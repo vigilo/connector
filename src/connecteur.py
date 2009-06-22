@@ -4,6 +4,9 @@ Connector for the Vigilo Project based on
 UNIX socket,
 Bus message using pubsub/XMPP
 """
+import signal
+import SocketServer
+
 from twisted.internet import reactor
 #from twisted.words.xish import domish
 #from twisted.words.protocols.jabber import jid, xmlstream
@@ -49,7 +52,7 @@ class configuration(object):
         self.adrto = config.get('Default', 'adrto')
         self.mynodeidentifier = config.get('Default', 'mynodeidentifier')
         self.mynodeidentifier1 = config.get('Default', 'mynodeidentifier1')
-        self.mysocket = '/tmp/socketname/' + self.userfrom
+        self.mysocket = '/tmp/' + self.userfrom
 
 
 
@@ -157,13 +160,13 @@ def texttoxml(text):
     """
     return text
 
-def mypubsubNodecreator(myXMPPClient):
+def mypubsubNodecreator(myXMPPClient, conf):
     """ 
     Called to create a pubsub Node from a XMPPClientVigilo
     And to listen from a socket to publish
     """
     print 'on commence reellement la création/subscription du noeud'
-    jidto = jid.JID(ADRTO)
+    jidto = jid.JID(conf.adrto)
     pubsubHandler = pubsub.PubSubClient()
     pubsubHandler.setHandlerParent(myXMPPClient)
     def cb_create(content):
@@ -172,7 +175,7 @@ def mypubsubNodecreator(myXMPPClient):
         """
         #print content
         print 'on a fini la création du noeud'
-        d2 = pubsubHandler.subscribe(jidto, nodeIdentifier=MYNODEIDENTIFIER,
+        d2 = pubsubHandler.subscribe(jidto, nodeIdentifier=conf.mynodeidentifier,
                 subscriber=jid.JID(ADRFROM + "/localhost"))
         d2.addCallback(cb_subscribe)
         d2.addErrback(eb_subscribe)
@@ -192,14 +195,14 @@ def mypubsubNodecreator(myXMPPClient):
         #print content
         print 'on a fini la subscription au noeud'
         myXMPPClient.ready = True
-        myXMPPClient.nodeIdentifier = MYNODEIDENTIFIER
+        myXMPPClient.nodeIdentifier = conf.mynodeidentifier
         myXMPPClient.service = jidto
         myXMPPClient.pubsubHandler = pubsubHandler
-        myXMPPClient.nodeIdentifier = MYNODEIDENTIFIER
+        myXMPPClient.nodeIdentifier = conf.mynodeidentifier
 
-        #socketServer(myXMPPClient)
-        #reactor.callFromThread(socketServer, myXMPPClient)
-        #reactor.callInThread(socketServer, myXMPPClient)
+        #socketServer(myXMPPClient, conf)
+        #reactor.callFromThread(socketServer, myXMPPClient, conf)
+        #reactor.callInThread(socketServer, myXMPPClient, conf)
         print 'on a appelle le thread de creation de la socket'
 
     def eb_subscribe(error):
@@ -213,82 +216,73 @@ def mypubsubNodecreator(myXMPPClient):
     # tant que l authentification n'est pas OK on ne commence rien
     while not myXMPPClient.auth_ready:
         time.sleep(1)
-    #d1 = pubsubHandler.createNode(jidto, nodeIdentifier=MYNODEIDENTIFIER)
-    #d1 = pubsubHandler.deleteNode(jidto, nodeIdentifier=MYNODEIDENTIFIER)
+    #d1 = pubsubHandler.createNode(jidto, nodeIdentifier=conf.mynodeidentifier)
+    #d1 = pubsubHandler.deleteNode(jidto, nodeIdentifier=conf.mynodeidentifier)
     #d1.addCallback(cb_create)
     #d1.addErrback(eb_create)
-    #d2 = pubsubHandler.subscribe(jidto, nodeIdentifier=MYNODEIDENTIFIER,
+    #d2 = pubsubHandler.subscribe(jidto, nodeIdentifier=conf.mynodeidentifier,
     #                              subscriber=jid.JID(ADRFROM + "/localhost"))
     #d2.addCallback(cb_subscribe)
     #d2.addErrback(eb_subscribe)
 
     # gros hack de barbare pour faire croire que l'on a souscrit
     myXMPPClient.ready = True
-    myXMPPClient.nodeIdentifier = MYNODEIDENTIFIER
+    myXMPPClient.nodeIdentifier = conf.mynodeidentifier
     myXMPPClient.service = jidto
     myXMPPClient.pubsubHandler = pubsubHandler
-    myXMPPClient.nodeIdentifier = MYNODEIDENTIFIER
-    socketServer(myXMPPClient)
+    myXMPPClient.nodeIdentifier = conf.mynodeidentifier
+    #socketServer(myXMPPClient, conf)
+    socket_server = VigiloSocketServer(conf.mysocket, SocketReaderClient)
+    socket_server.xmpp_client = myXMPPClient
+    socket_server.conf = conf
+    socket_server.serve_forever()
 
 
-def socketServer(myclientXMPP):
+class VigiloSocketServer(SocketServer.ThreadingMixIn, SocketServer.UnixStreamServer):
+    pass
+
+def socketServer(myclientXMPP, conf):
     """
     Function to serve from a UNIX socket to the XMPP BUS 
     """
-    while 1:
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        try:
-            os.remove(MYSOCKET)
-        except OSError:
-            pass
-        s.bind(MYSOCKET)
-        s.listen(5)
+    try:
         while 1:
-            conn, addr = s.accept()
-            print 'on a eu une connexion'
-            # the socket is handled in a separated thread
-            src = SocketReaderClient(conn, addr, myclientXMPP)
-            src.start()
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            try:
+                os.remove(conf.mysocket)
+            except OSError:
+                pass
+            print conf.mysocket
+            s.bind(conf.mysocket)
+            s.listen(5)
+            while 1:
+                conn, addr = s.accept()
+                print 'on a eu une connexion'
+                # the socket is handled in a separated thread
+                src = SocketReaderClient(conn, addr, myclientXMPP)
+                src.start()
+    except KeyboardInterrupt:
+        print "KeyboardInterrupt"
 
-class SocketReaderClient(threading.Thread):
-    """
-    Thread that read from a socket and then send a message
-    """
+class SocketReaderClient(SocketServer.BaseRequestHandler):
+    """ Handle socket data and then send a message """
 
-    def __init__(self, conn, addr, clientXMPP):
-        threading.Thread.__init__(self)
-        self.conn = conn
-        self.addr = addr
-        self.clientXMPP = clientXMPP
-
-    def run(self):
-        """
-        Read from a socket and then send a message
-        """
-
-        data_end = None
-        while 1:
-            data = self.conn.recv(1024)
-            if not data:
-                break
-            # buffer is completed while it can be
-            if data_end:
-                data_end = data_end + data
-            else:
-                data_end = data
-        # if no data where received don't send any message
-        if data_end:
-            sender = jid.JID(ADRFROM)
-            item = pubsub.Item(payload=texttoxml(data_end))
-            reactor.callFromThread(# pylint: disable-msg=E1101
-                                   self.clientXMPP.sendItem, 
-                                   [item], sender)
-        self.conn.close()
+    def handle(self):
+        """ Read from a socket and then send a message """
+        self.data = self.rfile.readline().strip()
+        sender = jid.JID(self.server.conf.adrfrom)
+        item = pubsub.Item(payload=texttoxml(self.data))
+        reactor.callFromThread(# pylint: disable-msg=E1101
+                               self.server.xmpp_client.sendItem, 
+                               [item], sender)
 
 
-if __name__ == '__main__':
+def on_exit(*args):
+    print "on exit"
+    reactor.stop()
+    print "exited"
 
-
+def main():
     conf = configuration()
     PWDFROM = conf.pwdfrom
     HOST = conf.host
@@ -307,5 +301,10 @@ if __name__ == '__main__':
     PRESENCE.setHandlerParent(XMPPCLIENT)
     PRESENCE.available()
     XMPPCLIENT.startService()
-    reactor.callInThread(mypubsubNodecreator, XMPPCLIENT)#pylint: disable-msg=E1101
+    signal.signal(signal.SIGINT, on_exit)
+    reactor.callInThread(mypubsubNodecreator, XMPPCLIENT, conf)#pylint: disable-msg=E1101
     reactor.run() # pylint: disable-msg=E1101
+
+
+if __name__ == '__main__':
+    main()
