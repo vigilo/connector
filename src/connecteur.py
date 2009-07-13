@@ -13,6 +13,7 @@ import logging
 import syslog
 import base64
 import socket
+import unittest
 #import pdb
 #from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -399,6 +400,7 @@ def on_exit(signum, frame):
     if os.access(conf.socketR, 0):
         os.remove(conf.socketR)
     os._exit(0)
+    #os.exit(0)
 
 def main():
     """ the main program """
@@ -420,5 +422,23 @@ def main():
     reactor.run() # pylint: disable-msg=E1101
 
 
+
+class TestSequenceFunctions(unittest.TestCase):
+    
+    def testevent2xml(self):
+        self.assertEqual("""<event xmlns='http://www.projet-vigilo.org/messages'><timestamp>1165939739</timestamp><host>serveur1.example.com</host><ip>192.168.0.1</ip><service>Load</service><state>CRITICAL</state><message>CRITICAL: load avg: 12 10 10</message></event>""", text2xml("""event|1165939739|serveur1.example.com|192.168.0.1|Load|CRITICAL|CRITICAL: load avg: 12 10 10"""))
+
+    def testperf2xml(self):
+        self.assertEqual("""<perf xmlns='http://www.projet-vigilo.org/messages'><timestamp>1165939739</timestamp><host>serveur1.example.com</host><datasource>Load</datasource><value>10</value></perf>""", text2xml("""perf|1165939739|serveur1.example.com|Load|10"""))
+
+            
+
 if __name__ == '__main__':
-    main()
+    unittest.main()
+
+
+#if __name__ == '__main__':
+#    main()
+
+
+
