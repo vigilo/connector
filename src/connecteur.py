@@ -151,7 +151,8 @@ class XMPPClientVigilo(client.XMPPClient):
     def __init__(self, cf, port=5222):
 
         self.conf = cf
-        client.XMPPClient.__init__(self, conf.jidfrom, conf.password, conf.host, port)
+        client.XMPPClient.__init__(self, conf.jidfrom, conf.password, 
+                conf.host, port)
         self.auth_ready = False
         if self.conf.createnode:
             self.node_ready = False
@@ -178,7 +179,9 @@ class XMPPClientVigilo(client.XMPPClient):
         #xs.addObserver('/message', self.gotMessage)
 
     def messageObserver(self):
-        """ Register a function to call each time a message arrive from the XMPP BUS """
+        """ 
+        Register a function to call each time a message arrive from the BUS
+        """
         
         while not self.subscribe_ready:
             #logguage("messageObserver: waiting authentification to be done")
@@ -223,7 +226,7 @@ class XMPPClientVigilo(client.XMPPClient):
         def eb_publish (*args):
             """ Error Back to handle deferred object """
             logguage(" send Item KO")
-            pass
+            #pass
 
         while not self.auth_ready:
             logguage("auth need to be done")
@@ -232,8 +235,8 @@ class XMPPClientVigilo(client.XMPPClient):
         #print "avant envoie"
         #pprint([ i.toXml() for i in items])
         if self.pubsubHandler:
-            d = self.pubsubHandler.publish(self.service, self.conf.nodeident, items,
-                    sender)
+            d = self.pubsubHandler.publish(self.service, self.conf.nodeident,
+                    items, sender)
             d.addCallback(cb_publish)
             d.addErrback(eb_publish)
     
@@ -271,7 +274,7 @@ class XMPPClientVigilo(client.XMPPClient):
                 # ejabberd's way of saying "create parent first"
                 logguage("forbidden error = Create the parents Nodes first")
                 # TODO create the parents
-                pass
+                #pass
             else:
                 raise error
 
@@ -283,7 +286,8 @@ class XMPPClientVigilo(client.XMPPClient):
 
         # gros hack pour accelerer le temps des tests
         #self.node_ready = True
-        d1 = self.pubsubHandler.createNode(conf.jidto, nodeIdentifier=nodeIdentifier)
+        d1 = self.pubsubHandler.createNode(conf.jidto, 
+                nodeIdentifier=nodeIdentifier)
         d1.addErrback(eb_create)
         d1.addCallback(cb_create)
     
@@ -424,21 +428,25 @@ def main():
 
 
 class TestSequenceFunctions(unittest.TestCase):
+    """ Test the connector functions """
     
     def testevent2xml(self):
+        """ Test the connector functions testevent2xml """
+
         self.assertEqual("""<event xmlns='http://www.projet-vigilo.org/messages'><timestamp>1165939739</timestamp><host>serveur1.example.com</host><ip>192.168.0.1</ip><service>Load</service><state>CRITICAL</state><message>CRITICAL: load avg: 12 10 10</message></event>""", text2xml("""event|1165939739|serveur1.example.com|192.168.0.1|Load|CRITICAL|CRITICAL: load avg: 12 10 10"""))
 
     def testperf2xml(self):
+        """ Test the connector functions testperf2xml """
         self.assertEqual("""<perf xmlns='http://www.projet-vigilo.org/messages'><timestamp>1165939739</timestamp><host>serveur1.example.com</host><datasource>Load</datasource><value>10</value></perf>""", text2xml("""perf|1165939739|serveur1.example.com|Load|10"""))
 
             
 
-if __name__ == '__main__':
-    unittest.main()
-
-
 #if __name__ == '__main__':
-#    main()
+#    unittest.main()
+
+
+if __name__ == '__main__':
+    main()
 
 
 
