@@ -17,7 +17,7 @@ import unittest
 #import pdb
 #from twisted.internet.defer import inlineCallbacks, returnValue
 
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.words.protocols.jabber import jid
 from twisted.application import service
 from wokkel import client, pubsub, xmppim
@@ -343,7 +343,7 @@ class XMPPClientVigilo(client.XMPPClient):
         self.socket_server = VigiloSocketServer(self.conf.socketR,
                 SocketReaderClient)
         self.socket_server.xmpp_client = self
-        self.socket_server.serve_forever()
+        self.socket_server.serve_until_stopped()
         
     def fromBUS(self, msg):
         """ Called when a message is received """
@@ -370,7 +370,22 @@ class XMPPClientVigilo(client.XMPPClient):
 class VigiloSocketServer(SocketServer.ThreadingMixIn, 
                          SocketServer.UnixStreamServer):
     """ Handle socket connexion and pass the treatment to an handler """
-    pass
+    
+    def serve_until_stopped(self):
+        self.serving = True
+        self.has_shutdown = False
+        while self.serving:
+            self.handle_request()
+        self.has_shutdown = True
+
+    def shutdown(self):
+        self.serving = False
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect(conf.socketR)
+        s.send("ctrl + c")
+        s.close()
+        while not self.has_shutdown :
+            pass
 
 
 class SocketReaderClient(SocketServer.StreamRequestHandler):
@@ -393,7 +408,7 @@ def on_exit(signum, frame):
     logguage("exit")
     XMPPCLIENT.unQueueItem()
     if XMPPCLIENT.socket_server:
-        XMPPCLIENT.socket_server.server_close()
+        XMPPCLIENT.socket_server.shutdown()
         # not available before python 2.6 
         #XMPPCLIENT.socket_server.shutdown()
     reactor.stop()#pylint: disable-msg=E1101
@@ -403,7 +418,7 @@ def on_exit(signum, frame):
     # removal of the socket file 
     if os.access(conf.socketR, 0):
         os.remove(conf.socketR)
-    os._exit(0)
+ #   os._exit(0)
     #os.exit(0)
 
 def main():
