@@ -273,8 +273,8 @@ class XMPPClientVigilo(client.XMPPClient):
             elif error.value.condition == 'forbidden':
                 # ejabberd's way of saying "create parent first"
                 logguage("forbidden error = Create the parents Nodes first")
-                # TODO create the parents
-                #pass
+                self.pubsubNodecreator(nodeIdentifier.rsplit('/',1)[0])
+                self.pubsubNodecreator(nodeIdentifier)
             else:
                 raise error
 
