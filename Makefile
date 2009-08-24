@@ -23,7 +23,10 @@ lint: $(BUILDENV)/bin/python
 	$(BUILDENV)/bin/python "$$(which pylint)" --rcfile=$(BUILDENV)/extra/pylintrc src/vigilo
 
 tests: $(BUILDENV)/bin/python
-	PYTHONPATH=$(BUILDENV) VIGILO_SETTINGS_MODULE=settings_tests $(BUILDENV)/bin/nosetests tests
+	PYTHONPATH=$(BUILDENV):src VIGILO_SETTINGS_MODULE=settings_tests \
+		$(BUILDENV)/bin/nosetests \
+		--with-coverage --cover-package=vigilo.connector \
+		tests
 
 .PHONY: all clean buildclean apidoc lint tests
 
