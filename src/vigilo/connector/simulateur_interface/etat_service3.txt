@@ -1,0 +1,1 @@
+<correvent change="modify" xmlns="http://www.projet-vigilo.org/messages">    <timestamp>1239104006</timestamp>    <host>ajc.fw.1</host>    <service>Charge 01</service>    <state>CRITICAL</state>    <message>CRITICAL: Charge 01 average is above 5 (5.2)</message>    <severity>7</severity>    <occurence>2</occurence></correvent>

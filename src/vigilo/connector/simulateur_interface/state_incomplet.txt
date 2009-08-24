@@ -1,0 +1,1 @@
+state|1239104006|server.example.com|192.168.1.1|Load|WARNING|SOFT|2

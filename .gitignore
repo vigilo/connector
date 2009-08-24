@@ -1,0 +1,4 @@
+/build/bdist.*
+/build/lib/vigilo
+/dist
+/src/*.egg-info

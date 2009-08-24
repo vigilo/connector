@@ -1,0 +1,2 @@
+event|1165939739|serveur1.example.com|Load|CRITICAL|CRITICAL: load avg: 12 10 10
+
