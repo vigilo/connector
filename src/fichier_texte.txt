@@ -1,7 +1,0 @@
-<command xmlns='http://vigilo.org'>
-    <type>nagios</type>
-    <name>CHANGE_NORMAL_SVC_CHECK_INTERVAL</name>
-    <host>server.example.com</host>
-    <service>Load</service>
-    <value>15</value>
-</command>

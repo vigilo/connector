@@ -1,2 +1,0 @@
-perf|1165939739|serveur1.example.com|Load|10
-
