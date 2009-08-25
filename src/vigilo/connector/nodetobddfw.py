@@ -38,16 +38,17 @@ def InsertState(xml):
     Insert XML stream of state object into the database
     keep in mind that timestamp has to be converted
     """
-    state = State('','','')
+    state = State('', '', '')
     for elm in xml.elements():
         if elm.name == 'timestamp':
             # if the timestamp is not a real integer
             try:
-                setattr(state,elm.name,datetime.fromtimestamp(int(elm.children[0])))
+                setattr(state, elm.name, 
+                        datetime.fromtimestamp(int(elm.children[0])))
             except:
-                setattr(state,elm.name,datetime.now())
+                setattr(state, elm.name, datetime.now())
         else:
-            setattr(state,elm.name,elm.children[0])
+            setattr(state, elm.name, elm.children[0])
     try:
         DBSession.add(state)
         DBSession.flush()
@@ -87,7 +88,7 @@ def InsertCorrEvent(xml):
         LOGGER.debug("Duplicate entry, we update it.")
         UpdateCorrEvent(xml)
         return
-    event = Events('','')
+    event = Events('', '')
     for elm in xml.elements():
         if elm.name == 'timestamp':
             # if the timestamp is not a real integer
@@ -100,7 +101,7 @@ def InsertCorrEvent(xml):
         elif elm.name == 'highlevel' or elm.name == 'ip':
             pass
         else:
-            setattr(event,elm_to_bdd[elm.name],elm.children[0])
+            setattr(event, elm_to_bdd[elm.name], elm.children[0])
     try:
         DBSession.add(event)
         DBSession.flush()
@@ -143,16 +144,17 @@ def UpdateCorrEvent(xml):
         if elm.name == 'timestamp':
             # if the timestamp is not a real integer
             try:        
-                setattr(event,elm.name,datetime.fromtimestamp(int(elm.children[0])))
+                setattr(event, elm.name, 
+                        datetime.fromtimestamp(int(elm.children[0])))
             except:
-                setattr(event,elm.name,datetime.now())
+                setattr(event, elm.name, datetime.now())
         elif elm.name == 'impact':
             event.impact = elm.getAttribute('count')
         elif elm.name == 'highlevel' or elm.name == 'ip':
             pass
 
         else:
-            setattr(event,elm_to_bdd[elm.name],elm.children[0])
+            setattr(event, elm_to_bdd[elm.name], elm.children[0])
     try:
         DBSession.flush()
         transaction.commit()
@@ -186,7 +188,8 @@ class NodeToBDDForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
             for i in it:
                 LOGGER.debug('Message from BUS to forward: %s', i.toXml().encode('utf8'))
                 # Sélectionne la bonne fonction suivant le type de message
-                if i.name == 'correvent' and i.getAttribute('change') is not None:
+                if i.name == 'correvent' and \
+                   i.getAttribute('change') is not None:
                     UpdateCorrEvent(i)
                 elif i.name == 'correvent':
                     InsertCorrEvent(i)

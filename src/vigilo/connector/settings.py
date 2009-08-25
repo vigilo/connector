@@ -13,4 +13,5 @@ VIGILO_CONNECTOR_TOPIC = '/home/tburguie3/connectorx/BUS'
 VIGILO_SOCKETW = '/tmp/socketW'
 VIGILO_SOCKETR = '/tmp/socketR'
 VIGILO_MESSAGE_BACKUP_FILE = '/tmp/backup'
+VIGILO_MESSAGE_BACKUP_TABLE = 'connector'
 

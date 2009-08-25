@@ -1,9 +1,7 @@
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
+""" Connector Pubsub client. """
 from __future__ import absolute_import
 
-"""
-Correlator Pubsub client.
-"""
 
 #import random
 
@@ -31,7 +29,7 @@ class ConnectorServiceMaker(object):
 
     #implements(service.IServiceMaker, IPlugin)
 
-    def makeService(self, options):
+    def makeService(self):
         xmpp_client = client.XMPPClient(
                 JID(settings['VIGILO_CONNECTOR_JID']),
                 settings['VIGILO_CONNECTOR_PASS'],
@@ -48,7 +46,8 @@ class ConnectorServiceMaker(object):
                 node_owner)
 
         message_consumer = NodeToSocketForwarder(
-                connector_sub, settings['VIGILO_SOCKETW'], settings['VIGILO_MESSAGE_BACKUP_FILE'])
+                connector_sub, settings['VIGILO_SOCKETW'],
+                settings['VIGILO_MESSAGE_BACKUP_FILE'])
         message_consumer.setHandlerParent(xmpp_client)
 
         message_publisher = SocketToNodeForwarder(
@@ -61,7 +60,7 @@ class ConnectorServiceMaker(object):
 
 def main():
     application = service.Application('Twisted PubSub component')
-    conn_service = ConnectorServiceMaker().makeService({})
+    conn_service = ConnectorServiceMaker().makeService()
     conn_service.setServiceParent(application)
     app.startApplication(application, False)
     reactor.run()

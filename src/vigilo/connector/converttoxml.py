@@ -4,10 +4,8 @@ import base64
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
-def logguage(text, facility=None):
+def logguage(text):
     """  Call to log evenements to the syslog """
-    #syslog.syslog(LEVELS['info'], text)
-    #print (text)
     LOGGER.info(text.encode('utf8'))
 
 
@@ -29,24 +27,19 @@ def text2xml(text):
     if elements:
         try:
             if elements == ['']:
-                # ligne vide
                 logguage("ligne vide")
-                return None
             if elements[0] == "event":
                 return parseXml(event2xml(elements)).toXml()
             elif elements[0] == "perf":
                 return parseXml(perf2xml(elements)).toXml()
             elif elements[0] == "state":
                 return parseXml(state2xml(elements)).toXml()
-            else:
-                logguage("type de message inconnue")
-                return None
-        except TypeError, AttributeError:
+        except (TypeError, AttributeError):
             logguage("type de message inconnue %s" % elements)
             return None
-    else:
-        logguage("type de message inconnue")
-        return None
+
+    logguage("type de message inconnue")
+    return None
 
 
 def event2xml(event_list):

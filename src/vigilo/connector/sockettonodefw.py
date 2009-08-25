@@ -1,9 +1,10 @@
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
-from __future__ import absolute_import
 
 """
 Extends pubsub clients to compute Socket message
 """
+
+from __future__ import absolute_import
 
 import twisted.internet.protocol
 from twisted.internet import reactor
@@ -11,8 +12,8 @@ from twisted.protocols.basic import LineReceiver
 from wokkel import pubsub
 
 from vigilo.common.logging import get_logger
-from vigilo.pubsub import  NodeSubscriber
-import logging 
+#from vigilo.pubsub import  NodeSubscriber
+#import logging 
 from vigilo.connector import converttoxml 
 
 LOGGER = get_logger(__name__)
@@ -55,7 +56,8 @@ class SocketToNodeForwarder(pubsub.PubSubClient, LineReceiver):
             # Couldn't parse this line
             return
         item = pubsub.Item(payload=payload)
-        self.publish(self.__subscription.service, self.__subscription.node,[item])
+        self.publish(self.__subscription.service, 
+                     self.__subscription.node, [item])
 
 
     def connectionInitialized(self):
@@ -64,10 +66,10 @@ class SocketToNodeForwarder(pubsub.PubSubClient, LineReceiver):
             return
         self.__port = reactor.listenUNIX(self.__socket_filename, self.__factory)
 
-    def connectionLost(self, reason):
-        return
-        print "connection LOST"
-        if self.__port :
-            self.__port.stopListening()
-        super(SocketToNodeForwarder, self).connectionLost(reason)
+    #def connectionLost(self, reason):
+    #    return
+    #    print "connection LOST"
+    #    if self.__port :
+    #        self.__port.stopListening()
+    #    super(SocketToNodeForwarder, self).connectionLost(reason)
 
