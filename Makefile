@@ -20,7 +20,7 @@ doc/apidoc/index.html: src/vigilo
 		   --docformat=epytext $^
 
 lint: $(BUILDENV)/bin/python
-	PYTHONPATH=src $(BUILDENV)/bin/python "$$(which pylint)" \
+	-PYTHONPATH=src $(BUILDENV)/bin/python "$$(which pylint)" \
 		--rcfile=$(BUILDENV)/extra/pylintrc src/vigilo/connector
 
 tests: $(BUILDENV)/bin/python
