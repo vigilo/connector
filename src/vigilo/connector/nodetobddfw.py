@@ -1,24 +1,17 @@
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
-from __future__ import absolute_import
-
 """
 Extends pubsub clients to compute Node message.
 """
 
+from __future__ import absolute_import
+
 import twisted.internet.protocol
-from twisted.internet import reactor
-from twisted.protocols.basic import LineReceiver
 
 from vigilo.common.logging import get_logger
 from vigilo.pubsub import  NodeSubscriber
-import logging 
-from vigilo.connector import converttoxml 
-import os
-
-import time
-
 from vigilo.models.session import DBSession
-from vigilo.models import State, Events, Host, Service
+from vigilo.models import State, Events
+
 from sqlalchemy import not_ , and_, desc
 from datetime import datetime
 import transaction
@@ -26,14 +19,14 @@ import transaction
 LOGGER = get_logger(__name__)
 
 # Because XML and Database don't use same names
-elm_to_bdd = { 'host' : 'hostname',
+ELM_TO_BDD = { 'host' : 'hostname',
        'service' : 'servicename',
        'state' : 'rawstate',
        'message' : 'output',
        'severity' : 'severity',
        'occurence' : 'occurence' }
 
-def InsertState(xml):
+def insertState(xml):
     """
     Insert XML stream of state object into the database
     keep in mind that timestamp has to be converted
@@ -43,21 +36,17 @@ def InsertState(xml):
         if elm.name == 'timestamp':
             # if the timestamp is not a real integer
             try:
-                setattr(state, elm.name, 
+                setattr(state, elm.name,
                         datetime.fromtimestamp(int(elm.children[0])))
-            except:
+            except ValueError:
                 setattr(state, elm.name, datetime.now())
         else:
             setattr(state, elm.name, elm.children[0])
-    try:
-        DBSession.add(state)
-        DBSession.flush()
-        transaction.commit()
-    except:
-        LOGGER.debug("Can't push data in database")
-        DBSession.rollback()
+    DBSession.add(state)
+    DBSession.flush()
+    transaction.commit()
 
-def InsertCorrEvent(xml):
+def insertCorrEvent(xml):
     
     """
     Insert XML stream of correvent object into the database
@@ -86,31 +75,27 @@ def InsertCorrEvent(xml):
             ).order_by(desc(Events.idevent))
     if event.count() != 0 :
         LOGGER.debug("Duplicate entry, we update it.")
-        UpdateCorrEvent(xml)
+        updateCorrEvent(xml)
         return
-    event = Events('', '')
+    event = Events('','')
     for elm in xml.elements():
         if elm.name == 'timestamp':
             # if the timestamp is not a real integer
             try:
                 event.timestamp = datetime.fromtimestamp(int(elm.children[0]))
-            except:
+            except ValueError:
                 event.timestamp = datetime.now()
         elif elm.name == 'impact':
             event.impact = elm.getAttribute('count')
         elif elm.name == 'highlevel' or elm.name == 'ip':
             pass
         else:
-            setattr(event, elm_to_bdd[elm.name], elm.children[0])
-    try:
-        DBSession.add(event)
-        DBSession.flush()
-        transaction.commit()
-    except:
-        LOGGER.debug("Can't push data in database")
-        DBSession.rollback()
+            setattr(event, ELM_TO_BDD[elm.name], elm.children[0])
+    DBSession.add(event)
+    DBSession.flush()
+    transaction.commit()
 
-def UpdateCorrEvent(xml):
+def updateCorrEvent(xml):
     """
     Update the database with the XML stream
     first, check that an other element exist with the same host/service
@@ -136,17 +121,18 @@ def UpdateCorrEvent(xml):
             ).filter(Events.timestamp_active != None
             ).order_by(desc(Events.idevent))
     if event.count() == 0:
-        LOGGER.debug( "Update query but not events in database with this couple host, service. We create it." , event.count())
-        InsertCorrEvent(xml)
+        LOGGER.debug( "Update query but not events in database with this " + \
+                "couple host, service. We create it." , event.count())
+        insertCorrEvent(xml)
         return
     event = event[0]
     for elm in xml.elements():
         if elm.name == 'timestamp':
             # if the timestamp is not a real integer
             try:        
-                setattr(event, elm.name, 
+                setattr(event, elm.name,
                         datetime.fromtimestamp(int(elm.children[0])))
-            except:
+            except ValueError:
                 setattr(event, elm.name, datetime.now())
         elif elm.name == 'impact':
             event.impact = elm.getAttribute('count')
@@ -154,13 +140,9 @@ def UpdateCorrEvent(xml):
             pass
 
         else:
-            setattr(event, elm_to_bdd[elm.name], elm.children[0])
-    try:
-        DBSession.flush()
-        transaction.commit()
-    except:
-        LOGGER.debug("Can't push data in database")
-        DBSession.rollback()
+            setattr(event, ELM_TO_BDD[elm.name], elm.children[0])
+    DBSession.flush()
+    transaction.commit()
 
 
 class NodeToBDDForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
@@ -175,7 +157,9 @@ class NodeToBDDForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
 
 
     def itemsReceived(self, event):
-
+        """
+        Manage items form the BUS
+        """
         if event.nodeIdentifier != self.__subscription.node:
             return
         
@@ -186,14 +170,15 @@ class NodeToBDDForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
             
             it = [ it for it in item.elements() if item.name == "item" ]
             for i in it:
-                LOGGER.debug('Message from BUS to forward: %s', i.toXml().encode('utf8'))
+                LOGGER.debug('Message from BUS to forward: %s',
+                        i.toXml().encode('utf8'))
                 # Sélectionne la bonne fonction suivant le type de message
                 if i.name == 'correvent' and \
-                   i.getAttribute('change') is not None:
-                    UpdateCorrEvent(i)
+                        i.getAttribute('change') is not None:
+                    updateCorrEvent(i)
                 elif i.name == 'correvent':
-                    InsertCorrEvent(i)
+                    insertCorrEvent(i)
                 elif i.name == 'state':
-                    InsertState(i)
+                    insertState(i)
                 else:
                     LOGGER.debug('Unknown XML')
