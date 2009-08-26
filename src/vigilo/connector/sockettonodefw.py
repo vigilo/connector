@@ -35,12 +35,14 @@ class SocketToNodeForwarder(pubsub.PubSubClient, LineReceiver):
         self.__port = None
 
     def buildProtocol(self, addr):
+        """ redefinition of the LineReceiver protocol """
         line_protocol = LineReceiver()
         line_protocol.delimiter = '\n'
         line_protocol.lineReceived = self.lineReceived
         return line_protocol
 
     def lineReceived(self, line):
+        """ definition of the lineReceived function"""
         
         if len(line) == 0:
             # empty line -> can't parse it
@@ -61,6 +63,7 @@ class SocketToNodeForwarder(pubsub.PubSubClient, LineReceiver):
 
 
     def connectionInitialized(self):
+        """ redefinition of the connectionInitialized function """
         super(SocketToNodeForwarder, self).connectionInitialized()
         if self.__port is not None:
             return

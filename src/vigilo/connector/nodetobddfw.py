@@ -158,7 +158,7 @@ class NodeToBDDForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
 
     def itemsReceived(self, event):
         """
-        Manage items form the BUS
+        Manage items from the BUS
         """
         if event.nodeIdentifier != self.__subscription.node:
             return

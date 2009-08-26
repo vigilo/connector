@@ -30,6 +30,7 @@ class ConnectorServiceMaker(object):
     #implements(service.IServiceMaker, IPlugin)
 
     def makeService(self):
+        """ the service that wraps everything the connector needs. """ 
         xmpp_client = client.XMPPClient(
                 JID(settings['VIGILO_CONNECTOR_JID']),
                 settings['VIGILO_CONNECTOR_PASS'],
@@ -59,6 +60,7 @@ class ConnectorServiceMaker(object):
         return root_service
 
 def main():
+    """ main function designed to launch the program """
     application = service.Application('Twisted PubSub component')
     conn_service = ConnectorServiceMaker().makeService()
     conn_service.setServiceParent(application)
