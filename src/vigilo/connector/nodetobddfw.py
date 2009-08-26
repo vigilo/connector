@@ -24,7 +24,8 @@ ELM_TO_BDD = { 'host' : 'hostname',
        'state' : 'rawstate',
        'message' : 'output',
        'severity' : 'severity',
-       'occurence' : 'occurence' }
+       'occurence' : 'occurence',
+       }
 
 def insertState(xml):
     """
@@ -41,7 +42,11 @@ def insertState(xml):
             except ValueError:
                 setattr(state, elm.name, datetime.now())
         else:
-            setattr(state, elm.name, elm.children[0])
+            if elm.name in ELM_TO_BDD:
+                setattr(state, ELM_TO_BDD[elm.name], elm.children[0])
+            else:
+                setattr(state, elm.name, elm.children[0])
+
     DBSession.add(state)
     DBSession.flush()
     transaction.commit()
@@ -154,7 +159,6 @@ class NodeToBDDForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
     def __init__(self, subscription):
         self.__subscription = subscription
         NodeSubscriber.__init__(self, [subscription])
-
 
     def itemsReceived(self, event):
         """
