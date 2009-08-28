@@ -3,10 +3,6 @@
 from __future__ import absolute_import
 
 
-#import random
-
-
-
 from twisted.application import app, service
 from twisted.internet import reactor
 from twisted.words.protocols.jabber.jid import JID
@@ -14,13 +10,11 @@ from vigilo.common.conf import settings
 
 from wokkel import client
 
-from vigilo.common.logging import get_logger
-
 from vigilo.connector.nodetosocketfw import NodeToSocketForwarder
 from vigilo.connector.sockettonodefw import SocketToNodeForwarder
 from vigilo.pubsub import NodeOwner, Subscription
 
-LOGGER = get_logger(__name__)
+
 
 class ConnectorServiceMaker(object):
     """
@@ -60,6 +54,7 @@ class ConnectorServiceMaker(object):
         return root_service
 
 def main():
+    
     """ main function designed to launch the program """
     application = service.Application('Twisted PubSub component')
     conn_service = ConnectorServiceMaker().makeService()

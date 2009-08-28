@@ -11,12 +11,8 @@ from twisted.internet import reactor
 from twisted.protocols.basic import LineReceiver
 from wokkel import pubsub
 
-from vigilo.common.logging import get_logger
-#from vigilo.pubsub import  NodeSubscriber
-#import logging 
 from vigilo.connector import converttoxml 
 
-LOGGER = get_logger(__name__)
 
 class SocketToNodeForwarder(pubsub.PubSubClient, LineReceiver):
     """
@@ -68,11 +64,4 @@ class SocketToNodeForwarder(pubsub.PubSubClient, LineReceiver):
         if self.__port is not None:
             return
         self.__port = reactor.listenUNIX(self.__socket_filename, self.__factory)
-
-    #def connectionLost(self, reason):
-    #    return
-    #    print "connection LOST"
-    #    if self.__port :
-    #        self.__port.stopListening()
-    #    super(SocketToNodeForwarder, self).connectionLost(reason)
 

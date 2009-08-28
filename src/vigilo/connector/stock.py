@@ -1,10 +1,16 @@
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
+"""
+function to stock message to a sqlite DataBase
+"""
 from __future__ import absolute_import
 
 from sqlite3 import dbapi2 as sqlite
 import time
 from vigilo.common.conf import settings
-
+from vigilo.common.logging import get_logger
+LOGGER = get_logger(__name__)
+from vigilo.common.gettext import translate
+_ = translate(__name__)
 
 
 def initializeDB(filename):
@@ -70,17 +76,18 @@ def unstockmessage(filename, function):
             function(msg.encode('utf8'))
         except sqlite.OperationalError, e:
             connection.rollback()
-            print e
             if e.__str__() == "database is locked":
+                LOGGER.warning(_(e.__str__()))
                 time.sleep(1)
                 return unstockmessage(filename, function)
             else: 
+                LOGGER.error(_(e.__str__()))
                 cursor.close()
                 connection.close()
                 raise e
         except sqlite.Error, e:
             connection.rollback()
-            print e 
+            LOGGER.warning(_(e.__str__()))
     cursor.close()
     connection.close()
     return empty

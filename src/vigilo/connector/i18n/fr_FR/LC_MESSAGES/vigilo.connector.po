@@ -1,0 +1,43 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
+"POT-Creation-Date: 2009-08-27 13:12+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../src/vigilo/connector/converttoxml.py:21
+msgid "empty line"
+msgstr "ligne vide"
+
+#: ../src/vigilo/connector/converttoxml.py:32
+msgid "unknown message type"
+msgstr "type de message inconnue"
+
+#: ../src/vigilo/connector/converttoxml.py:29
+#, python-format
+msgid "unknown message type: %(messages)s"
+msgstr "type de message inconnue: %(messages)s"
+
+#: ../src/vigilo/connector/nodetosocketfw.py:72
+#, python-format
+msgid "Message from BUS to forward: %(message)s"
+msgstr "Message depuis le bus à transmettre: %(message)s"
+
+#: ../src/vigilo/connector/nodetosocketfw.py:77
+msgid ""
+"Message from BUS impossible to forward (socket not connected), the message "
+"is stocked for later reemission"
+msgstr ""
+"Message depuis le BUS impossible à transmettre (socket non connectée), le "
+"message est stocké pour une réemission ultérieur"

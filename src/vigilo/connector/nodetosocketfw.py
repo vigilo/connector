@@ -7,18 +7,19 @@ from __future__ import absolute_import
 
 import twisted.internet.protocol
 from twisted.internet import reactor
-#from twisted.protocols.basic import LineReceiver
 
 from vigilo.common.logging import get_logger
 from vigilo.pubsub import  NodeSubscriber
-#import logging 
 from vigilo.connector.stock import unstockmessage, stockmessage, \
         initializeDB, sqlitevacuumDB
 import os
 
-#import time
-
 LOGGER = get_logger(__name__)
+
+from vigilo.common.gettext import translate
+_ = translate(__name__)
+
+
 
 class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
     """
@@ -43,6 +44,7 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
 
 
     def itemsReceived(self, event):
+        """ function to treat a received item """
         # See ItemsEvent
         #event.sender
         #event.recipient
@@ -70,12 +72,12 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
                     sqlitevacuumDB(self.__filename)
 
                 for i in it:
-                    LOGGER.debug('Message from BUS to forward: %s', 
+                    LOGGER.debug(_('Message from BUS to forward: %(message)s') % 
                                  i.toXml().encode('utf8'))
                     self.__connector.transport.write(i.toXml().encode('utf8') + '\n\n')
             else:
                 for i in it:
-                    LOGGER.debug('Message from BUS impossible to forward (socket close ?): %s', i.toXml().encode('utf8'))
+                    LOGGER.error(_('Message from BUS impossible to forward (socket not connected), the message is stocked for later reemission'))
                     stockmessage(self.__filename, i.toXml().encode('utf8'))
                     self.__backuptoempty = True
 

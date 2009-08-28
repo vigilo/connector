@@ -1,21 +1,14 @@
 # -*- coding: utf-8 -*-
+"""
+function to convert text to XML
+"""
 from wokkel.generic import parseXml
-import base64
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
-def logguage(text):
-    """  Call to log evenements to the syslog """
-    LOGGER.info(text.encode('utf8'))
+from vigilo.common.gettext import translate
 
-
-def encode(data):
-    """ Encode data using Base64. """
-    return base64.b64encode(data)
-
-def decode(data):
-    """ Decode data using Base64 """
-    return base64.b64decode(data)
+_ = translate(__name__)
 
 def text2xml(text):
     """ 
@@ -27,7 +20,7 @@ def text2xml(text):
     if elements:
         try:
             if elements == ['']:
-                logguage("ligne vide")
+                LOGGER.debug(_("empty line"))
             if elements[0] == "event":
                 return parseXml(event2xml(elements)).toXml()
             elif elements[0] == "perf":
@@ -35,10 +28,10 @@ def text2xml(text):
             elif elements[0] == "state":
                 return parseXml(state2xml(elements)).toXml()
         except (TypeError, AttributeError):
-            logguage("type de message inconnue %s" % elements)
+            LOGGER.warning(_("unknown message type: %(messages)s") % elements)
             return None
 
-    logguage("type de message inconnue")
+    LOGGER.warning(_("unknown message type"))
     return None
 
 

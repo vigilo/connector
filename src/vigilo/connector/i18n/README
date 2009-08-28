@@ -1,0 +1,13 @@
+# Here HOWTO do traduction into french language
+# Generating NEW traduction file :
+xgettext --language=Python --keyword=_ -d module_name --output-dir=./fr_FR/LC_MESSAGES --from-code=utf-8 --msgid-bugs-address=contact@projet-vigilo.org /path/to/your/file/*py
+# Then you need to file CHARSET variable with utf-8 and fill up the traductions
+
+
+# Updating traduction file (keep the old and already done traduction and add the new ones)
+xgettext --language=Python --keyword=_ -d module_name --output-dir=./fr_FR/LC_MESSAGES --from-code=utf-8 --msgid-bugs-address=contact@projet-vigilo.org /path/to/your/file/*py -j 
+# Then you need to fill up the new traductions
+
+# generating of binary traduction file (this one can be used by the system in your python programm via gettext)
+msgfmt fr_FR/LC_MESSAGES/module_name.po -o fr_FR/LC_MESSAGES/module_name.mo
+# the precedant file need to be placed in /usr/share/locale/fr/LC_MESSAGES/
