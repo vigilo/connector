@@ -39,16 +39,23 @@ class ConnectorServiceMaker(object):
                 JID(settings['VIGILO_CONNECTOR_XMPP_PUBSUB_SERVICE']),
                 settings['VIGILO_CONNECTOR_TOPIC'],
                 node_owner)
-
-        if settings['VIGILO_SOCKETW']:
+        try:
+            sw = settings['VIGILO_SOCKETW']
             message_consumer = NodeToSocketForwarder(
-                    connector_sub, settings['VIGILO_SOCKETW'],
+                    connector_sub, sw,
                     settings['VIGILO_MESSAGE_BACKUP_FILE'])
             message_consumer.setHandlerParent(xmpp_client)
-        if settings['VIGILO_SOCKETR']:
+
+        except KeyError:
+            pass
+
+        try:
+            sr = settings['VIGILO_SOCKETR']
             message_publisher = SocketToNodeForwarder(
-                    settings['VIGILO_SOCKETR'], connector_sub)
+                    sr, connector_sub)
             message_publisher.setHandlerParent(xmpp_client)
+        except KeyError:
+            pass
 
         root_service = service.MultiService()
         xmpp_client.setServiceParent(root_service)

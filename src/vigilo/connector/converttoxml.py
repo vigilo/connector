@@ -27,8 +27,8 @@ def text2xml(text):
                 return parseXml(perf2xml(elements)).toXml()
             elif elements[0] == "state":
                 return parseXml(state2xml(elements)).toXml()
-        except (TypeError, AttributeError):
-            LOGGER.warning(_("unknown message type: %(messages)s") % elements)
+        except (TypeError, AttributeError), e :
+            LOGGER.warning(_("unknown message type: %s") % elements[0])
             return None
 
     LOGGER.warning(_("unknown message type"))

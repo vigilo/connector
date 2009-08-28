@@ -5,7 +5,7 @@ fi
 
 socket=$1
 if [  ! -e "$socket" ] ; then
-    socket="/tmp/socketR"
+    socket="/var/lib/vigilo/send.sock"
 fi
 if [ ! -S "$socket" ] ; then
     echo "fichier $socket non présent"

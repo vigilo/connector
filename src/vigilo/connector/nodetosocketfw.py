@@ -72,7 +72,7 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
                     sqlitevacuumDB(self.__filename)
 
                 for i in it:
-                    LOGGER.debug(_('Message from BUS to forward: %(message)s') % 
+                    LOGGER.debug(_('Message from BUS to forward: %s') % 
                                  i.toXml().encode('utf8'))
                     self.__connector.transport.write(i.toXml().encode('utf8') + '\n\n')
             else:
