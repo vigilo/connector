@@ -34,10 +34,15 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
         self.__backuptoempty = os.path.exists(file_filename) 
         # using ReconnectingClientFactory using a backoff retry 
         # (it try again and again with a delay incrising between attempt)
-        factory = twisted.internet.protocol.ReconnectingClientFactory()
-        factory.buildProtocol = lambda addr: self
+        self.__factory = twisted.internet.protocol.ReconnectingClientFactory()
+        def buildProtocol(addr):
+            # reset the reconnecting delay after a succesfull connection
+            self.__factory.resetDelay()
+            return self
+
+        self.__factory.buildProtocol = buildProtocol
         #creation socket
-        connector = reactor.connectUNIX(socket_filename, factory,
+        connector = reactor.connectUNIX(socket_filename, self.__factory,
                                         timeout=3, checkPID=0)
         self.__connector = connector
         NodeSubscriber.__init__(self, [subscription])
@@ -65,6 +70,7 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
                 continue
             it = [ it for it in item.elements() if item.name == "item" ]
             if self.__connector.state == 'connected':
+                self.__factory.resetDelay()
                 if self.__backuptoempty:
                     while not unstockmessage(self.__filename, self.__connector.transport.write):
                         pass
