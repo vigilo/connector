@@ -60,7 +60,8 @@ class SocketToNodeForwarder(pubsub.PubSubClient, LineReceiver):
 
     def connectionInitialized(self):
         """ redefinition of the connectionInitialized function """
-        super(SocketToNodeForwarder, self).connectionInitialized()
+        #super(SocketToNodeForwarder, self).connectionInitialized()
+        pubsub.PubSubClient.connectionInitialized(self)
         if self.__port is not None:
             return
         self.__port = reactor.listenUNIX(self.__socket_filename, self.__factory)
