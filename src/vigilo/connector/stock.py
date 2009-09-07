@@ -26,9 +26,13 @@ def initializeDB(filename):
 def stockmessage(filename, msg):
     """ 
     function to stock the message on a DataBase 
-    return a boolean 
-    True if the insertion in the DB is OK
-    False otherwise
+    @param msg: The message to stock
+    @param filename: The filename of the DB used to stock message
+    @type  filename: C{str}
+    @type  msg: C{str}
+    return: True if the message was stocked, False otherwise
+    @raise e: when the sqlite library raise a sqlite.OperationalError.
+
     """
     table = settings['VIGILO_MESSAGE_BACKUP_TABLE']
     connection = sqlite.connect(filename)
@@ -55,8 +59,11 @@ def stockmessage(filename, msg):
 def unstockmessage(filename, function):
     """ 
     function to unstock the message on a DataBase
-    return a Boolean (base is empty ?)
-    the message unstocked is passed as argument of the function
+    @param function: The function to treat the message
+    @type  filename: C{str}
+    return: True if the DB is the database is empty, False otherwise
+    @raise e: When the sqlite library raise a sqlite.OperationalError or
+              sqlite.Error.
     """
     msg = None
     table = settings['VIGILO_MESSAGE_BACKUP_TABLE']

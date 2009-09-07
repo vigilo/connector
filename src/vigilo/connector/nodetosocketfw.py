@@ -49,7 +49,13 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
 
 
     def itemsReceived(self, event):
-        """ function to treat a received item """
+        """ 
+        function to treat a received item 
+        
+        @param event: event to treat
+        @type  event: xml object
+
+        """
         # See ItemsEvent
         #event.sender
         #event.recipient

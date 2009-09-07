@@ -61,6 +61,7 @@ class ConnectorServiceMaker(object):
         return root_service
 
 def daemonize():
+    """ Called to daemonize a program """
    
     from vigilo.common.conf import settings
     import daemon
@@ -102,9 +103,9 @@ def daemonize():
                 LOGGER.info(_('Removing stale pid file at %(pidfile)s (%(pid)d).') % 
                         {'pidfile': pidfile, 'pid': pid})
             
-            # never seen
-            print _("daemon mode ON (you should not see this message except in debug mode")
-            return main()
+    # never seen
+    print _("daemon mode ON (you should not see this message except in debug mode")
+    return main()
 
 def main():
 

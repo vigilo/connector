@@ -15,6 +15,7 @@ def text2xml(text):
     Called to return the XML from text message read from socket
     @param text: The text to convert
     @type  text: C{str}
+    return: xml object representing the text given as argument
     """
     elements = text.strip().split('|')
     if elements:
@@ -36,7 +37,12 @@ def text2xml(text):
 
 
 def event2xml(event_list):
-    """ Called to return the XML from event message list """
+    """ 
+    Called to return the XML from event message list 
+    @param event_list: list contening a event type message to convert
+    @type event_list: C{list}
+    @return: C{str} representing the event in xml format
+    """
 
     # to avoid error from message length
     if len(event_list) != 7:
@@ -64,7 +70,13 @@ def event2xml(event_list):
 
 
 def perf2xml(perf_list):
-    """ Called to return the XML from perf message list """
+    """ 
+    Called to return the XML from perf message list 
+    
+    @param perf_list: list contening a perf type message to convert
+    @type perf_list: C{list}
+    @return: C{str} representing the perf in xml format
+    """
 
     # to avoid error from message length
     if len(perf_list) != 5:
@@ -88,7 +100,13 @@ def perf2xml(perf_list):
     return message % dico
 
 def state2xml(state_list):
-    """ Called to return the XML from state message list """
+    """ 
+    Called to return the XML from state message list 
+    
+    @param perf_list: list contening a perf type message to convert
+    @type perf_list: C{list}
+    @return: C{str} representing the perf in xml format
+    """
     
     
     # to avoid error from message length
