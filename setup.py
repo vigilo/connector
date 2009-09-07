@@ -34,7 +34,7 @@ setup(name='vigilo-connector',
             ],
         entry_points={
             'console_scripts': [
-                'connector = vigilo.connector.main:main',
+                'connector = vigilo.connector.main:daemonize',
                 ],
             },
         package_dir={'': 'src'},
