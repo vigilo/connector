@@ -5,7 +5,7 @@ fi
 
 socket=$1
 if [ ! -n "$socket" ] ; then
-    socket="/var/lib/vigilo/recv.sock"
+    socket="/var/lib/vigilo/connector/recv.sock"
 fi
 
 if [ -S "$socket" ] ; then
