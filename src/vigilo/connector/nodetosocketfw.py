@@ -54,15 +54,13 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
         """
 
         # reset the reconnecting delay after a succesfull connection
-        #if self.__connector.state == 'connected':
-        if self.__connector and self.__connector.state == 'connected':
-            self.__factory.resetDelay()
-            if self.__backuptoempty:
-                while not unstockmessage(self.__filename, \
-                        self.messageForward):
-                    pass
-                self.__backuptoempty = False
-                sqlitevacuumDB(self.__filename)
+        self.__factory.resetDelay()
+        if self.__backuptoempty and self.__connector.state == 'connected':
+            while not unstockmessage(self.__filename, \
+                                     self.messageForward):
+                pass
+            self.__backuptoempty = False
+            sqlitevacuumDB(self.__filename)
     
     def buildProtocol(self, addr):
         """ Create an instance of a subclass of Protocol. """

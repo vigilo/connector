@@ -82,7 +82,6 @@ def unstockmessage(filename, function):
             cursor.execute('DELETE FROM %s WHERE id = ?' % table, (id_min,))
             connection.commit()
             function( msg.encode('utf8'))
-            print 'on a destocké'
         except sqlite.OperationalError, e:
             connection.rollback()
             if e.__str__() == "database is locked":
