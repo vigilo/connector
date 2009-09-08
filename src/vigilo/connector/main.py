@@ -3,7 +3,7 @@
 from __future__ import absolute_import, with_statement
 
 
-import os
+import os, sys
 from twisted.application import app, service
 from twisted.internet import reactor
 from twisted.words.protocols.jabber.jid import JID
@@ -93,18 +93,21 @@ def daemonize():
         if alreadyRunning :
             from vigilo.common.logging import get_logger
             LOGGER = get_logger(__name__)
-            LOGGER.warning(_('Already running, pid is %(pid)d.') % {'pid' : pid})
+            LOGGER.warning(_('Already running, pid is %(pid)d.') % \
+                           {'pid' : pid})
             return(1)
 
         with daemon.DaemonContext(detach_process=True, pidfile=pidfile):
             if stalepid:
                 from vigilo.common.logging import get_logger
                 LOGGER = get_logger(__name__)
-                LOGGER.info(_('Removing stale pid file at %(pidfile)s (%(pid)d).') % 
-                        {'pidfile': pidfile, 'pid': pid})
+                LOGGER.info(_('Removing stale pid file at %(pidfile)s ' + \
+                            '(%(pid)d).') % 
+                            {'pidfile': pidfile, 'pid': pid})
             
     # never seen
-    print _("daemon mode ON (you should not see this message except in debug mode")
+    print _("daemon mode ON (you should not see this message " + \
+            "except in debug mode")
     return main()
 
 def main():

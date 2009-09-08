@@ -18,7 +18,8 @@ def initializeDB(filename):
     connection = sqlite.connect(filename)
     cursor = connection.cursor()
     table = settings['VIGILO_MESSAGE_BACKUP_TABLE']
-    cursor.execute('CREATE TABLE IF NOT EXISTS %s (id INTEGER PRIMARY KEY, msg TXT)' % table)
+    cursor.execute('CREATE TABLE IF NOT EXISTS %s \
+                   (id INTEGER PRIMARY KEY, msg TXT)' % table)
     connection.commit()
     cursor.close()
     connection.close()
@@ -80,7 +81,8 @@ def unstockmessage(filename, function):
             msg = cursor.fetchone()[0]
             cursor.execute('DELETE FROM %s WHERE id = ?' % table, (id_min,))
             connection.commit()
-            function(msg.encode('utf8'))
+            function( msg.encode('utf8'))
+            print 'on a destocké'
         except sqlite.OperationalError, e:
             connection.rollback()
             if e.__str__() == "database is locked":
