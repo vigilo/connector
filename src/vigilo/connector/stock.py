@@ -13,18 +13,19 @@ from vigilo.common.gettext import translate
 _ = translate(__name__)
 
 
-def initializeDB(filename):
+def initializeDB(filename, tablelist):
     """ function to initialize the DB the first time """
     connection = sqlite.connect(filename)
     cursor = connection.cursor()
-    table = settings['VIGILO_MESSAGE_BACKUP_TABLE']
-    cursor.execute('CREATE TABLE IF NOT EXISTS %s \
-                   (id INTEGER PRIMARY KEY, msg TXT)' % table)
+    #table = settings['VIGILO_MESSAGE_BACKUP_TABLE']
+    for table in tablelist : 
+        cursor.execute('CREATE TABLE IF NOT EXISTS %s \
+                (id INTEGER PRIMARY KEY, msg TXT)' % table)
     connection.commit()
     cursor.close()
     connection.close()
 
-def stockmessage(filename, msg):
+def stockmessage(filename, msg, table):
     """ 
     function to stock the message on a DataBase 
     @param msg: The message to stock
@@ -35,7 +36,7 @@ def stockmessage(filename, msg):
     @raise e: when the sqlite library raise a sqlite.OperationalError.
 
     """
-    table = settings['VIGILO_MESSAGE_BACKUP_TABLE']
+    #table = settings['VIGILO_MESSAGE_BACKUP_TABLE']
     connection = sqlite.connect(filename)
     cursor = connection.cursor()
 
@@ -57,7 +58,7 @@ def stockmessage(filename, msg):
     return False
 
 
-def unstockmessage(filename, function):
+def unstockmessage(filename, function, table):
     """ 
     function to unstock the message on a DataBase
     @param function: The function to treat the message
@@ -67,7 +68,7 @@ def unstockmessage(filename, function):
               sqlite.Error.
     """
     msg = None
-    table = settings['VIGILO_MESSAGE_BACKUP_TABLE']
+    #table = settings['VIGILO_MESSAGE_BACKUP_TABLE']
     connection = sqlite.connect(filename)
     cursor = connection.cursor()
     cursor.execute('SELECT MIN(id) FROM %s' % table)

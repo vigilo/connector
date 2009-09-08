@@ -26,11 +26,13 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
     Forward Node to socket.
     """
 
-    def __init__(self, subscription, socket_filename, file_filename):
-        self.__filename = file_filename
-        initializeDB(self.__filename)
+    def __init__(self, subscription, socket_filename, dbfilename, table):
+        self.__dbfilename = dbfilename
+        self.__table = table
+
+        initializeDB(self.__dbfilename, [self.__table])
         self.__subscription = subscription
-        self.__backuptoempty = os.path.exists(file_filename) 
+        self.__backuptoempty = os.path.exists(self.__dbfilename) 
         # using ReconnectingClientFactory using a backoff retry 
         # (it try again and again with a delay incrising between attempt)
         self.__factory = twisted.internet.protocol.ReconnectingClientFactory()
@@ -56,11 +58,11 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
         # reset the reconnecting delay after a succesfull connection
         self.__factory.resetDelay()
         if self.__backuptoempty and self.__connector.state == 'connected':
-            while not unstockmessage(self.__filename, \
-                                     self.messageForward):
+            while not unstockmessage(self.__dbfilename, self.messageForward,
+                                     self.__table):
                 pass
             self.__backuptoempty = False
-            sqlitevacuumDB(self.__filename)
+            sqlitevacuumDB(self.__dbfilename)
     
     def buildProtocol(self, addr):
         """ Create an instance of a subclass of Protocol. """
@@ -112,6 +114,6 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
                     LOGGER.error(_('Message from BUS impossible to forward' + \
                             ' (socket not connected), the message is ' + \
                             'stocked for later reemission'))
-                    stockmessage(self.__filename, i.toXml().encode('utf8'))
+                    stockmessage(self.__dbfilename, i.toXml().encode('utf8'), self.__table)
                     self.__backuptoempty = True
 

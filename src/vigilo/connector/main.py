@@ -47,7 +47,8 @@ class ConnectorServiceMaker(object):
         if sw is not None:
             message_consumer = NodeToSocketForwarder(
                     connector_sub, sw,
-                    settings['VIGILO_MESSAGE_BACKUP_FILE'])
+                    settings['VIGILO_MESSAGE_BACKUP_FILE'],
+                    settings['VIGILO_MESSAGE_BACKUP_TABLE_FROMBUS'])
             message_consumer.setHandlerParent(xmpp_client)
 
         sr = settings.get('VIGILO_SOCKETR', None)
