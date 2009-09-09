@@ -6,39 +6,23 @@ Extends pubsub clients to compute Socket message
 
 from __future__ import absolute_import
 
-import twisted.internet.protocol
-from twisted.internet import reactor
+from twisted.internet import reactor, protocol
 from twisted.protocols.basic import LineReceiver
-from wokkel import pubsub
+from wokkel.pubsub import PubSubClient, Item
 
 from vigilo.connector import converttoxml 
+from vigilo.connector.stock import unstockmessage, stockmessage, \
+                initializeDB, sqlitevacuumDB
+import os
 
 
-class SocketToNodeForwarder(pubsub.PubSubClient, LineReceiver):
-    """
-    Publishes pubsub items from a socket.
-
-    Consumes serialized L{Pubsub.Item}s from a socket
-    and publishes to a pubsub topic node.
-    Forward Socket to Node
-    """
-
-    def __init__(self, socket_filename, subscription):
-        self.__subscription = subscription
-        self.__socket_filename = socket_filename
-        self.__factory = twisted.internet.protocol.Factory()
-        self.__factory.buildProtocol = self.buildProtocol
-        self.__port = None
-
-    def buildProtocol(self, addr):
-        """ redefinition of the LineReceiver protocol """
-        line_protocol = LineReceiver()
-        line_protocol.delimiter = '\n'
-        line_protocol.lineReceived = self.lineReceived
-        return line_protocol
+class Forwarder(LineReceiver):
+    """ TODO """
+    
+    delimiter = '\n'
 
     def lineReceived(self, line):
-        """ definition of the lineReceived function"""
+        """ redefinition of the lineReceived function"""
         
         if len(line) == 0:
             # empty line -> can't parse it
@@ -46,23 +30,48 @@ class SocketToNodeForwarder(pubsub.PubSubClient, LineReceiver):
 
         # already XML or not ?
         if line[0] != '<':
-            payload = converttoxml.text2xml(line)
+            strXml = converttoxml.text2xml(line)
         else:
-            payload = line
+            strXml = line
 
-        if payload is None:
+        if strXml is None:
             # Couldn't parse this line
             return
-        item = pubsub.Item(payload=payload)
-        self.publish(self.__subscription.service, 
-                     self.__subscription.node, [item])
+        self.factory.publishStrXml(strXml)
+
+
+class SocketToNodeForwarder(PubSubClient):
+
+    def __init__(self, socket_filename, subscription, dbfilename, table):
+        self.__dbfilename = dbfilename
+        self.__table = table
+
+        initializeDB(self.__dbfilename, [self.__table])
+        self.__subscription = subscription
+        self.__backuptoempty = os.path.exists(self.__dbfilename)
+        self.__factory = protocol.ServerFactory()
+
+        self.__connector = reactor.listenUNIX(socket_filename, self.__factory)
+        self.__factory.protocol = Forwarder
+        self.__factory.publishStrXml = self.publishStrXml
 
 
     def connectionInitialized(self):
-        """ redefinition of the connectionInitialized function """
-        #super(SocketToNodeForwarder, self).connectionInitialized()
-        pubsub.PubSubClient.connectionInitialized(self)
-        if self.__port is not None:
-            return
-        self.__port = reactor.listenUNIX(self.__socket_filename, self.__factory)
-
+        PubSubClient.connectionInitialized(self)
+        if self.__backuptoempty :
+            while not unstockmessage(self.__dbfilename, self.publishStrXml,
+                                     self.__table):
+                pass
+            self.__backuptoempty = False
+            sqlitevacuumDB(self.__dbfilename)
+        
+    def publishStrXml(self, strXml):
+        item = Item(payload=strXml)
+        try :
+            self.publish(self.__subscription.service, 
+                         self.__subscription.node, [item])
+        except AttributeError :
+            stockmessage(self.__dbfilename, strXml,
+                         self.__table)
+            self.__backuptoempty = True
+    

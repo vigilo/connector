@@ -26,7 +26,7 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
     Forward Node to socket.
     """
 
-    def __init__(self, subscription, socket_filename, dbfilename, table):
+    def __init__(self, socket_filename, subscription, dbfilename, table):
         self.__dbfilename = dbfilename
         self.__table = table
 

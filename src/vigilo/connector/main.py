@@ -46,7 +46,7 @@ class ConnectorServiceMaker(object):
         sw = settings.get('VIGILO_SOCKETW', None)
         if sw is not None:
             message_consumer = NodeToSocketForwarder(
-                    connector_sub, sw,
+                    sw, connector_sub,
                     settings['VIGILO_MESSAGE_BACKUP_FILE'],
                     settings['VIGILO_MESSAGE_BACKUP_TABLE_FROMBUS'])
             message_consumer.setHandlerParent(xmpp_client)
@@ -54,7 +54,9 @@ class ConnectorServiceMaker(object):
         sr = settings.get('VIGILO_SOCKETR', None)
         if sr is not None:
             message_publisher = SocketToNodeForwarder(
-                    sr, connector_sub)
+                    sr, connector_sub,
+                    settings['VIGILO_MESSAGE_BACKUP_FILE'],
+                     settings['VIGILO_MESSAGE_BACKUP_TABLE_TOBUS'])
             message_publisher.setHandlerParent(xmpp_client)
 
         root_service = service.MultiService()
