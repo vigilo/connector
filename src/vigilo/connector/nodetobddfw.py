@@ -56,9 +56,9 @@ def insertCorrEvent(xml):
     """
     Insert XML stream of correvent object into the database
     first, check that no other element exist with the same host/service
-        else, this is an update
+    else, this is an update
     The highlevel service et ip are static value and already in database
-        we don't use them
+    we don't use them
     """
 
     hostname, servicename = None, None
@@ -104,9 +104,9 @@ def updateCorrEvent(xml):
     """
     Update the database with the XML stream
     first, check that an other element exist with the same host/service
-        else, this is an insert
+    else, this is an insert
     The highlevel service et ip are static value and already in database
-        we don't use them
+    we don't use them
     """ 
     hostname, servicename = None, None
     for elm in xml.elements():

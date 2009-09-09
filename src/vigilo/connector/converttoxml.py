@@ -103,9 +103,9 @@ def state2xml(state_list):
     """ 
     Called to return the XML from state message list 
     
-    @param perf_list: list contening a perf type message to convert
-    @type perf_list: C{list}
-    @return: C{str} representing the perf in xml format
+    @param state_list: list contening a state type message to convert
+    @type state_list: C{list}
+    @return: C{str} representing the state in xml format
     """
     
     
