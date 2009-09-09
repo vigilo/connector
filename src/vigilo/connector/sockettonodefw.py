@@ -13,11 +13,16 @@ from wokkel.pubsub import PubSubClient, Item
 from vigilo.connector import converttoxml 
 from vigilo.connector.stock import unstockmessage, stockmessage, \
                 initializeDB, sqlitevacuumDB
+from vigilo.common.gettext import translate
+_ = translate(__name__)
+from vigilo.common.logging import get_logger
+LOGGER = get_logger(__name__)
+
 import os
 
 
 class Forwarder(LineReceiver):
-    """ TODO """
+    """ Protocol used for each line received from the socket """
     
     delimiter = '\n'
 
@@ -41,6 +46,10 @@ class Forwarder(LineReceiver):
 
 
 class SocketToNodeForwarder(PubSubClient):
+    """
+    Receives messages on the socket and passes them to the xmpp bus,
+    Forward socket to Node.
+    """
 
     def __init__(self, socket_filename, subscription, dbfilename, table):
         self.__dbfilename = dbfilename
@@ -57,6 +66,7 @@ class SocketToNodeForwarder(PubSubClient):
 
 
     def connectionInitialized(self):
+        """ redefinition of the function for flushing backup message """
         PubSubClient.connectionInitialized(self)
         if self.__backuptoempty :
             while not unstockmessage(self.__dbfilename, self.publishStrXml,
@@ -66,11 +76,16 @@ class SocketToNodeForwarder(PubSubClient):
             sqlitevacuumDB(self.__dbfilename)
         
     def publishStrXml(self, strXml):
+        """ function to publish a C{str} XML text to the node """
         item = Item(payload=strXml)
         try :
             self.publish(self.__subscription.service, 
                          self.__subscription.node, [item])
         except AttributeError :
+            LOGGER.error(_('Message from Socket impossible to forward' + \
+                           ' (XMPP BUS not connected), the message is' + \
+                           ' stocked for later reemission'))
+
             stockmessage(self.__dbfilename, strXml,
                          self.__table)
             self.__backuptoempty = True

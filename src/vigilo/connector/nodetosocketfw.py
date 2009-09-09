@@ -114,6 +114,7 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
                     LOGGER.error(_('Message from BUS impossible to forward' + \
                             ' (socket not connected), the message is ' + \
                             'stocked for later reemission'))
-                    stockmessage(self.__dbfilename, i.toXml().encode('utf8'), self.__table)
+                    stockmessage(self.__dbfilename, 
+                                 i.toXml().encode('utf8'), self.__table)
                     self.__backuptoempty = True
 
