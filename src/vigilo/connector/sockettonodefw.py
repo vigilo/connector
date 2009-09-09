@@ -85,8 +85,6 @@ class SocketToNodeForwarder(PubSubClient):
             LOGGER.error(_('Message from Socket impossible to forward' + \
                            ' (XMPP BUS not connected), the message is' + \
                            ' stocked for later reemission'))
-
-            stockmessage(self.__dbfilename, strXml,
-                         self.__table)
+            stockmessage(self.__dbfilename, strXml, self.__table)
             self.__backuptoempty = True
     
