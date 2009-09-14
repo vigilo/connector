@@ -10,7 +10,7 @@ import twisted.internet.protocol
 from vigilo.common.logging import get_logger
 from vigilo.pubsub import  NodeSubscriber
 from vigilo.models.session import DBSession
-from vigilo.models import State, Events
+from vigilo.models import State, Event
 
 from sqlalchemy import not_ , and_, desc
 from datetime import datetime
@@ -71,18 +71,18 @@ def insertCorrEvent(xml):
         LOGGER.debug( "Host or Service wrong")
         DBSession.rollback()
         return
-    event = DBSession.query(Events
-            ).filter(Events.hostname == hostname
-            ).filter(Events.servicename == servicename
-            ).filter(not_(and_(Events.active == False,
-                Events.status == 'AAClosed'))
-            ).filter(Events.timestamp_active != None
-            ).order_by(desc(Events.idevent))
+    event = DBSession.query(Event
+            ).filter(Event.hostname == hostname
+            ).filter(Event.servicename == servicename
+            ).filter(not_(and_(Event.active == False,
+                Event.status == 'AAClosed'))
+            ).filter(Event.timestamp_active != None
+            ).order_by(desc(Event.idevent))
     if event.count() != 0 :
         LOGGER.debug("Duplicate entry, we update it.")
         updateCorrEvent(xml)
         return
-    event = Events('','')
+    event = Event('','')
     for elm in xml.elements():
         if elm.name == 'timestamp':
             # if the timestamp is not a real integer
@@ -118,13 +118,13 @@ def updateCorrEvent(xml):
         LOGGER.debug( "Host or Service wrong")
         DBSession.rollback()
         return
-    event = DBSession.query(Events
-            ).filter(Events.hostname == hostname
-            ).filter(Events.servicename == servicename
-            ).filter(not_(and_(Events.active == False,
-                Events.status == 'AAClosed'))
-            ).filter(Events.timestamp_active != None
-            ).order_by(desc(Events.idevent))
+    event = DBSession.query(Event
+            ).filter(Event.hostname == hostname
+            ).filter(Event.servicename == servicename
+            ).filter(not_(and_(Event.active == False,
+                Event.status == 'AAClosed'))
+            ).filter(Event.timestamp_active != None
+            ).order_by(desc(Event.idevent))
     if event.count() == 0:
         LOGGER.debug( "Update query but not events in database with this " + \
                 "couple host, service. We create it." , event.count())
