@@ -10,6 +10,11 @@ from vigilo.common.gettext import translate
 
 _ = translate(__name__)
 
+NS_AGGR = 'http://www.projet-vigilo.org/xmlns/aggr1'
+NS_EVENT = 'http://www.projet-vigilo.org/xmlns/event1'
+NS_PERF = 'http://www.projet-vigilo.org/xmlns/perf1'
+NS_STATE = 'http://www.projet-vigilo.org/xmlns/state1'
+
 def text2xml(text):
     """ 
     Called to return the XML from text message read from socket
@@ -48,7 +53,7 @@ def event2xml(event_list):
     if len(event_list) != 7:
         return None
 
-    message = """<event xmlns="http://www.projet-vigilo.org/messages">
+    message = """<event xmlns="%(ns)s">
     <timestamp>%(timestamp)s</timestamp>
     <host>%(host)s</host>
     <ip>%(ip)s</ip>
@@ -58,7 +63,8 @@ def event2xml(event_list):
 </event>
 """
 
-    dico = { "timestamp": event_list[1], # MUST
+    dico = { "ns": NS_EVENT,
+             "timestamp": event_list[1], # MUST
              "host": event_list[2],      # MUST
              "ip": event_list[3],        # MAY
              "service": event_list[4],   # MAY
@@ -82,7 +88,7 @@ def perf2xml(perf_list):
     if len(perf_list) != 5:
         return None
 
-    message = """<perf xmlns="http://www.projet-vigilo.org/messages">
+    message = """<perf xmlns="%(ns)s">
     <timestamp>%(timestamp)s</timestamp>
     <host>%(host)s</host>
     <datasource>%(datasource)s</datasource>
@@ -91,7 +97,8 @@ def perf2xml(perf_list):
 """
 
 
-    dico = { "timestamp": perf_list[1],  # MUST
+    dico = { "ns": NS_PERF,
+             "timestamp": perf_list[1],  # MUST
              "host": perf_list[2],       # MUST
              "datasource": perf_list[3], # MUST
              "value": perf_list[4],      # MUST
@@ -113,7 +120,7 @@ def state2xml(state_list):
     if len(state_list) != 9:
         return None
     
-    message = """<state xmlns="http://www.projet-vigilo.org/messages">
+    message = """<state xmlns="%(ns)s">
     <timestamp>%(timestamp)s</timestamp>
     <host>%(host)s</host>
     <ip>%(ip)s</ip>
@@ -125,7 +132,8 @@ def state2xml(state_list):
 </state>
 """
 
-    dico = {"timestamp": state_list[1], # MUST
+    dico = {"ns": NS_STATE,
+            "timestamp": state_list[1], # MUST
             "host": state_list[2],      # MUST
             "ip": state_list[3],        # MAY
             "service": state_list[4],   # MUST
