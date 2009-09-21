@@ -79,15 +79,15 @@ def daemonize(pidfile=None):
 
         if pidfile.is_locked():
             pid = pidfile.read_pid()
-        try:
-            os.kill(pid, 0) # Just check if it exists
-        except OSError: # Stale PID
-            # Display a message before daemonization.
-            slatepid = True
-            pidfile.break_lock()
-        else:
-            # Display a message and don't daemonize.
-            alreadyRunning = True
+            try:
+                os.kill(pid, 0) # Just check if it exists
+            except OSError: # Stale PID
+                # Display a message before daemonization.
+                slatepid = True
+                pidfile.break_lock()
+            else:
+                # Display a message and don't daemonize.
+                alreadyRunning = True
 
     if alreadyRunning :
         from vigilo.common.logging import get_logger
@@ -106,6 +106,11 @@ def daemonize(pidfile=None):
 
 def main():
     """ main function designed to launch the program """
+    from vigilo.common.conf import settings
+    if settings.get('VIGILO_CONNECTOR_DAEMONIZE', False) == True:
+        with daemonize(settings.get('VIGILO_CONNECTOR_PIDFILE', None)):
+            pass
+
     application = service.Application('Twisted PubSub component')
     conn_service = ConnectorServiceMaker().makeService()
     conn_service.setServiceParent(application)
@@ -114,12 +119,6 @@ def main():
 
 
 if __name__ == '__main__':
-    from vigilo.common.conf import settings
-    if settings.get('VIGILO_CONNECTOR_DAEMONIZE', False) == True:
-        with daemonize(settings.get('VIGILO_CONNECTOR_PIDFILE', None)):
-            result = main()
-    else:
-        result = main()
-
+    result = main()
     sys.exit(result)
 

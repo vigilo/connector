@@ -1,6 +1,6 @@
 import logging
 LOGGING_PLUGINS = (
-        'vigilo.pubsub.logging',       
+#        'vigilo.pubsub.logging',       
         )
 LOGGING_SETTINGS = { 'level': logging.DEBUG, }
 LOGGING_LEVELS = {}
@@ -22,6 +22,7 @@ LOGGING_LEVELS = {
 
 
 VIGILO_CONNECTOR_DAEMONIZE = True
+#VIGILO_CONNECTOR_DAEMONIZE = False
 VIGILO_CONNECTOR_PIDFILE = '/var/lib/vigilo/connector/connector.pid'
 VIGILO_CONNECTOR_XMPP_SERVER_HOST = 'tburguie3'
 VIGILO_CONNECTOR_XMPP_PUBSUB_SERVICE = 'pubsub.tburguie3'

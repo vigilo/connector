@@ -24,6 +24,7 @@ setup(name='vigilo-connector',
             'vigilo-pubsub',
             'wokkel',
             'Twisted',
+            #'rrdtool',
             ],
         namespace_packages = [
             'vigilo',
@@ -34,7 +35,7 @@ setup(name='vigilo-connector',
             ],
         entry_points={
             'console_scripts': [
-                'connector = vigilo.connector.main:daemonize',
+                'connector = vigilo.connector.main:main',
                 ],
             },
         package_dir={'': 'src'},
