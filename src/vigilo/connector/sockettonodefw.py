@@ -36,14 +36,14 @@ class Forwarder(LineReceiver):
 
         # already XML or not ?
         if line[0] != '<':
-             Xml = converttoxml.text2xml(line)
+            xml = converttoxml.text2xml(line)
         else:
-            Xml = parseXml(line)
+            xml = parseXml(line)
 
-        if Xml is None:
+        if xml is None:
             # Couldn't parse this line
             return
-        self.factory.publishXml(Xml)
+        self.factory.publishXml(xml)
 
 
 class SocketToNodeForwarder(PubSubClient):
@@ -52,7 +52,9 @@ class SocketToNodeForwarder(PubSubClient):
     Forward socket to Node.
     """
 
-    def __init__(self, socket_filename, dbfilename, table, nodetopublish, service):
+    def __init__(self, socket_filename, dbfilename, table, 
+                 nodetopublish, service):
+        PubSubClient.__init__(self)
         self.__dbfilename = dbfilename
         self.__table = table
 
@@ -79,30 +81,30 @@ class SocketToNodeForwarder(PubSubClient):
                 elif msg == False:
                     continue
                 else:
-                    Xml = parseXml(msg)
-                    self.publishXml(Xml)
+                    xml = parseXml(msg)
+                    self.publishXml(xml)
                 
             self.__backuptoempty = False
             sqlitevacuumDB(self.__dbfilename)
         
-    def publishXml(self, Xml):
+    def publishXml(self, xml):
         """ function to publish a XML msg to node """
-        def eb(e, Xml):
+        def eb(e, xml):
             """errback"""
             LOGGER.error(_("errback publishStrXml %s") % e.__str__())
-            msg = Xml.toXml()
+            msg = xml.toXml()
             storemessage(self.__dbfilename, msg, self.__table)
             self.__backuptoempty = True
         
-        item = Item(payload=Xml)
-        node = self.__nodetopublish[Xml.name]
+        item = Item(payload=xml)
+        node = self.__nodetopublish[xml.name]
         try :
             result = self.publish(self.__service, node, [item])
-            result.addErrback(eb, Xml)
+            result.addErrback(eb, xml)
         except AttributeError :
             LOGGER.error(_('Message from Socket impossible to forward' + \
                            ' (XMPP BUS not connected), the message is' + \
                            ' stored for later reemission'))
-            msg = Xml.toXml()
+            msg = xml.toXml()
             storemessage(self.__dbfilename, msg, self.__table)
             self.__backuptoempty = True

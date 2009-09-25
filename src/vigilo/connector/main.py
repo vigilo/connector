@@ -23,7 +23,7 @@ class ConnectorServiceMaker(object):
         """ the service that wraps everything the connector needs. """ 
         from vigilo.connector.nodetosocketfw import NodeToSocketForwarder
         from vigilo.connector.sockettonodefw import SocketToNodeForwarder
-        from vigilo.pubsub import NodeOwner, Subscription
+        from vigilo.pubsub import NodeOwner 
         from vigilo.common.conf import settings
         xmpp_client = client.XMPPClient(
                 JID(settings['VIGILO_CONNECTOR_JID']),
@@ -37,10 +37,12 @@ class ConnectorServiceMaker(object):
 
         list_nodeOwner = settings.get('VIGILO_CONNECTOR_TOPIC_OWNER', [])
         list_nodeSubscriber = settings.get('VIGILO_CONNECTOR_TOPIC', [])
-        verifyNode = VerificationNode(list_nodeOwner, list_nodeSubscriber, doThings=True)
+        verifyNode = VerificationNode(list_nodeOwner, list_nodeSubscriber, 
+                                      doThings=True)
         verifyNode.setHandlerParent(xmpp_client)
         nodetopublish = settings.get('VIGILO_CONNECTOR_TOPIC_PUBLISHER', None)
-        _service = JID(settings.get('VIGILO_CONNECTOR_XMPP_PUBSUB_SERVICE', None))
+        _service = JID(settings.get('VIGILO_CONNECTOR_XMPP_PUBSUB_SERVICE',
+                                    None))
 
         sw = settings.get('VIGILO_SOCKETW', None)
         if sw is not None:
@@ -88,7 +90,7 @@ def daemonize(pidfile=None):
                 os.kill(pid, 0) # Just check if it exists
             except OSError: # Stale PID
                 # Display a message before daemonization.
-                slatepid = True
+                stalepid = True
                 pidfile.break_lock()
             else:
                 # Display a message and don't daemonize.

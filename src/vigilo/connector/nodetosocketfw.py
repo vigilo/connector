@@ -41,6 +41,7 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
 
 
     def __init__(self, socket_filename, dbfilename, table):
+        PubSubClient.__init__(self)
         self.__dbfilename = dbfilename
         self.__table = table
 
