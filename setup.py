@@ -26,6 +26,7 @@ setup(name='vigilo-connector',
             'wokkel',
             'Twisted',
             #'rrdtool',
+            'python-daemon',
             ],
         namespace_packages = [
             'vigilo',
