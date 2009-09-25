@@ -70,9 +70,14 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         # reset the reconnecting delay after a succesfull connection
         self.__factory.resetDelay()
         if self.__backuptoempty and self.__connector.state == 'connected':
-            while not unstoremessage(self.__dbfilename, self.messageForward,
-                                     self.__table):
-                pass
+            while True:
+                msg = unstoremessage(self.__dbfilename, self.__table)
+                if msg == True:
+                    break
+                elif msg == False:
+                    continue
+                else:
+                    self.messageForward(msg)
             self.__backuptoempty = False
             sqlitevacuumDB(self.__dbfilename)
     
