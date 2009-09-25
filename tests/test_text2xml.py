@@ -20,21 +20,21 @@ class TestSequenceFunctions(unittest.TestCase):
         dico = {'ns': NS_EVENT}
         
         # subfunction event2xml 
-        self.assertEqual("""<event xmlns='%(ns)s'><timestamp>1165939739</timestamp><host>serveur1.example.com</host><ip>192.168.0.1</ip><service>Load</service><state>CRITICAL</state><message>CRITICAL: load avg: 12 10 10</message></event>""" % dico, text2xml("""event|1165939739|serveur1.example.com|192.168.0.1|Load|CRITICAL|CRITICAL: load avg: 12 10 10"""))
+        self.assertEqual("""<event xmlns='%(ns)s'><timestamp>1165939739</timestamp><host>serveur1.example.com</host><ip>192.168.0.1</ip><service>Load</service><state>CRITICAL</state><message>CRITICAL: load avg: 12 10 10</message></event>""" % dico, text2xml("""event|1165939739|serveur1.example.com|192.168.0.1|Load|CRITICAL|CRITICAL: load avg: 12 10 10""").toXml())
 
     def test_perf2xml(self):
         """ Test the connector function perf2xml """
         dico = {'ns': NS_PERF}
 
         # subfunction perf2xml 
-        self.assertEqual("""<perf xmlns='%(ns)s'><timestamp>1165939739</timestamp><host>serveur1.example.com</host><datasource>Load</datasource><value>10</value></perf>""" % dico, text2xml("""perf|1165939739|serveur1.example.com|Load|10"""))
+        self.assertEqual("""<perf xmlns='%(ns)s'><timestamp>1165939739</timestamp><host>serveur1.example.com</host><datasource>Load</datasource><value>10</value></perf>""" % dico, text2xml("""perf|1165939739|serveur1.example.com|Load|10""").toXml())
 
     def test_state2xml(self):
         """ Test the connector function state2xml """
         dico = {'ns': NS_STATE}
 
         # subfunction state2xml 
-        self.assertEqual("""<state xmlns='%(ns)s'><timestamp>1239104006</timestamp><host>server.example.com</host><ip>192.168.1.1</ip><service>Load</service><statename>WARNING</statename><type>SOFT</type><attempt>2</attempt><message>WARNING: Load average is above 4 (4.5)</message></state>""" % dico, text2xml("""state|1239104006|server.example.com|192.168.1.1|Load|WARNING|SOFT|2|WARNING: Load average is above 4 (4.5)"""))
+        self.assertEqual("""<state xmlns='%(ns)s'><timestamp>1239104006</timestamp><host>server.example.com</host><ip>192.168.1.1</ip><service>Load</service><statename>WARNING</statename><type>SOFT</type><attempt>2</attempt><message>WARNING: Load average is above 4 (4.5)</message></state>""" % dico, text2xml("""state|1239104006|server.example.com|192.168.1.1|Load|WARNING|SOFT|2|WARNING: Load average is above 4 (4.5)""").toXml())
 
     def test_badinput2xml(self):
         """ Test the connector function text2xml with badinput"""
