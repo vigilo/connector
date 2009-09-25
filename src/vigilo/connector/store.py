@@ -1,6 +1,6 @@
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
 """
-function to stock message to a sqlite DataBase
+function to store message to a sqlite DataBase
 """
 from __future__ import absolute_import
 
@@ -17,7 +17,6 @@ def initializeDB(filename, tablelist):
     """ function to initialize the DB the first time """
     connection = sqlite.connect(filename)
     cursor = connection.cursor()
-    #table = settings['VIGILO_MESSAGE_BACKUP_TABLE']
     for table in tablelist : 
         cursor.execute('CREATE TABLE IF NOT EXISTS %s \
                 (id INTEGER PRIMARY KEY, msg TXT)' % table)
@@ -25,18 +24,17 @@ def initializeDB(filename, tablelist):
     cursor.close()
     connection.close()
 
-def stockmessage(filename, msg, table):
+def storemessage(filename, msg, table):
     """ 
-    function to stock the message on a DataBase 
-    @param msg: The message to stock
-    @param filename: The filename of the DB used to stock message
+    function to store the message on a DataBase 
+    @param msg: The message to store
+    @param filename: The filename of the DB used to store message
     @type  filename: C{str}
     @type  msg: C{str}
-    return: True if the message was stocked, False otherwise
+    return: True if the message was stored, False otherwise
     @raise e: when the sqlite library raise a sqlite.OperationalError.
 
     """
-    #table = settings['VIGILO_MESSAGE_BACKUP_TABLE']
     connection = sqlite.connect(filename)
     cursor = connection.cursor()
 
@@ -52,23 +50,22 @@ def stockmessage(filename, msg, table):
             cursor.close()
             connection.close()
             time.sleep(1)
-            return stockmessage(filename, msg)
+            return storemessage(filename, msg)
         else:
             raise e
     return False
 
 
-def unstockmessage(filename, function, table):
+def unstoremessage(filename, table):
     """ 
-    function to unstock the message on a DataBase
+    function to unstore the message on a DataBase
     @param function: The function to treat the message
     @type  filename: C{str}
-    return: True if the DB is the database is empty, False otherwise
+    return: True if the DB is the database is empty, the msg otherwise
     @raise e: When the sqlite library raise a sqlite.OperationalError or
               sqlite.Error.
     """
     msg = None
-    #table = settings['VIGILO_MESSAGE_BACKUP_TABLE']
     connection = sqlite.connect(filename)
     cursor = connection.cursor()
     cursor.execute('SELECT MIN(id) FROM %s' % table)
@@ -82,13 +79,13 @@ def unstockmessage(filename, function, table):
             msg = cursor.fetchone()[0]
             cursor.execute('DELETE FROM %s WHERE id = ?' % table, (id_min,))
             connection.commit()
-            function( msg.encode('utf8'))
+            return msg.encode('utf8')
         except sqlite.OperationalError, e:
             connection.rollback()
             if e.__str__() == "database is locked":
                 LOGGER.warning(_(e.__str__()))
-                time.sleep(1)
-                return unstockmessage(filename, function)
+                time.sleep(5)
+                return unstoremessage(filename, table)
             else: 
                 LOGGER.error(_(e.__str__()))
                 cursor.close()

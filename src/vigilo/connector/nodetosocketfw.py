@@ -10,9 +10,11 @@ from twisted.internet import reactor
 
 from vigilo.common.logging import get_logger
 from vigilo.pubsub import  NodeSubscriber
-from vigilo.connector.stock import unstockmessage, stockmessage, \
+from vigilo.connector.store import unstoremessage, storemessage, \
         initializeDB, sqlitevacuumDB
 import os
+from wokkel.pubsub import PubSubClient
+from wokkel import xmppim
 
 LOGGER = get_logger(__name__)
 
@@ -20,18 +22,29 @@ from vigilo.common.gettext import translate
 _ = translate(__name__)
 
 
-class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
+#class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
+class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
     """
     Receives messages on the xmpp bus, and passes them to the socket.
     Forward Node to socket.
     """
+    def connectionInitialized(self):
+        # Called when we are connected and authenticated
+        #super(NodeSubscriber, self).connectionInitialized()
+        PubSubClient.connectionInitialized(self)
+        
+        # There's probably a way to configure it (on_sub vs on_sub_and_presence)
+        # but the spec defaults to not sending subscriptions without presence.
+        self.send(xmppim.AvailablePresence())
+        LOGGER.info(_('ConnectionInitialized'))
 
-    def __init__(self, socket_filename, subscription, dbfilename, table):
+
+
+    def __init__(self, socket_filename, dbfilename, table):
         self.__dbfilename = dbfilename
         self.__table = table
 
         initializeDB(self.__dbfilename, [self.__table])
-        self.__subscription = subscription
         self.__backuptoempty = os.path.exists(self.__dbfilename) 
         # using ReconnectingClientFactory using a backoff retry 
         # (it try again and again with a delay incrising between attempt)
@@ -42,7 +55,6 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
         connector = reactor.connectUNIX(socket_filename, self.__factory,
                                         timeout=3, checkPID=0)
         self.__connector = connector
-        NodeSubscriber.__init__(self, [subscription])
 
     def connectionMade(self):
         """Called when a connection is made.
@@ -58,7 +70,7 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
         # reset the reconnecting delay after a succesfull connection
         self.__factory.resetDelay()
         if self.__backuptoempty and self.__connector.state == 'connected':
-            while not unstockmessage(self.__dbfilename, self.messageForward,
+            while not unstoremessage(self.__dbfilename, self.messageForward,
                                      self.__table):
                 pass
             self.__backuptoempty = False
@@ -84,11 +96,6 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
         @type  event: xml object
 
         """
-        # See ItemsEvent
-        #event.sender
-        #event.recipient
-        if event.nodeIdentifier != self.__subscription.node:
-            return
         #event.headers
         for item in event.items:
             # Item is a domish.IElement and a domish.Element
@@ -113,8 +120,8 @@ class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
                 for i in it:
                     LOGGER.error(_('Message from BUS impossible to forward' + \
                             ' (socket not connected), the message is ' + \
-                            'stocked for later reemission'))
-                    stockmessage(self.__dbfilename, 
+                            'stored for later reemission'))
+                    storemessage(self.__dbfilename, 
                                  i.toXml().encode('utf8'), self.__table)
                     self.__backuptoempty = True
 

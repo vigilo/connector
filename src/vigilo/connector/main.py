@@ -6,6 +6,7 @@ import os, sys
 from twisted.application import app, service
 from twisted.internet import reactor
 from twisted.words.protocols.jabber.jid import JID
+from vigilo.pubsub.checknode import VerificationNode
 
 from wokkel import client
 from vigilo.common.gettext import translate
@@ -34,15 +35,17 @@ class ConnectorServiceMaker(object):
         node_owner = NodeOwner()
         node_owner.setHandlerParent(xmpp_client)
 
-        connector_sub = Subscription(
-                JID(settings['VIGILO_CONNECTOR_XMPP_PUBSUB_SERVICE']),
-                settings['VIGILO_CONNECTOR_TOPIC'],
-                node_owner)
+        list_nodeOwner = settings.get('VIGILO_CONNECTOR_TOPIC_OWNER', [])
+        list_nodeSubscriber = settings.get('VIGILO_CONNECTOR_TOPIC', [])
+        verifyNode = VerificationNode(list_nodeOwner, list_nodeSubscriber, doThings=True)
+        verifyNode.setHandlerParent(xmpp_client)
+        nodetopublish = settings.get('VIGILO_CONNECTOR_TOPIC_PUBLISHER', None)
+        _service = JID(settings.get('VIGILO_CONNECTOR_XMPP_PUBSUB_SERVICE', None))
 
         sw = settings.get('VIGILO_SOCKETW', None)
         if sw is not None:
             message_consumer = NodeToSocketForwarder(
-                    sw, connector_sub,
+                    sw,
                     settings['VIGILO_MESSAGE_BACKUP_FILE'],
                     settings['VIGILO_MESSAGE_BACKUP_TABLE_FROMBUS'])
             message_consumer.setHandlerParent(xmpp_client)
@@ -50,9 +53,11 @@ class ConnectorServiceMaker(object):
         sr = settings.get('VIGILO_SOCKETR', None)
         if sr is not None:
             message_publisher = SocketToNodeForwarder(
-                    sr, connector_sub,
+                    sr,
                     settings['VIGILO_MESSAGE_BACKUP_FILE'],
-                    settings['VIGILO_MESSAGE_BACKUP_TABLE_TOBUS'])
+                    settings['VIGILO_MESSAGE_BACKUP_TABLE_TOBUS'],
+                    nodetopublish,
+                    _service)
             message_publisher.setHandlerParent(xmpp_client)
 
         root_service = service.MultiService()
