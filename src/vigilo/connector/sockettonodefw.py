@@ -8,6 +8,8 @@ from __future__ import absolute_import
 
 from twisted.internet import reactor, protocol
 from twisted.protocols.basic import LineReceiver
+from twisted.words.protocols.jabber.jid import JID
+from twisted.words.xish import domish
 from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
 
@@ -20,6 +22,8 @@ from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
 import os
+
+MESSAGEONETOONE = 'oneToOne'
 
 
 class Forwarder(LineReceiver):
@@ -43,7 +47,11 @@ class Forwarder(LineReceiver):
         if xml is None:
             # Couldn't parse this line
             return
-        self.factory.publishXml(xml)
+        if xml.name == MESSAGEONETOONE:
+            self.factory.sendOneToOneXml(xml)
+        else:
+            self.factory.publishXml(xml)
+
 
 
 class SocketToNodeForwarder(PubSubClient):
@@ -65,6 +73,7 @@ class SocketToNodeForwarder(PubSubClient):
         self.__connector = reactor.listenUNIX(socket_filename, self.__factory)
         self.__factory.protocol = Forwarder
         self.__factory.publishXml = self.publishXml
+        self.__factory.sendOneToOneXml = self.sendOneToOneXml
         self.__service = service
         self.__nodetopublish = nodetopublish
 
@@ -82,11 +91,29 @@ class SocketToNodeForwarder(PubSubClient):
                     continue
                 else:
                     xml = parseXml(msg)
-                    self.publishXml(xml)
+                    if xml.name == MESSAGEONETOONE:
+                        self.sendOneToOneXml(xml)
+                    else:
+                        self.publishXml(xml)
                 
             self.__backuptoempty = False
             sqlitevacuumDB(self.__dbfilename)
-        
+
+
+
+    def sendOneToOneXml(self, xml):
+        """ function to send a XML msg to a particular jabber user"""
+        # we need to send it to a particular receiver 
+        # il faut l'envoyer vers un destinataire en particulier
+        msg = domish.Element((None, "message"))
+        msg["to"] = xml['to']
+        msg["from"] = self.parent.jid.userhostJID().full()
+        msg["type"] = 'chat'
+        body = xml.firstChildElement()
+        msg.addElement("body", content=body)
+        self.send(msg)
+
+
     def publishXml(self, xml):
         """ function to publish a XML msg to node """
         def eb(e, xml):
@@ -94,10 +121,11 @@ class SocketToNodeForwarder(PubSubClient):
             LOGGER.error(_("errback publishStrXml %s") % e.__str__())
             msg = xml.toXml()
             storemessage(self.__dbfilename, msg, self.__table)
-            self.__backuptoempty = True
-        
+            self.__backuptoempty = True                                      
+
         item = Item(payload=xml)
         node = self.__nodetopublish[xml.name]
+        
         try :
             result = self.publish(self.__service, node, [item])
             result.addErrback(eb, xml)

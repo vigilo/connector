@@ -15,6 +15,7 @@ NS_AGGR = 'http://www.projet-vigilo.org/xmlns/aggr1'
 NS_EVENT = 'http://www.projet-vigilo.org/xmlns/event1'
 NS_PERF = 'http://www.projet-vigilo.org/xmlns/perf1'
 NS_STATE = 'http://www.projet-vigilo.org/xmlns/state1'
+MESSAGEONETOONE = 'oneToOne'
 
 def text2xml(text):
     """ 
@@ -23,26 +24,63 @@ def text2xml(text):
     @type  text: C{str}
     return: xml object (twisted.words.xish.domish.Element) 
             representing the text given as argument
+            or None in non convertible text
     """
     elements = text.strip().split('|')
     if elements:
         try:
+            enveloppe = None
+            msg = None
+            if len(elements) > 2 and elements[0] == MESSAGEONETOONE:
+                enveloppe = oneToOne2xml(elements[:2])
+                elements.pop(0)
+                elements.pop(0)
             if elements == ['']:
                 LOGGER.debug(_("empty line"))
-            if elements[0] == "event":
-                return event2xml(elements)
+            elif elements[0] == "event":
+                msg = event2xml(elements)
             elif elements[0] == "perf":
-                return perf2xml(elements)
+                msg =  perf2xml(elements)
             elif elements[0] == "state":
-                return state2xml(elements)
+                msg = state2xml(elements)
+            if enveloppe:
+                if msg:
+                    enveloppe.addChild(msg)
+                    return enveloppe
+                else:
+                    LOGGER.warning(_("unknown message type: '%s'") % 
+                                   elements[0])
+            return msg
+
         except (TypeError, AttributeError), e:
             print e.__str__()
-            LOGGER.warning(_("unknown message type: %s") % elements[0])
+            LOGGER.warning(_("unknown message type: '%s'") % elements[0])
             return None
 
     LOGGER.warning(_("unknown message type"))
     return None
 
+def oneToOne2xml(onetoone_list):
+    """ 
+    Called to return the XML from MESSAGEONETOONE message list 
+    @param event_list: list contenning a MESSAGEONETOONE type message to convert
+    @type event_list: C{list}
+    @return: C{str} representing the MESSAGEONETOONE message in xml format
+    """
+
+    # to avoid error from message length
+    if len(onetoone_list) != 2:
+        return None
+    # email regexp pattern
+    # (\W+@\W+(?:\.\W+)+)
+    # (<)?(\w+@\w+(?:\.\w+)+)(?(1)>)
+
+    
+
+
+    msg = domish.Element((None, MESSAGEONETOONE))
+    msg['to'] = onetoone_list[1]
+    return msg
 
 def event2xml(event_list):
     """ 

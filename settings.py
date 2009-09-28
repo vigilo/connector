@@ -32,7 +32,7 @@ VIGILO_CONNECTOR_JID = 'connectorx@tburguie3'
 VIGILO_CONNECTOR_PASS = 'connectorx'
 
 # listen on this node (écoute de ce noeud)
-VIGILO_CONNECTOR_TOPIC = ['/home/tburguie3/connectorx/BUS']
+#VIGILO_CONNECTOR_TOPIC = ['/home/tburguie3/connectorx/BUS']
 # create this node (créer ce noeud)
 VIGILO_CONNECTOR_TOPIC_OWNER = ['/home/tburguie3/connectorx/BUS']
 # publish on those node (publier sur ces noeuds)

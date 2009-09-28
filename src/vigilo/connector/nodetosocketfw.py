@@ -22,7 +22,6 @@ from vigilo.common.gettext import translate
 _ = translate(__name__)
 
 
-#class NodeToSocketForwarder(NodeSubscriber, twisted.internet.protocol.Protocol):
 class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
     """
     Receives messages on the xmpp bus, and passes them to the socket.
