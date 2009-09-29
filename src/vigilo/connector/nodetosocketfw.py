@@ -21,7 +21,6 @@ LOGGER = get_logger(__name__)
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
-
 class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
     """
     Receives messages on the xmpp bus, and passes them to the socket.
@@ -31,6 +30,9 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         # Called when we are connected and authenticated
         #super(NodeSubscriber, self).connectionInitialized()
         PubSubClient.connectionInitialized(self)
+        # add an observer to deal with chat message (oneToOne message)
+        self.xmlstream.addObserver("/message[@type='chat']", self.chatReceived)
+
         
         # There's probably a way to configure it (on_sub vs on_sub_and_presence)
         # but the spec defaults to not sending subscriptions without presence.
@@ -93,6 +95,42 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         """
         self.__connector.transport.write(msg + '\n')
 
+    def chatReceived(self, msg):
+        """ 
+        function to treat a received chat message 
+        
+        @param msg: msg to treat
+        @type  msg: Xml object
+
+        """
+        # It should only be one body
+        # Il ne devrait y avoir qu'un seul corps de message (body)
+        bodys = [element for element in msg.elements()
+                         if element.name in ('body',)]
+
+        if self.__connector.state == 'connected':
+            for b in bodys:
+                # the data we need is just underneath
+                # les données dont on a besoin sont juste en dessous
+                for data in b.elements():
+                    LOGGER.debug(_('Message from chat message to forward: ' +
+                                   '%s') %
+                                   data.toXml().encode('utf8'))
+                    self.messageForward(data.toXml().encode('utf8'))
+        else:
+            for b in bodys:
+                # the data we need is just underneath
+                # les données dont on a besoin sont juste en dessous
+                for data in b.elements():
+                    LOGGER.error(_('Message from chat message impossible to' +
+                                   ' forward (socket not connected), the me' +
+                                   'ssage is stored for later reemission'))
+                    storemessage(self.__dbfilename, 
+                            data.toXml().encode('utf8'), self.__table)
+                    self.__backuptoempty = True
+
+
+    
     def itemsReceived(self, event):
         """ 
         function to treat a received item 

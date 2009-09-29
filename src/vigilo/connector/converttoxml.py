@@ -2,7 +2,6 @@
 """
 function to convert text to XML
 """
-from wokkel.generic import parseXml
 from twisted.words.xish import domish
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
