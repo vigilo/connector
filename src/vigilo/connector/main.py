@@ -2,11 +2,10 @@
 """ Connector Pubsub client. """
 from __future__ import absolute_import, with_statement
 
-import os, sys
 from twisted.application import app, service
 from twisted.internet import reactor
 from twisted.words.protocols.jabber.jid import JID
-from vigilo.pubsub.checknode import VerificationNode
+
 
 from wokkel import client
 from vigilo.common.gettext import translate
@@ -24,6 +23,7 @@ class ConnectorServiceMaker(object):
         from vigilo.connector.nodetosocketfw import NodeToSocketForwarder
         from vigilo.connector.sockettonodefw import SocketToNodeForwarder
         from vigilo.pubsub import NodeOwner 
+        from vigilo.pubsub.checknode import VerificationNode
         from vigilo.common.conf import settings
         xmpp_client = client.XMPPClient(
                 JID(settings['VIGILO_CONNECTOR_JID']),
@@ -66,66 +66,23 @@ class ConnectorServiceMaker(object):
         xmpp_client.setServiceParent(root_service)
         return root_service
 
-
-def daemonize(pidfile=None):
-    """
-    Call this method to daemonize a program.
-    
-    @param pidfile: The name of the file where the daemon's PID will be stored.
-    @type pidfile: C{str}
-    """
-
-    import daemon
-    import daemon.pidlockfile
-
-    stalepid = False
-    alreadyRunning = False
-
-    if pidfile is not None:
-        pidfile = daemon.pidlockfile.PIDLockFile(pidfile)
-
-        if pidfile.is_locked():
-            pid = pidfile.read_pid()
-            try:
-                os.kill(pid, 0) # Just check if it exists
-            except OSError: # Stale PID
-                # Display a message before daemonization.
-                stalepid = True
-                pidfile.break_lock()
-            else:
-                # Display a message and don't daemonize.
-                alreadyRunning = True
-
-    if alreadyRunning :
-        from vigilo.common.logging import get_logger
-        LOGGER = get_logger(__name__)
-        LOGGER.warning(_('Already running, pid is %(pid)d.') % {'pid' : pid})
-        sys.exit(1)
-
-    if stalepid:
-        from vigilo.common.logging import get_logger
-        LOGGER = get_logger(__name__)
-        LOGGER.info(_('Removing stale pid file at %(pidfile)s (%(pid)d).') % 
-                {'pidfile': pidfile, 'pid': pid})
-
-    return daemon.DaemonContext(detach_process=True, pidfile=pidfile)
-
-
-def main():
+def do_main_programm():
     """ main function designed to launch the program """
-    from vigilo.common.conf import settings
-    if settings.get('VIGILO_CONNECTOR_DAEMONIZE', False) == True:
-        with daemonize(settings.get('VIGILO_CONNECTOR_PIDFILE', None)):
-            pass
-
     application = service.Application('Twisted PubSub component')
     conn_service = ConnectorServiceMaker().makeService()
     conn_service.setServiceParent(application)
     app.startApplication(application, False)
     reactor.run()
 
+def main():
+    """ main function designed to launch the program """
+
+    from vigilo.common.daemonize import daemonize
+    context = daemonize()
+    with context:
+        do_main_programm()
+
 
 if __name__ == '__main__':
-    result = main()
-    sys.exit(result)
+    main()
 

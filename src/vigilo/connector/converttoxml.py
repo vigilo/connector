@@ -47,13 +47,13 @@ def text2xml(text):
                     enveloppe.addChild(msg)
                     return enveloppe
                 else:
-                    LOGGER.warning(_("unknown message type: '%s'") % 
-                                   elements[0])
+                    LOGGER.warning(_("unknown/malformed message " +
+                        "(type: '%s')") % elements[0])
             return msg
 
-        except (TypeError, AttributeError), e:
-            print e.__str__()
-            LOGGER.warning(_("unknown message type: '%s'") % elements[0])
+        except (TypeError, AttributeError):
+            LOGGER.warning(_("unknown/malformed message " +
+                "(type: '%s')") % elements[0])
             return None
 
     LOGGER.warning(_("unknown message type"))

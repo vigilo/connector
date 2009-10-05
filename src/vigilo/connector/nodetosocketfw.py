@@ -27,6 +27,12 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
     Forward Node to socket.
     """
     def connectionInitialized(self):
+        """
+        redefinition in order to add :
+            - new observer for message type=chat;
+            - sending presence.
+
+        """
         # Called when we are connected and authenticated
         #super(NodeSubscriber, self).connectionInitialized()
         PubSubClient.connectionInitialized(self)

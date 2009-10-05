@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 from sqlite3 import dbapi2 as sqlite
 import time
-from vigilo.common.conf import settings
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 from vigilo.common.gettext import translate
