@@ -12,6 +12,83 @@ from vigilo.common.gettext import translate
 _ = translate(__name__)
 
 
+class DbRetry(object):
+    def __init__(self, filename, tablelist):
+        self.__connection = sqlite.connect(filename)
+        cursor = self.__connection.cursor()
+        for table in tablelist:
+            cursor.execute('CREATE TABLE IF NOT EXISTS %s \
+                    (id INTEGER PRIMARY KEY, msg TXT)' % table)
+        self.__connection.commit()
+        cursor.close()
+
+    def __del__(self):
+        self.__connection.close()
+
+    def store(self, msg):
+        cursor = self.__connection.cursor()
+
+        try:
+            cursor.execute('INSERT INTO %s VALUES (null, ?)' % table, (msg,))
+            self.__connection.commit()
+            cursor.close()
+            return True
+
+        except sqlite.OperationalError, e:
+            self.__connection.rollback()
+            cursor.close()
+
+            if e.__str__() == "database is locked":
+                time.sleep(1)
+                return self.store(msg)
+            else:
+                raise e
+        return False
+
+    def unstore(self):
+        msg = None
+        cursor = self.__connection.cursor()
+        cursor.execute('SELECT MIN(id) FROM %s' % table)
+        id_min = cursor.fetchone()[0]
+        empty = True
+        
+        if id_min:
+            empty = False
+            try:
+                cursor.execute('SELECT msg FROM %s WHERE id = ?' % table, (id_min,))
+                msg = cursor.fetchone()[0]
+                cursor.execute('DELETE FROM %s WHERE id = ?' % table, (id_min,))
+                self.__connection.commit()
+                cursor.close()
+                return msg.encode('utf8')
+ 
+            except sqlite.OperationalError, e:
+                self.__connection.rollback()
+                cursor.close()
+
+                if e.__str__() == "database is locked":
+                    LOGGER.warning(_(e.__str__()))
+                    time.sleep(5)
+                    return self.unstoremessage()
+                else:
+                    LOGGER.error(_(e.__str__()))
+                    raise e
+ 
+            except sqlite.Error, e:
+                self.__connection.rollback()
+                cursor.close()
+                LOGGER.warning(_(e.__str__()))
+
+        cursor.close()
+        return empty
+
+    def vacuum(self):
+        cursor = self.__connection.cursor()
+        cursor.execute('VACUUM')
+        self.__connection.commit()
+        cursor.close()
+
+
 def initializeDB(filename, tablelist):
     """ function to initialize the DB the first time """
     connection = sqlite.connect(filename)
