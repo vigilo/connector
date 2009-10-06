@@ -13,12 +13,12 @@ _ = translate(__name__)
 
 
 class DbRetry(object):
-    def __init__(self, filename, tablelist):
+    def __init__(self, filename, table):
+        self.__table = table
         self.__connection = sqlite.connect(filename)
         cursor = self.__connection.cursor()
-        for table in tablelist:
-            cursor.execute('CREATE TABLE IF NOT EXISTS %s \
-                    (id INTEGER PRIMARY KEY, msg TXT)' % table)
+        cursor.execute('CREATE TABLE IF NOT EXISTS %s \
+                (id INTEGER PRIMARY KEY, msg TXT)' % table)
         self.__connection.commit()
         cursor.close()
 
@@ -29,7 +29,8 @@ class DbRetry(object):
         cursor = self.__connection.cursor()
 
         try:
-            cursor.execute('INSERT INTO %s VALUES (null, ?)' % table, (msg,))
+            cursor.execute('INSERT INTO %s VALUES (null, ?)' %
+                self.__table, (msg,))
             self.__connection.commit()
             cursor.close()
             return True
@@ -48,16 +49,18 @@ class DbRetry(object):
     def unstore(self):
         msg = None
         cursor = self.__connection.cursor()
-        cursor.execute('SELECT MIN(id) FROM %s' % table)
+        cursor.execute('SELECT MIN(id) FROM %s' % self.__table)
         id_min = cursor.fetchone()[0]
         empty = True
         
         if id_min:
             empty = False
             try:
-                cursor.execute('SELECT msg FROM %s WHERE id = ?' % table, (id_min,))
+                cursor.execute('SELECT msg FROM %s WHERE id = ?' %
+                    self.__table, (id_min,))
                 msg = cursor.fetchone()[0]
-                cursor.execute('DELETE FROM %s WHERE id = ?' % table, (id_min,))
+                cursor.execute('DELETE FROM %s WHERE id = ?' %
+                    self.__table, (id_min,))
                 self.__connection.commit()
                 cursor.close()
                 return msg.encode('utf8')
