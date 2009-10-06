@@ -32,9 +32,6 @@ class ConnectorServiceMaker(object):
         xmpp_client.logTraffic = True
         xmpp_client.setName('xmpp_client')
 
-        node_owner = NodeOwner()
-        node_owner.setHandlerParent(xmpp_client)
-
         list_nodeOwner = settings.get('VIGILO_CONNECTOR_TOPIC_OWNER', [])
         list_nodeSubscriber = settings.get('VIGILO_CONNECTOR_TOPIC', [])
         verifyNode = VerificationNode(list_nodeOwner, list_nodeSubscriber, 
