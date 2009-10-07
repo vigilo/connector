@@ -18,28 +18,25 @@ LOGGING_LEVELS = {
         'multiprocessing': logging.DEBUG,
         'twisted': logging.DEBUG,
         'vigilo.pubsub': logging.DEBUG,
-        'vigilo.connector': logging.INFO,
+        'vigilo.connector': logging.DEBUG,
     }
 
 
-VIGILO_CONNECTOR_DAEMONIZE = True
-VIGILO_CONNECTOR_DAEMONIZE = False
-VIGILO_CONNECTOR_PIDFILE = '/var/lib/vigilo/connector/connector.pid'
-VIGILO_CONNECTOR_XMPP_SERVER_HOST = 'tburguie3'
-VIGILO_CONNECTOR_XMPP_PUBSUB_SERVICE = 'pubsub.tburguie3'
+VIGILO_CONNECTOR_XMPP_SERVER_HOST = 'vigilo-dev'
+VIGILO_CONNECTOR_XMPP_PUBSUB_SERVICE = 'pubsub.localhost'
 # Respect the ejabberd namespacing, for now. It will be too restrictive soon.
-VIGILO_CONNECTOR_JID = 'connectorx@tburguie3'
+VIGILO_CONNECTOR_JID = 'connectorx@localhost'
 VIGILO_CONNECTOR_PASS = 'connectorx'
 
 # listen on this node (écoute de ce noeud)
-#VIGILO_CONNECTOR_TOPIC = ['/home/tburguie3/connectorx/BUS']
+VIGILO_CONNECTOR_TOPIC = ['/home/localhost/connectorx/BUS']
 # create this node (créer ce noeud)
-VIGILO_CONNECTOR_TOPIC_OWNER = ['/home/tburguie3/connectorx/BUS']
+VIGILO_CONNECTOR_TOPIC_OWNER = ['/home/localhost/connectorx/BUS']
 # publish on those node (publier sur ces noeuds)
 VIGILO_CONNECTOR_TOPIC_PUBLISHER = { 
-        'perf': '/home/tburguie3/connectorx/BUS',
-        'state': '/home/tburguie3/connectorx/BUS',
-        'event': '/home/tburguie3/connectorx/BUS',
+        'perf': '/home/localhost/connectorx/BUS',
+        'state': '/home/localhost/connectorx/BUS',
+        'event': '/home/localhost/connectorx/BUS',
         }
 
 VIGILO_SOCKETW = '/var/lib/vigilo/connector/recv.sock'
