@@ -121,7 +121,11 @@ class SocketToNodeForwarder(PubSubClient):
         msg.addElement("body", content=body)
         # if not connected store the message
         if self.xmlstream is None:
-            self.retry.store(msg.toXml().encode('utf8'))
+            LOGGER.error(_('Message from Socket impossible to forward' + \
+                           ' (no connection to XMPP server), the mess' + \
+                           'age is stored for later reemission'))
+            self.retry.store(xml.toXml().encode('utf8'))
+            self.__backuptoempty = True 
         else:
             self.send(msg)
 
@@ -131,6 +135,9 @@ class SocketToNodeForwarder(PubSubClient):
         """ function to publish a XML msg to node """
         # if not connected store the message
         if self.xmlstream is None:
+            LOGGER.error(_('Message from Socket impossible to forward' + \
+                           ' (no connection to XMPP server), the mess' + \
+                           'age is stored for later reemission'))
             self.retry.store(xml.toXml().encode('utf8'))
             return
 
@@ -138,7 +145,7 @@ class SocketToNodeForwarder(PubSubClient):
             """errback"""
             LOGGER.error(_("errback publishStrXml %s") % e.__str__())
             self.retry.store(xml.toXml().encode('utf8'))
-            self.__backuptoempty = True                                      
+            self.__backuptoempty = True 
 
         item = Item(payload=xml)
         node = self.__nodetopublish[xml.name]
@@ -147,7 +154,7 @@ class SocketToNodeForwarder(PubSubClient):
             result.addErrback(eb, xml)
         except AttributeError :
             LOGGER.error(_('Message from Socket impossible to forward' + \
-                           ' (XMPP BUS not connected), the message is' + \
-                           ' stored for later reemission'))
+                           ' (no connection to XMPP server), the mess' + \
+                           'age is stored for later reemission'))
             self.retry.store(xml.toXml().encode('utf8'))
             self.__backuptoempty = True

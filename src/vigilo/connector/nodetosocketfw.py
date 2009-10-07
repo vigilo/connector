@@ -168,9 +168,9 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
                     self.messageForward(i.toXml().encode('utf8'))
             else:
                 for i in it:
-                    LOGGER.error(_('Message from BUS impossible to forward' + \
-                            ' (socket not connected), the message is ' + \
-                            'stored for later reemission'))
+                    LOGGER.error(_('Message from BUS impossible to' +
+                                   ' forward (socket not connected), the me' +
+                                   'ssage is stored for later reemission'))
                     self.retry.store(i.toXml().encode('utf8'))
                     self.__backuptoempty = True
 
