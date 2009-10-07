@@ -12,10 +12,10 @@ from twisted.words.protocols.jabber.jid import JID
 from twisted.words.xish import domish
 from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
+from wokkel import xmppim
 
 from vigilo.connector import converttoxml 
-from vigilo.connector.store import unstoremessage, storemessage, \
-                initializeDB, sqlitevacuumDB
+from vigilo.connector.store import DbRetry
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 from vigilo.common.logging import get_logger
@@ -60,14 +60,12 @@ class SocketToNodeForwarder(PubSubClient):
     Forward socket to Node.
     """
 
-    def __init__(self, socket_filename, dbfilename, table, 
+    def __init__(self, socket_filename, dbfilename, dbtable, 
                  nodetopublish, service):
         PubSubClient.__init__(self)
-        self.__dbfilename = dbfilename
-        self.__table = table
+        self.retry = DbRetry(dbfilename, dbtable)
+        self.__backuptoempty = os.path.exists(dbfilename)
 
-        initializeDB(self.__dbfilename, [self.__table])
-        self.__backuptoempty = os.path.exists(self.__dbfilename)
         self.__factory = protocol.ServerFactory()
 
         self.__connector = reactor.listenUNIX(socket_filename, self.__factory)
@@ -78,13 +76,14 @@ class SocketToNodeForwarder(PubSubClient):
         self.__nodetopublish = nodetopublish
 
 
-    def connectionInitialized(self):
-        """ redefinition of the function for flushing backup message """
-        PubSubClient.connectionInitialized(self)
-        LOGGER.info(_('ConnectionInitialized'))
-        if self.__backuptoempty :
+    def sendQueuedMessages(self):
+        """
+        Called to send Message previously stored
+        """
+        if self.__backuptoempty:
+            # XXX Ce code peut potentiellement boucler indéfiniment...
             while True:
-                msg = unstoremessage(self.__dbfilename, self.__table)
+                msg = self.retry.unstore()
                 if msg == True:
                     break
                 elif msg == False:
@@ -95,10 +94,19 @@ class SocketToNodeForwarder(PubSubClient):
                         self.sendOneToOneXml(xml)
                     else:
                         self.publishXml(xml)
-                
-            self.__backuptoempty = False
-            sqlitevacuumDB(self.__dbfilename)
 
+            self.__backuptoempty = False
+            self.retry.vacuum()
+
+
+    def connectionInitialized(self):
+        """ redefinition of the function for flushing backup message """
+        PubSubClient.connectionInitialized(self)
+        # There's probably a way to configure it (on_sub vs on_sub_and_presence)
+        # but the spec defaults to not sending subscriptions without presence.
+        self.send(xmppim.AvailablePresence())
+        LOGGER.info(_('ConnectionInitialized'))
+        self.sendQueuedMessages()
 
 
     def sendOneToOneXml(self, xml):
@@ -111,21 +119,29 @@ class SocketToNodeForwarder(PubSubClient):
         msg["type"] = 'chat'
         body = xml.firstChildElement()
         msg.addElement("body", content=body)
-        self.send(msg)
+        # if not connected store the message
+        if self.xmlstream is None:
+            self.retry.store(msg.toXml().encode('utf8'))
+        else:
+            self.send(msg)
+
 
 
     def publishXml(self, xml):
         """ function to publish a XML msg to node """
+        # if not connected store the message
+        if self.xmlstream is None:
+            self.retry.store(xml.toXml().encode('utf8'))
+            return
+
         def eb(e, xml):
             """errback"""
             LOGGER.error(_("errback publishStrXml %s") % e.__str__())
-            msg = xml.toXml()
-            storemessage(self.__dbfilename, msg, self.__table)
+            self.retry.store(xml.toXml().encode('utf8'))
             self.__backuptoempty = True                                      
 
         item = Item(payload=xml)
         node = self.__nodetopublish[xml.name]
-        
         try :
             result = self.publish(self.__service, node, [item])
             result.addErrback(eb, xml)
@@ -133,6 +149,5 @@ class SocketToNodeForwarder(PubSubClient):
             LOGGER.error(_('Message from Socket impossible to forward' + \
                            ' (XMPP BUS not connected), the message is' + \
                            ' stored for later reemission'))
-            msg = xml.toXml()
-            storemessage(self.__dbfilename, msg, self.__table)
+            self.retry.store(xml.toXml().encode('utf8'))
             self.__backuptoempty = True

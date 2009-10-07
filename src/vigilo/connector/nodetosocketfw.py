@@ -9,9 +9,7 @@ import twisted.internet.protocol
 from twisted.internet import reactor
 
 from vigilo.common.logging import get_logger
-from vigilo.pubsub import  NodeSubscriber
-from vigilo.connector.store import unstoremessage, storemessage, \
-        initializeDB, sqlitevacuumDB
+from vigilo.connector.store import DbRetry
 import os
 from wokkel.pubsub import PubSubClient
 from wokkel import xmppim
@@ -34,7 +32,6 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
 
         """
         # Called when we are connected and authenticated
-        #super(NodeSubscriber, self).connectionInitialized()
         PubSubClient.connectionInitialized(self)
         # add an observer to deal with chat message (oneToOne message)
         self.xmlstream.addObserver("/message[@type='chat']", self.chatReceived)
@@ -47,22 +44,37 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
 
 
 
-    def __init__(self, socket_filename, dbfilename, table):
+    def __init__(self, socket_filename, dbfilename, dbtable):
         PubSubClient.__init__(self)
-        self.__dbfilename = dbfilename
-        self.__table = table
-
-        initializeDB(self.__dbfilename, [self.__table])
-        self.__backuptoempty = os.path.exists(self.__dbfilename) 
+        self.retry = DbRetry(dbfilename, dbtable)
+        self.__backuptoempty = os.path.exists(dbfilename) 
         # using ReconnectingClientFactory using a backoff retry 
         # (it try again and again with a delay incrising between attempt)
         self.__factory = twisted.internet.protocol.ReconnectingClientFactory()
 
         self.__factory.buildProtocol = self.buildProtocol
-        #creation socket
+        # creation socket
         connector = reactor.connectUNIX(socket_filename, self.__factory,
                                         timeout=3, checkPID=0)
         self.__connector = connector
+
+    def sendQueuedMessages(self):
+        """
+        Called to send Message previously stored
+        """
+        if self.__backuptoempty:
+            # XXX Ce code peut potentiellement boucler indéfiniment...
+            while True:
+                msg = self.retry.unstore()
+                if msg == True:
+                    break
+                elif msg == False:
+                    continue
+                else:
+                    self.messageForward(msg)
+            self.__backuptoempty = False
+            self.retry.vacuum()
+
 
     def connectionMade(self):
         """Called when a connection is made.
@@ -77,17 +89,7 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
 
         # reset the reconnecting delay after a succesfull connection
         self.__factory.resetDelay()
-        if self.__backuptoempty and self.__connector.state == 'connected':
-            while True:
-                msg = unstoremessage(self.__dbfilename, self.__table)
-                if msg == True:
-                    break
-                elif msg == False:
-                    continue
-                else:
-                    self.messageForward(msg)
-            self.__backuptoempty = False
-            sqlitevacuumDB(self.__dbfilename)
+        self.sendQueuedMessages()
     
     def buildProtocol(self, addr):
         """ Create an instance of a subclass of Protocol. """
@@ -131,8 +133,7 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
                     LOGGER.error(_('Message from chat message impossible to' +
                                    ' forward (socket not connected), the me' +
                                    'ssage is stored for later reemission'))
-                    storemessage(self.__dbfilename, 
-                            data.toXml().encode('utf8'), self.__table)
+                    self.retry.store(data.toXml().encode('utf8'))
                     self.__backuptoempty = True
 
 
@@ -170,7 +171,6 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
                     LOGGER.error(_('Message from BUS impossible to forward' + \
                             ' (socket not connected), the message is ' + \
                             'stored for later reemission'))
-                    storemessage(self.__dbfilename, 
-                                 i.toXml().encode('utf8'), self.__table)
+                    self.retry.store(i.toXml().encode('utf8'))
                     self.__backuptoempty = True
 
