@@ -15,7 +15,6 @@ LOGGING_SETTINGS = {
         'format': '%(levelname)s::%(name)s::%(message)s',
         }
 LOGGING_LEVELS = {
-        'multiprocessing': logging.DEBUG,
         'twisted': logging.DEBUG,
         'vigilo.pubsub': logging.DEBUG,
         'vigilo.connector': logging.DEBUG,
@@ -42,6 +41,7 @@ VIGILO_CONNECTOR_TOPIC_PUBLISHER = {
 VIGILO_SOCKETW = '/var/lib/vigilo/connector/recv.sock'
 VIGILO_SOCKETR = '/var/lib/vigilo/connector/send.sock'
 VIGILO_MESSAGE_BACKUP_FILE = '/var/lib/vigilo/connector/backup'
+#VIGILO_MESSAGE_BACKUP_FILE = ':memory:'
 VIGILO_MESSAGE_BACKUP_TABLE_TOBUS = 'connector_tobus'
 VIGILO_MESSAGE_BACKUP_TABLE_FROMBUS = 'connector_frombus'
 

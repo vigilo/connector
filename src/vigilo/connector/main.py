@@ -22,7 +22,6 @@ class ConnectorServiceMaker(object):
         """ the service that wraps everything the connector needs. """ 
         from vigilo.connector.nodetosocketfw import NodeToSocketForwarder
         from vigilo.connector.sockettonodefw import SocketToNodeForwarder
-        from vigilo.pubsub import NodeOwner 
         from vigilo.pubsub.checknode import VerificationNode
         from vigilo.common.conf import settings
         from vigilo.common.logging import get_logger
@@ -52,19 +51,23 @@ class ConnectorServiceMaker(object):
         for i in bkpfile, sw, sr:
             if i != ':memory:':
                 if not os.access(os.path.dirname(i), os.F_OK):
-                    msg = _("Directory not found: '%(dir)s'") % {'dir': os.path.dirname(i)}
+                    msg = _("Directory not found: '%(dir)s'") % \
+                            {'dir': os.path.dirname(i)}
                     LOGGER.error(msg)
                     raise OSError(msg)
                 if not os.access(os.path.dirname(i), os.R_OK):
-                    msg = _("Directory not readable: '%(dir)s'") % {'dir': os.path.dirname(i)}
+                    msg = _("Directory not readable: '%(dir)s'") % \
+                            {'dir': os.path.dirname(i)}
                     LOGGER.error(msg)
                     raise OSError(msg)
                 if not os.access(os.path.dirname(i), os.W_OK):
-                    msg = _("Directory not writable: '%(dir)s'") % {'dir': os.path.dirname(i)}
+                    msg = _("Directory not writable: '%(dir)s'") % \
+                            {'dir': os.path.dirname(i)}
                     LOGGER.error(msg)
                     raise OSError(msg)
                 if not os.access(os.path.dirname(i), os.X_OK):
-                    msg = _("Directory not executable: '%(dir)s'") % {'dir': os.path.dirname(i)}
+                    msg = _("Directory not executable: '%(dir)s'") % \
+                            {'dir': os.path.dirname(i)}
                     LOGGER.error(msg)
                     raise OSError(msg)
 
