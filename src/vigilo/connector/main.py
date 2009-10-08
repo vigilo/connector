@@ -25,6 +25,10 @@ class ConnectorServiceMaker(object):
         from vigilo.pubsub import NodeOwner 
         from vigilo.pubsub.checknode import VerificationNode
         from vigilo.common.conf import settings
+        from vigilo.common.logging import get_logger
+        import os
+        LOGGER = get_logger(__name__)
+
         xmpp_client = client.XMPPClient(
                 JID(settings['VIGILO_CONNECTOR_JID']),
                 settings['VIGILO_CONNECTOR_PASS'],
@@ -41,7 +45,30 @@ class ConnectorServiceMaker(object):
         _service = JID(settings.get('VIGILO_CONNECTOR_XMPP_PUBSUB_SERVICE',
                                     None))
 
+        bkpfile = settings['VIGILO_MESSAGE_BACKUP_FILE']
         sw = settings.get('VIGILO_SOCKETW', None)
+        sr = settings.get('VIGILO_SOCKETR', None)
+
+        for i in bkpfile, sw, sr:
+            if i != ':memory:':
+                if not os.access(os.path.dirname(i), os.F_OK):
+                    msg = _("Directory not found: '%(dir)s'") % {'dir': os.path.dirname(i)}
+                    LOGGER.error(msg)
+                    raise OSError(msg)
+                if not os.access(os.path.dirname(i), os.R_OK):
+                    msg = _("Directory not readable: '%(dir)s'") % {'dir': os.path.dirname(i)}
+                    LOGGER.error(msg)
+                    raise OSError(msg)
+                if not os.access(os.path.dirname(i), os.W_OK):
+                    msg = _("Directory not writable: '%(dir)s'") % {'dir': os.path.dirname(i)}
+                    LOGGER.error(msg)
+                    raise OSError(msg)
+                if not os.access(os.path.dirname(i), os.X_OK):
+                    msg = _("Directory not executable: '%(dir)s'") % {'dir': os.path.dirname(i)}
+                    LOGGER.error(msg)
+                    raise OSError(msg)
+
+
         if sw is not None:
             message_consumer = NodeToSocketForwarder(
                     sw,
@@ -49,7 +76,6 @@ class ConnectorServiceMaker(object):
                     settings['VIGILO_MESSAGE_BACKUP_TABLE_FROMBUS'])
             message_consumer.setHandlerParent(xmpp_client)
 
-        sr = settings.get('VIGILO_SOCKETR', None)
         if sr is not None:
             message_publisher = SocketToNodeForwarder(
                     sr,
