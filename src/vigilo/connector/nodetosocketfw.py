@@ -101,7 +101,17 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         @param msg: message to forward
         @type msg: C{str}
         """
-        self.__connector.transport.write(msg + '\n')
+        if self.__connector.state == 'connected':
+            self.__connector.transport.write(msg + '\n')
+        else:
+            LOGGER.error(_('Message impossible to forward (socket not ' +
+                           'connected), the message is stored for later ' +
+                           'reemission'))
+            self.retry.store(msg)
+            self.__backuptoempty = True
+
+
+
 
     def chatReceived(self, msg):
         """ 
@@ -116,26 +126,14 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         bodys = [element for element in msg.elements()
                          if element.name in ('body',)]
 
-        if self.__connector.state == 'connected':
-            for b in bodys:
-                # the data we need is just underneath
-                # les données dont on a besoin sont juste en dessous
-                for data in b.elements():
-                    LOGGER.debug(_('Message from chat message to forward: ' +
-                                   '%s') %
-                                   data.toXml().encode('utf8'))
-                    self.messageForward(data.toXml().encode('utf8'))
-        else:
-            for b in bodys:
-                # the data we need is just underneath
-                # les données dont on a besoin sont juste en dessous
-                for data in b.elements():
-                    LOGGER.error(_('Message from chat message impossible to' +
-                                   ' forward (socket not connected), the me' +
-                                   'ssage is stored for later reemission'))
-                    self.retry.store(data.toXml().encode('utf8'))
-                    self.__backuptoempty = True
-
+        for b in bodys:
+            # the data we need is just underneath
+            # les données dont on a besoin sont juste en dessous
+            for data in b.elements():
+                LOGGER.debug(_('Message from chat message to forward: ' +
+                               '%s') %
+                               data.toXml().encode('utf8'))
+                self.messageForward(data.toXml().encode('utf8'))
 
     
     def itemsReceived(self, event):
@@ -161,16 +159,8 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
                 # ejabberd keeps 10 items before retracting old items.
                 continue
             it = [ it for it in item.elements() if item.name == "item" ]
-            if self.__connector.state == 'connected':
-                for i in it:
-                    LOGGER.debug(_('Message from BUS to forward: %s') % 
-                                 i.toXml().encode('utf8'))
-                    self.messageForward(i.toXml().encode('utf8'))
-            else:
-                for i in it:
-                    LOGGER.error(_('Message from BUS impossible to' +
-                                   ' forward (socket not connected), the me' +
-                                   'ssage is stored for later reemission'))
-                    self.retry.store(i.toXml().encode('utf8'))
-                    self.__backuptoempty = True
+            for i in it:
+                LOGGER.debug(_('Message from BUS to forward: %s') % 
+                             i.toXml().encode('utf8'))
+                self.messageForward(i.toXml().encode('utf8'))
 
