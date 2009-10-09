@@ -44,12 +44,12 @@ class ConnectorServiceMaker(object):
         _service = JID(settings.get('VIGILO_CONNECTOR_XMPP_PUBSUB_SERVICE',
                                     None))
 
-        bkpfile = settings['VIGILO_MESSAGE_BACKUP_FILE']
+        bkpfile = settings.get('VIGILO_MESSAGE_BACKUP_FILE', ":memory:")
         sw = settings.get('VIGILO_SOCKETW', None)
         sr = settings.get('VIGILO_SOCKETR', None)
 
         for i in bkpfile, sw, sr:
-            if i != ':memory:':
+            if i != ':memory:' and i is not None:
                 if not os.access(os.path.dirname(i), os.F_OK):
                     msg = _("Directory not found: '%(dir)s'") % \
                             {'dir': os.path.dirname(i)}

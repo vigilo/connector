@@ -68,10 +68,10 @@ class SocketToNodeForwarder(PubSubClient):
 
         self.__factory = protocol.ServerFactory()
 
-        self.__connector = reactor.listenUNIX(socket_filename, self.__factory)
         self.__factory.protocol = Forwarder
         self.__factory.publishXml = self.publishXml
         self.__factory.sendOneToOneXml = self.sendOneToOneXml
+        self.__connector = reactor.listenUNIX(socket_filename, self.__factory)
         self.__service = service
         self.__nodetopublish = nodetopublish
 
