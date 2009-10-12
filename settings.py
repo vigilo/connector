@@ -3,8 +3,6 @@ import logging
 LOGGING_PLUGINS = (
         'vigilo.pubsub.logging',       
         )
-LOGGING_SETTINGS = { 'level': logging.DEBUG, }
-LOGGING_LEVELS = {}
 LOGGING_SYSLOG = True
 LOG_TRAFFIC = True
 
@@ -41,7 +39,6 @@ VIGILO_CONNECTOR_TOPIC_PUBLISHER = {
 VIGILO_SOCKETW = '/var/lib/vigilo/connector/recv.sock'
 VIGILO_SOCKETR = '/var/lib/vigilo/connector/send.sock'
 VIGILO_MESSAGE_BACKUP_FILE = '/var/lib/vigilo/connector/backup'
-#VIGILO_MESSAGE_BACKUP_FILE = ':memory:'
 VIGILO_MESSAGE_BACKUP_TABLE_TOBUS = 'connector_tobus'
 VIGILO_MESSAGE_BACKUP_TABLE_FROMBUS = 'connector_frombus'
 
