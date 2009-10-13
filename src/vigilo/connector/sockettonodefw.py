@@ -81,21 +81,25 @@ class SocketToNodeForwarder(PubSubClient):
         Called to send Message previously stored
         """
         if self.__backuptoempty:
+            self.__backuptoempty = False
             # XXX Ce code peut potentiellement boucler indéfiniment...
             while True:
                 msg = self.retry.unstore()
-                if msg == True:
+                if msg is None:
                     break
-                elif msg == False:
-                    continue
                 else:
                     xml = parseXml(msg)
                     if xml.name == MESSAGEONETOONE:
-                        self.sendOneToOneXml(xml)
+                        if self.sendOneToOneXml(xml) is not True:
+                            # we loose the ability to send message again
+                            self.__backuptoempty = True
+                            break
                     else:
-                        self.publishXml(xml)
+                        if self.publishXml(xml) is not True:
+                            # we loose the ability to send message again
+                            self.__backuptoempty = True
+                            break
 
-            self.__backuptoempty = False
             self.retry.vacuum()
 
 
@@ -128,6 +132,7 @@ class SocketToNodeForwarder(PubSubClient):
             self.__backuptoempty = True 
         else:
             self.send(msg)
+            return True
 
 
 
@@ -152,6 +157,7 @@ class SocketToNodeForwarder(PubSubClient):
         try :
             result = self.publish(self.__service, node, [item])
             result.addErrback(eb, xml)
+            return True
         except AttributeError :
             LOGGER.error(_('Message from Socket impossible to forward' + \
                            ' (no connection to XMPP server), the mess' + \

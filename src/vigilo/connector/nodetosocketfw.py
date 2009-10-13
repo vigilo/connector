@@ -63,16 +63,17 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         Called to send Message previously stored
         """
         if self.__backuptoempty:
+            self.__backuptoempty = False
             # XXX Ce code peut potentiellement boucler indéfiniment...
             while True:
                 msg = self.retry.unstore()
-                if msg == True:
+                if msg is None:
                     break
-                elif msg == False:
-                    continue
                 else:
-                    self.messageForward(msg)
-            self.__backuptoempty = False
+                    if self.messageForward(msg) is not True:
+                        # we loose the ability to send message again
+                        self.__backuptoempty = True
+                        break
             self.retry.vacuum()
 
 
