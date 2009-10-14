@@ -62,6 +62,23 @@ class SocketToNodeForwarder(PubSubClient):
 
     def __init__(self, socket_filename, dbfilename, dbtable, 
                  nodetopublish, service):
+        """
+        Instancie un connecteur socket vers BUS XMPP.
+
+        @param pipe_filename: le nom du fichier pipe qui accueillra les 
+        messages XMPP
+        @type pipe_filename: C{str}
+        @param dbfilename: le nom du fichier permettant la sauvegarde des 
+        messages en cas de problème d'éciture sur le pipe
+        @type dbfilename: C{str}
+        @param dbtable: Le nom de la table SQL dans ce fichier.
+        @type dbtable: C{str}
+        @param nodetopublish: dictionnaire pour la correspondance type de message 
+                              noeud PubSub de destination.
+        @type nodetopublish: C{dict}
+        @param service: The publish subscribe service that keeps the node.
+        @type service: L{JID}
+        """
         PubSubClient.__init__(self)
         self.retry = DbRetry(dbfilename, dbtable)
         self.__backuptoempty = os.path.exists(dbfilename)
@@ -114,7 +131,11 @@ class SocketToNodeForwarder(PubSubClient):
 
 
     def sendOneToOneXml(self, xml):
-        """ function to send a XML msg to a particular jabber user"""
+        """ 
+        function to send a XML msg to a particular jabber user
+        @param xml: le message a envoyé sous forme XML 
+        @type xml: twisted.words.xish.domish.Element
+        """
         # we need to send it to a particular receiver 
         # il faut l'envoyer vers un destinataire en particulier
         msg = domish.Element((None, "message"))
@@ -137,7 +158,11 @@ class SocketToNodeForwarder(PubSubClient):
 
 
     def publishXml(self, xml):
-        """ function to publish a XML msg to node """
+        """ 
+        function to publish a XML msg to node 
+        @param xml: le message a envoyé sous forme XML 
+        @type xml: twisted.words.xish.domish.Element
+        """
         # if not connected store the message
         if self.xmlstream is None:
             LOGGER.error(_('Message from Socket impossible to forward' + \

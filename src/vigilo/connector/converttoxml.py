@@ -21,7 +21,7 @@ def text2xml(text):
     Called to return the XML from text message read from socket
     @param text: The text to convert
     @type  text: C{str}
-    return: xml object (twisted.words.xish.domish.Element) 
+    @return: xml object (twisted.words.xish.domish.Element) 
             representing the text given as argument
             or None in non convertible text
     """
@@ -64,7 +64,9 @@ def oneToOne2xml(onetoone_list):
     Called to return the XML from MESSAGEONETOONE message list 
     @param event_list: list contenning a MESSAGEONETOONE type message to convert
     @type event_list: C{list}
-    @return: C{str} representing the MESSAGEONETOONE message in xml format
+    @return: xml object (twisted.words.xish.domish.Element)
+            representing the text given as argument
+            or None in non convertible text
     """
 
     # to avoid error from message length
@@ -87,6 +89,9 @@ def event2xml(event_list):
     @param event_list: list contening a event type message to convert
     @type event_list: C{list}
     @return: C{str} representing the event in xml format
+    @return: xml object (twisted.words.xish.domish.Element)
+            representing the text given as argument
+            or None in non convertible text
     """
 
     # to avoid error from message length
@@ -110,7 +115,9 @@ def perf2xml(perf_list):
     
     @param perf_list: list contening a perf type message to convert
     @type perf_list: C{list}
-    @return: C{str} representing the perf in xml format
+    @return: xml object (twisted.words.xish.domish.Element)
+             representing the text given as argument
+             or None in non convertible text
     """
 
     # to avoid error from message length
@@ -131,7 +138,9 @@ def state2xml(state_list):
     
     @param state_list: list contening a state type message to convert
     @type state_list: C{list}
-    @return: C{str} representing the state in xml format
+    @return: xml object (twisted.words.xish.domish.Element)
+             representing the text given as argument
+             or None in non convertible text
     """
     
     

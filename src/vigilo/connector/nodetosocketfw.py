@@ -45,6 +45,18 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
 
 
     def __init__(self, socket_filename, dbfilename, dbtable):
+        """
+        Instancie un connecteur BUS XMPP vers socket.
+
+        @param socket_filename: le nom du fichier socket qui accueillra les 
+        messages du BUS XMPP
+        @type socket_filename: C{str}
+        @param dbfilename: le nom du fichier permettant la sauvegarde des 
+        messages en cas de problème d'éciture sur le pipe
+        @type dbfilename: C{str}
+        @param dbtable: Le nom de la table SQL dans ce fichier.
+        @type dbtable: C{str}
+        """
         PubSubClient.__init__(self)
         self.retry = DbRetry(dbfilename, dbtable)
         self.__backuptoempty = os.path.exists(dbfilename) 
@@ -119,7 +131,7 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         function to treat a received chat message 
         
         @param msg: msg to treat
-        @type  msg: Xml object
+        @type  msg: twisted.words.xish.domish.Element
 
         """
         # It should only be one body
@@ -142,7 +154,7 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         function to treat a received item 
         
         @param event: event to treat
-        @type  event: xml object
+        @type  event: twisted.words.xish.domish.Element
 
         """
         #event.headers
