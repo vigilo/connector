@@ -42,6 +42,9 @@ def text2xml(text):
                 msg =  perf2xml(elements)
             elif elements[0] == "state":
                 msg = state2xml(elements)
+            else:
+                LOGGER.warning(_("unknown/malformed message " +
+                    "(type: '%s')") % elements[0])
             if enveloppe:
                 if msg:
                     enveloppe.addChild(msg)
