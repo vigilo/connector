@@ -81,7 +81,7 @@ class SocketToNodeForwarder(PubSubClient):
         """
         PubSubClient.__init__(self)
         self.retry = DbRetry(dbfilename, dbtable)
-        self.__backuptoempty = os.path.exists(dbfilename)
+        self._backuptoempty = os.path.exists(dbfilename)
 
         self.__factory = protocol.ServerFactory()
 
@@ -89,16 +89,16 @@ class SocketToNodeForwarder(PubSubClient):
         self.__factory.publishXml = self.publishXml
         self.__factory.sendOneToOneXml = self.sendOneToOneXml
         self.__connector = reactor.listenUNIX(socket_filename, self.__factory)
-        self.__service = service
-        self.__nodetopublish = nodetopublish
+        self._service = service
+        self._nodetopublish = nodetopublish
 
 
     def sendQueuedMessages(self):
         """
         Called to send Message previously stored
         """
-        if self.__backuptoempty:
-            self.__backuptoempty = False
+        if self._backuptoempty:
+            self._backuptoempty = False
             # XXX Ce code peut potentiellement boucler indéfiniment...
             while True:
                 msg = self.retry.unstore()
@@ -109,12 +109,12 @@ class SocketToNodeForwarder(PubSubClient):
                     if xml.name == MESSAGEONETOONE:
                         if self.sendOneToOneXml(xml) is not True:
                             # we loose the ability to send message again
-                            self.__backuptoempty = True
+                            self._backuptoempty = True
                             break
                     else:
                         if self.publishXml(xml) is not True:
                             # we loose the ability to send message again
-                            self.__backuptoempty = True
+                            self._backuptoempty = True
                             break
 
             self.retry.vacuum()
@@ -126,7 +126,7 @@ class SocketToNodeForwarder(PubSubClient):
         # There's probably a way to configure it (on_sub vs on_sub_and_presence)
         # but the spec defaults to not sending subscriptions without presence.
         self.send(xmppim.AvailablePresence())
-        LOGGER.info(_('ConnectionInitialized'))
+        LOGGER.debug('connectionInitialized')
         self.sendQueuedMessages()
 
 
@@ -150,7 +150,7 @@ class SocketToNodeForwarder(PubSubClient):
                            ' (no connection to XMPP server), the mess' + \
                            'age is stored for later reemission'))
             self.retry.store(xml.toXml().encode('utf8'))
-            self.__backuptoempty = True 
+            self._backuptoempty = True 
         else:
             self.send(msg)
             return True
@@ -175,12 +175,12 @@ class SocketToNodeForwarder(PubSubClient):
             """errback"""
             LOGGER.error(_("errback publishStrXml %s") % e.__str__())
             self.retry.store(xml.toXml().encode('utf8'))
-            self.__backuptoempty = True 
+            self._backuptoempty = True 
 
         item = Item(payload=xml)
-        node = self.__nodetopublish[xml.name]
+        node = self._nodetopublish[xml.name]
         try :
-            result = self.publish(self.__service, node, [item])
+            result = self.publish(self._service, node, [item])
             result.addErrback(eb, xml)
             return True
         except AttributeError :
@@ -188,4 +188,4 @@ class SocketToNodeForwarder(PubSubClient):
                            ' (no connection to XMPP server), the mess' + \
                            'age is stored for later reemission'))
             self.retry.store(xml.toXml().encode('utf8'))
-            self.__backuptoempty = True
+            self._backuptoempty = True
