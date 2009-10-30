@@ -69,9 +69,9 @@ class SocketToNodeForwarder(PubSubClient):
         messages XMPP
         @type pipe_filename: C{str}
         @param dbfilename: le nom du fichier permettant la sauvegarde des 
-        messages en cas de problème d'éciture sur le pipe
+        messages en cas de problème d'éciture sur le BUS
         @type dbfilename: C{str}
-        @param dbtable: Le nom de la table SQL dans ce fichier.
+        @param dbtable: Le nom de la table SQL pour la sauvegarde des messages.
         @type dbtable: C{str}
         @param nodetopublish: dictionnaire pour la correspondance type de message 
                               noeud PubSub de destination.
