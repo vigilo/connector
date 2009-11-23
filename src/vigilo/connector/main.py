@@ -92,7 +92,7 @@ class ConnectorServiceMaker(object):
         xmpp_client.setServiceParent(root_service)
         return root_service
 
-def do_main_programm():
+def do_main_program():
     """ main function designed to launch the program """
     application = service.Application('Twisted PubSub component')
     conn_service = ConnectorServiceMaker().makeService()
@@ -100,13 +100,13 @@ def do_main_programm():
     app.startApplication(application, False)
     reactor.run()
 
-def main():
+def main(*args):
     """ main function designed to launch the program """
 
     from vigilo.common.daemonize import daemonize
     context = daemonize()
     with context:
-        do_main_programm()
+        do_main_program()
 
 
 if __name__ == '__main__':
