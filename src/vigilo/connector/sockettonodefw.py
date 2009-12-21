@@ -105,6 +105,7 @@ class SocketToNodeForwarder(PubSubClient):
                 if msg is None:
                     break
                 else:
+                    LOGGER.debug(_('Received message: %r') % msg)
                     xml = parseXml(msg)
                     if xml.name == MESSAGEONETOONE:
                         if self.sendOneToOneXml(xml) is not True:

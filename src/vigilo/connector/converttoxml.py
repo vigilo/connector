@@ -14,6 +14,7 @@ NS_AGGR = 'http://www.projet-vigilo.org/xmlns/aggr1'
 NS_EVENT = 'http://www.projet-vigilo.org/xmlns/event1'
 NS_PERF = 'http://www.projet-vigilo.org/xmlns/perf1'
 NS_STATE = 'http://www.projet-vigilo.org/xmlns/state1'
+NS_COMMAND = 'http://www.projet-vigilo.org/xmlns/command1'
 MESSAGEONETOONE = 'oneToOne'
 
 def text2xml(text):
@@ -42,6 +43,10 @@ def text2xml(text):
                 msg =  perf2xml(elements)
             elif elements[0] == "state":
                 msg = state2xml(elements)
+            elif elements[0] == "command":
+                msg = domish.Element((NS_COMMAND, 'command'))
+                msg['type'] = elements[1]
+                msg.addContent('|'.join(elements[2:]))
             else:
                 LOGGER.warning(_("unknown/malformed message " +
                     "(type: '%s')") % elements[0])
