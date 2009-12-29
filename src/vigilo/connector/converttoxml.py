@@ -14,6 +14,7 @@ NS_AGGR = 'http://www.projet-vigilo.org/xmlns/aggr1'
 NS_EVENT = 'http://www.projet-vigilo.org/xmlns/event1'
 NS_PERF = 'http://www.projet-vigilo.org/xmlns/perf1'
 NS_STATE = 'http://www.projet-vigilo.org/xmlns/state1'
+NS_DOWNTIME = 'http://www.projet-vigilo.org/xmlns/downtime1'
 NS_COMMAND = 'http://www.projet-vigilo.org/xmlns/command1'
 MESSAGEONETOONE = 'oneToOne'
 
@@ -41,8 +42,8 @@ def text2xml(text):
                 msg = event2xml(elements)
             elif elements[0] == "perf":
                 msg =  perf2xml(elements)
-            elif elements[0] == "state":
-                msg = state2xml(elements)
+            elif elements[0] == "downtime":
+                msg = downtime2xml(elements)
             elif elements[0] == "command":
                 msg = domish.Element((NS_COMMAND, 'command'))
                 msg['type'] = elements[1]
@@ -103,17 +104,16 @@ def event2xml(event_list):
     """
 
     # to avoid error from message length
-    if len(event_list) != 7:
+    if len(event_list) != 6:
         return None
     
 
     msg = domish.Element((NS_EVENT, 'event'))
     msg.addElement('timestamp', content=event_list[1])
     msg.addElement('host', content=event_list[2])
-    msg.addElement('ip', content=event_list[3])
-    msg.addElement('service', content=event_list[4])
-    msg.addElement('state', content=event_list[5])
-    msg.addElement('message', content=event_list[6])
+    msg.addElement('service', content=event_list[3])
+    msg.addElement('state', content=event_list[4])
+    msg.addElement('message', content=event_list[5])
     return msg
 
 
@@ -140,12 +140,13 @@ def perf2xml(perf_list):
     msg.addElement('value', content=perf_list[4])
     return msg
 
-def state2xml(state_list):
+
+def downtime2xml(downtime_list):
     """ 
-    Called to return the XML from state message list 
+    Called to return the XML from downtime message list 
     
-    @param state_list: list contening a state type message to convert
-    @type state_list: C{list}
+    @param downtime_list: list contening a downtime type message to convert
+    @type downtime_list: C{list}
     @return: xml object (twisted.words.xish.domish.Element)
              representing the text given as argument
              or None in non convertible text
@@ -153,16 +154,14 @@ def state2xml(state_list):
     
     
     # to avoid error from message length
-    if len(state_list) != 9:
+    if len(downtime_list) != 7:
         return None
     
-    msg = domish.Element((NS_STATE, 'state'))
-    msg.addElement('timestamp', content=state_list[1])
-    msg.addElement('host', content=state_list[2])
-    msg.addElement('ip', content=state_list[3])
-    msg.addElement('service', content=state_list[4])
-    msg.addElement('statename', content=state_list[5])
-    msg.addElement('type', content=state_list[6])
-    msg.addElement('attempt', content=state_list[7])
-    msg.addElement('message', content=state_list[8])
+    msg = domish.Element((NS_DOWNTIME, 'downtime'))
+    msg.addElement('timestamp', content=downtime_list[1])
+    msg.addElement('host', content=downtime_list[2])
+    msg.addElement('service', content=downtime_list[3])
+    msg.addElement('type', content=downtime_list[4])
+    msg.addElement('author', content=downtime_list[5])
+    msg.addElement('comment', content=downtime_list[6])
     return msg

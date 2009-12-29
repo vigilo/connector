@@ -179,6 +179,7 @@ class SocketToNodeForwarder(PubSubClient):
             self._backuptoempty = True 
 
         item = Item(payload=xml)
+        
         node = self._nodetopublish[xml.name]
         try :
             result = self.publish(self._service, node, [item])
