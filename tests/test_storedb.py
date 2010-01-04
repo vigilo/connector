@@ -73,13 +73,13 @@ class TestSauveDB(unittest.TestCase):
         #message_publisher.__factory.protocol.lineReceived("oneToOne|test@localhost|event|1165939739|serveur1.example.com|192.168.0.1|Load|CRITICAL|CRITICAL: load avg: 12 10 10\n")
         xml1 = text2xml(
                 "oneToOne|test@localhost|event|1165939739|serveur1.example." + 
-                "com|192.168.0.1|Load|CRITICAL|CRITICAL: load avg: 12 10 10")
+                "com|Load|CRITICAL|CRITICAL: load avg: 12 10 10")
         message_publisher.sendOneToOneXml(xml1)
         nb_msg_save_in_DB += 1
         
         xml2 = text2xml(
                 "event|1165939739|serveur1.example." +
-                "com|192.168.0.1|Load|CRITICAL|CRITICAL: load avg: 12 10 10")
+                "com|Load|CRITICAL|CRITICAL: load avg: 12 10 10")
         message_publisher.publishXml(xml2)
         nb_msg_save_in_DB += 1
         
@@ -146,9 +146,8 @@ class TestSauveDB(unittest.TestCase):
 
 
         xml = text2xml(
-                "event|1165939739|serveur1.example." +
-                "com|192.168.0.1|Load|CRITICAL|CRITICAL: load avg: " +
-                "12 10 10")
+                "event|1165939739|serveur1.example.com|" +
+                "Load|CRITICAL|CRITICAL: load avg: 12 10 10")
         message_publisher.messageForward(xml.toXml().encode('utf8'))
         nb_msg_save_in_DB += 1
 
