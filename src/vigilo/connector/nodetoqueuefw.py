@@ -52,12 +52,12 @@ class NodeToQueueForwarder(PubSubClient, object):
                 # Erreur "Broken pipe" lorsque le message
                 # est trop long pour être stocké dans la file.
                 if errno == 32:
-                    LOGGER.error(l_('Incoming message is too big to be stored '
+                    LOGGER.error(_('Incoming message is too big to be stored '
                         'in the queue, dropping it.'))
                 else:
                     raise
             except Queue.Full:
-                LOGGER.error(l_('The queue is full, dropping incoming '
+                LOGGER.error(_('The queue is full, dropping incoming '
                     'XML message! (%s)') % xml)
 
     def sendQueuedMessages(self):
