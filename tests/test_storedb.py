@@ -33,8 +33,7 @@ class TestSauveDB(unittest.TestCase):
     """
     def test_sockettonodeDbStore(self):
         """ 
-        test the storage of message in case of XMPP server non working 
-        in the socketToNode module
+        Message storage in socketToNode
         """
         nb_msg_save_in_DB = 0
 
@@ -110,8 +109,7 @@ class TestSauveDB(unittest.TestCase):
         
     def test_nodeToSocketDbStore(self):
         """ 
-        test the storage of message in case of XMPP server non working 
-        in the nodeToSocket module
+        Message storage in nodeToSocket
         """
 
         nb_msg_save_in_DB = 0

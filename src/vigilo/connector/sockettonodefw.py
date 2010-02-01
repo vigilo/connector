@@ -88,6 +88,8 @@ class SocketToNodeForwarder(PubSubClient):
         self.__factory.protocol = Forwarder
         self.__factory.publishXml = self.publishXml
         self.__factory.sendOneToOneXml = self.sendOneToOneXml
+        if os.path.exists(socket_filename):
+            os.remove(socket_filename)
         self.__connector = reactor.listenUNIX(socket_filename, self.__factory)
         self._service = service
         self._nodetopublish = nodetopublish
