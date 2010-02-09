@@ -29,24 +29,24 @@ class ConnectorServiceMaker(object):
         LOGGER = get_logger(__name__)
 
         xmpp_client = client.XMPPClient(
-                JID(settings['VIGILO_CONNECTOR_JID']),
-                settings['VIGILO_CONNECTOR_PASS'],
-                settings['VIGILO_CONNECTOR_XMPP_SERVER_HOST'])
-        xmpp_client.logTraffic = True
+                JID(settings['connector']['vigilo_connector_jid']),
+                settings['connector']['vigilo_connector_pass'],
+                settings['connector']['vigilo_connector_xmpp_server_host'])
+        xmpp_client.logTraffic = settings['connector'].as_bool('log_traffic')
         xmpp_client.setName('xmpp_client')
 
-        list_nodeOwner = settings.get('VIGILO_CONNECTOR_TOPIC_OWNER', [])
-        list_nodeSubscriber = settings.get('VIGILO_CONNECTOR_TOPIC', [])
+        list_nodeOwner = settings['connector'].get('vigilo_connector_topic_owner', [])
+        list_nodeSubscriber = settings['connector'].get('vigilo_connector_topic', [])
         verifyNode = VerificationNode(list_nodeOwner, list_nodeSubscriber, 
                                       doThings=True)
         verifyNode.setHandlerParent(xmpp_client)
-        nodetopublish = settings.get('VIGILO_CONNECTOR_TOPIC_PUBLISHER', None)
-        _service = JID(settings.get('VIGILO_CONNECTOR_XMPP_PUBSUB_SERVICE',
-                                    None))
+        nodetopublish = settings.get('vigilo_connector_topic_publisher', {})
+        _service = JID(
+            settings['connector']['vigilo_connector_xmpp_pubsub_service'])
 
-        bkpfile = settings.get('VIGILO_MESSAGE_BACKUP_FILE', ":memory:")
-        sw = settings.get('VIGILO_SOCKETW', None)
-        sr = settings.get('VIGILO_SOCKETR', None)
+        bkpfile = settings.get('vigilo_message_backup_file', ":memory:")
+        sw = settings['connector'].get('vigilo_socketw', None)
+        sr = settings['connector'].get('vigilo_socketr', None)
 
         for i in bkpfile, sw, sr:
             if i != ':memory:' and i is not None:
@@ -76,14 +76,14 @@ class ConnectorServiceMaker(object):
             message_consumer = NodeToSocketForwarder(
                     sw,
                     bkpfile,
-                    settings['VIGILO_MESSAGE_BACKUP_TABLE_FROMBUS'])
+                    settings['connector']['vigilo_message_backup_table_frombus'])
             message_consumer.setHandlerParent(xmpp_client)
 
         if sr is not None:
             message_publisher = SocketToNodeForwarder(
                     sr,
                     bkpfile,
-                    settings['VIGILO_MESSAGE_BACKUP_TABLE_TOBUS'],
+                    settings['connector']['vigilo_message_backup_table_tobus'],
                     nodetopublish,
                     _service)
             message_publisher.setHandlerParent(xmpp_client)
