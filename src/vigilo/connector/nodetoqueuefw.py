@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
-from vigilo.common.logging import get_logger
-from wokkel.pubsub import PubSubClient
 import os.path
 import Queue
+import errno
 
-LOGGER = get_logger(__name__)
+from wokkel.pubsub import PubSubClient
 
+from vigilo.common.logging import get_logger
 from vigilo.common.gettext import translate
 from vigilo.connector.store import DbRetry
+
+LOGGER = get_logger(__name__)
 _ = translate(__name__)
 
 class NodeToQueueForwarder(PubSubClient, object):
@@ -48,10 +50,10 @@ class NodeToQueueForwarder(PubSubClient, object):
             # allowed to block.
             try:
                 self.__queue.put_nowait(xml)
-            except IOError, (errno, errstr):
+            except IOError, e:
                 # Erreur "Broken pipe" lorsque le message
                 # est trop long pour être stocké dans la file.
-                if errno == 32:
+                if e.errno == errno.EPIPE:
                     LOGGER.error(_('Incoming message is too big to be stored '
                         'in the queue, dropping it.'))
                 else:

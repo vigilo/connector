@@ -9,6 +9,7 @@ from wokkel import xmppim
 
 import Queue as queue
 import os.path
+import errno
 
 from vigilo.common.logging import get_logger
 from vigilo.connector.store import DbRetry
@@ -63,6 +64,17 @@ class QueueToNodeForwarder(SocketToNodeForwarder, object):
                     xml = self._queue.get(block=True, timeout=1.)
                 except queue.Empty:
                     continue
+                except (IOError, OSError), e:
+                    if e.errno != errno.EINTR:
+                        raise
+                    else:
+                        continue
+                else:
+                    if not xml:
+                        LOGGER.debug(_('Received request to shutdown'))
+                        self._stop = True
+                        continue
+
 
             item = parseXml(xml)
 
@@ -76,6 +88,9 @@ class QueueToNodeForwarder(SocketToNodeForwarder, object):
                 self.sendOneToOneXml(item)
             else:
                 self.publishXml(item)
+
+        LOGGER.debug(_('Stopping QueueToNodeForwarder.'))
+        self.connectionLost(None)
 
     def sendQueuedMessages(self):
         # XXX Faire quelque chose d'utile ici:
