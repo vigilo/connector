@@ -29,22 +29,28 @@ def text2xml(text):
     """
     elements = text.strip().split('|')
     if elements:
+        LOGGER.debug("Recieved: %s" % str(elements))
         try:
             enveloppe = None
             msg = None
             if len(elements) > 2 and elements[0] == MESSAGEONETOONE:
+                LOGGER.debug(_("Got One2One message"))
                 enveloppe = oneToOne2xml(elements[:2])
                 elements.pop(0)
                 elements.pop(0)
             if elements == ['']:
                 LOGGER.debug(_("empty line"))
             elif elements[0] == "event":
+                LOGGER.debug(_("Got event message"))
                 msg = event2xml(elements)
             elif elements[0] == "perf":
+                LOGGER.debug(_("Got perf message"))
                 msg =  perf2xml(elements)
             elif elements[0] == "downtime":
+                LOGGER.debug(_("Got downtime message"))
                 msg = downtime2xml(elements)
             elif elements[0] == "command":
+                LOGGER.debug(_("Got command message"))
                 msg = domish.Element((NS_COMMAND, 'command'))
                 msg['type'] = elements[1]
                 msg.addContent('|'.join(elements[2:]))
@@ -58,6 +64,7 @@ def text2xml(text):
                 else:
                     LOGGER.warning(_("unknown/malformed message " +
                         "(type: '%s')") % elements[0])
+            LOGGER.debug("Converted to: %s" % msg.toXml())
             return msg
 
         except (TypeError, AttributeError):
