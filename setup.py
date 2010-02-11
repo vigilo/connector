@@ -38,10 +38,7 @@ setup(name='vigilo-connector',
             'vigilo.connector',
             ],
         entry_points={
-            'console_scripts': [
-                'connector = vigilo.connector.main:main',
-                ],
-            },
+        },
         extras_require={
             'tests': tests_require,
         },
