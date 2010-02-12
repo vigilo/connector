@@ -24,6 +24,7 @@ class ConnectorServiceMaker(object):
         from vigilo.connector.sockettonodefw import SocketToNodeForwarder
         from vigilo.pubsub.checknode import VerificationNode
         from vigilo.common.conf import settings
+        settings.load_module(__name__)
         from vigilo.common.logging import get_logger
         import os
         LOGGER = get_logger(__name__)
