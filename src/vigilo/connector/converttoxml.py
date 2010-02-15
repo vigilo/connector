@@ -117,7 +117,8 @@ def event2xml(event_list):
 
     msg = domish.Element((NS_EVENT, 'event'))
     msg.addElement('timestamp', content=event_list[1])
-    msg.addElement('host', content=event_list[2])
+    if event_list[2] and event_list[2].lower() != "host":
+        msg.addElement('host', content=event_list[2])
     msg.addElement('service', content=event_list[3])
     msg.addElement('state', content=event_list[4])
     msg.addElement('message', content=event_list[5])
