@@ -88,6 +88,13 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
         pass
 
     def connectionInitialized(self):
-        super(QueueToNodeForwarder, self).connectionInitialized()
+        # On passe l'appel à la méthode dans SocketToNodeForwarder
+        # pour éviter une boucle infinie dans sendQueuedMessages().
+        PubSubClient.connectionInitialized(self)
+        # There's probably a way to configure it (on_sub vs on_sub_and_presence)
+        # but the spec defaults to not sending subscriptions without presence.
+        self.send(xmppim.AvailablePresence())
+        LOGGER.debug('connectionInitialized')
+        self.sendQueuedMessages()
         reactor.callInThread(self.consumeQueue)
 
