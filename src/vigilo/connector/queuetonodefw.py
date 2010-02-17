@@ -8,7 +8,6 @@ from wokkel.generic import parseXml
 from wokkel import xmppim
 
 import Queue as queue
-import os.path
 import errno
 
 from vigilo.common.logging import get_logger
@@ -21,7 +20,7 @@ LOGGER = get_logger(__name__)
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
-class QueueToNodeForwarder(SocketToNodeForwarder, object):
+class QueueToNodeForwarder(SocketToNodeForwarder):
     """
     Publishes pubsub items from a queue.
 
@@ -36,8 +35,6 @@ class QueueToNodeForwarder(SocketToNodeForwarder, object):
         self._queue = queue
         # Défini comme public pour faciliter les tests.
         self.retry = DbRetry(dbfilename, dbtable)
-        self._backuptoempty = os.path.exists(dbfilename)
-        self._stop = False
         self._service = service
         self._nodetopublish = nodetopublish
 
@@ -47,11 +44,8 @@ class QueueToNodeForwarder(SocketToNodeForwarder, object):
             LOGGER.error(_("Error callback in consumeQueue(): %s") %
                             e.__str__())
             self.retry.store(xml)
-            self._backuptoempty = True
 
-        while not self._stop and self.parent is not None:
-            LOGGER.debug(_('Main loop in consumeQueue'))
-
+        while self.parent is not None:
             # On tente le renvoi d'un message.
             xml = self.retry.unstore()
 
@@ -59,11 +53,7 @@ class QueueToNodeForwarder(SocketToNodeForwarder, object):
                 try:
                     # Aucun message à renvoyer ?
                     # On récupère un message de la file dans ce cas.
-                    # Le timeout permet de quitter proprement lorsque
-                    # self._stop passe à True.
-                    xml = self._queue.get(block=True, timeout=1.)
-                except queue.Empty:
-                    continue
+                    xml = self._queue.get(block=True)
                 except (IOError, OSError), e:
                     if e.errno != errno.EINTR:
                         raise
@@ -72,8 +62,7 @@ class QueueToNodeForwarder(SocketToNodeForwarder, object):
                 else:
                     if not xml:
                         LOGGER.debug(_('Received request to shutdown'))
-                        self._stop = True
-                        continue
+                        break
 
 
             item = parseXml(xml)
@@ -90,7 +79,7 @@ class QueueToNodeForwarder(SocketToNodeForwarder, object):
                 self.publishXml(item)
 
         LOGGER.debug(_('Stopping QueueToNodeForwarder.'))
-        self.connectionLost(None)
+        self.disownHandlerParent(None)
 
     def sendQueuedMessages(self):
         # XXX Faire quelque chose d'utile ici:
@@ -99,17 +88,6 @@ class QueueToNodeForwarder(SocketToNodeForwarder, object):
         pass
 
     def connectionInitialized(self):
-        PubSubClient.connectionInitialized(self)
-        # There's probably a way to configure it (on_sub vs on_sub_and_presence)
-        # but the spec defaults to not sending subscriptions without presence.
-        self.send(xmppim.AvailablePresence())
-        LOGGER.info('ConnectionInitialized')
-        self.sendQueuedMessages()
-
-#        super(QueueToNodeForwarder, self).connectionInitialized()
+        super(QueueToNodeForwarder, self).connectionInitialized()
         reactor.callInThread(self.consumeQueue)
-
-    def connectionLost(self, reason):
-        self._stop = True
-        super(QueueToNodeForwarder, self).connectionLost(reason)
 

@@ -59,7 +59,6 @@ class SocketToNodeForwarder(PubSubClient):
     Receives messages on the socket and passes them to the xmpp bus,
     Forward socket to Node.
     """
-
     def __init__(self, socket_filename, dbfilename, dbtable, 
                  nodetopublish, service):
         """
@@ -83,16 +82,17 @@ class SocketToNodeForwarder(PubSubClient):
         self.retry = DbRetry(dbfilename, dbtable)
         self._backuptoempty = os.path.exists(dbfilename)
 
-        self.__factory = protocol.ServerFactory()
+        self.factory = protocol.ServerFactory()
 
-        self.__factory.protocol = Forwarder
-        self.__factory.publishXml = self.publishXml
-        self.__factory.sendOneToOneXml = self.sendOneToOneXml
+        self.factory.protocol = Forwarder
+        self.factory.publishXml = self.publishXml
+        self.factory.sendOneToOneXml = self.sendOneToOneXml
         if os.path.exists(socket_filename):
             os.remove(socket_filename)
-        self.__connector = reactor.listenUNIX(socket_filename, self.__factory)
+        self.__connector = reactor.listenUNIX(socket_filename, self.factory)
         self._service = service
         self._nodetopublish = nodetopublish
+        self.name = self.__class__.__name__
 
 
     def sendQueuedMessages(self):
@@ -166,18 +166,13 @@ class SocketToNodeForwarder(PubSubClient):
         @param xml: le message a envoyé sous forme XML 
         @type xml: twisted.words.xish.domish.Element
         """
-        # if not connected store the message
-        if self.xmlstream is None:
-            LOGGER.error(_('Message from Socket impossible to forward' + \
-                           ' (no connection to XMPP server), the mess' + \
-                           'age is stored for later reemission'))
-            self.retry.store(xml.toXml().encode('utf8'))
-            return
-
         def eb(e, xml):
             """errback"""
-            LOGGER.error(_("errback publishStrXml %s") % e.__str__())
-            self.retry.store(xml.toXml().encode('utf8'))
+            xml_src = xml.toXml().encode('utf8')
+            LOGGER.error(_('Message from Socket impossible to forward'
+                           ' (no connection to XMPP server), the mess'
+                           'age is stored for later reemission (%s)') % xml_src)
+            self.retry.store(xml_src)
             self._backuptoempty = True 
 
         item = Item(payload=xml)
@@ -186,11 +181,13 @@ class SocketToNodeForwarder(PubSubClient):
         try:
             result = self.publish(self._service, node, [item])
             result.addErrback(eb, xml)
+            del result
             return True
         except AttributeError:
-            LOGGER.error(_('Message from Socket impossible to forward' + \
-                           ' (no connection to XMPP server), the mess' + \
-                           'age is stored for later reemission'))
-            self.retry.store(xml.toXml().encode('utf8'))
+            xml_src = xml.toXml().encode('utf8')
+            LOGGER.error(_('Message from Socket impossible to forward'
+                           ' (no connection to XMPP server), the mess'
+                           'age is stored for later reemission (%s)') % xml_src)
+            self.retry.store(xml_src)
             self._backuptoempty = True
 
