@@ -8,7 +8,6 @@ from __future__ import absolute_import
 
 from twisted.internet import reactor, protocol
 from twisted.protocols.basic import LineReceiver
-from twisted.words.protocols.jabber.jid import JID
 from twisted.words.xish import domish
 from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
@@ -76,7 +75,7 @@ class SocketToNodeForwarder(PubSubClient):
                               noeud PubSub de destination.
         @type nodetopublish: C{dict}
         @param service: The publish subscribe service that keeps the node.
-        @type service: L{JID}
+        @type service: L{twisted.words.protocols.jabber.jid.JID}
         """
         PubSubClient.__init__(self)
         self.retry = DbRetry(dbfilename, dbtable)
@@ -169,9 +168,12 @@ class SocketToNodeForwarder(PubSubClient):
         def eb(e, xml):
             """errback"""
             xml_src = xml.toXml().encode('utf8')
-            LOGGER.error(_('Message from Socket impossible to forward'
-                           ' (no connection to XMPP server), the mess'
-                           'age is stored for later reemission (%s)') % xml_src)
+            LOGGER.error(_('Unable to forward the message (%(error)r), it '
+                        'has been stored for later retransmission '
+                        '(%(xml_src)s)') % {
+                            'xml_src': xml_src,
+                            'error': e,
+                        })
             self.retry.store(xml_src)
             self._backuptoempty = True 
 
@@ -181,8 +183,8 @@ class SocketToNodeForwarder(PubSubClient):
         try:
             result = self.publish(self._service, node, [item])
             result.addErrback(eb, xml)
-            del result
             return True
+            del result
         except AttributeError:
             xml_src = xml.toXml().encode('utf8')
             LOGGER.error(_('Message from Socket impossible to forward'
