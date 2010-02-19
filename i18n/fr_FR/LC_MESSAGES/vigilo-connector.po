@@ -1,0 +1,155 @@
+# French translations for PACKAGE package
+# Traductions françaises du paquet PACKAGE.
+# Copyright (C) 2010 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Automatically generated, 2010.
+#
+msgid   ""
+msgstr  "Project-Id-Version: vigilo.connector\n"
+        "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
+        "POT-Creation-Date: 2010-02-19 10:09+0100\n"
+        "PO-Revision-Date: 2010-02-19 09:46+0100\n"
+        "Last-Translator: Automatically generated\n"
+        "Language-Team: none\n"
+        "MIME-Version: 1.0\n"
+        "Content-Type: text/plain; charset=UTF-8\n"
+        "Content-Transfer-Encoding: 8bit\n"
+        "Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: src/vigilo/connector/nodetoqueuefw.py:91
+msgid   "Incoming message is too big to be stored in the queue, dropping it."
+msgstr  "Le message entrant est trop volumineux pour être stocké, message "
+        "ignoré."
+
+#: src/vigilo/connector/nodetoqueuefw.py:96
+#, python-format
+msgid   "The queue is full, dropping incoming XML message! (%s)"
+msgstr  "La file est pleine, le message XML entrant a été ignoré! (%s)"
+
+#: src/vigilo/connector/store.py:111
+msgid   "The database is locked"
+msgstr  "La base de données est verrouillée"
+
+#: src/vigilo/connector/store.py:116
+#, python-format
+msgid   "Some operational error occured. Original error message was: %s"
+msgstr  "Une erreur opérationnelle est survenue. Le message d'erreur d'origine "
+        "était : %s"
+
+#: src/vigilo/connector/store.py:125
+#, python-format
+msgid   "Some error occured. Original error message was: %s"
+msgstr  "Une erreur est survenue. Le message d'erreur d'origine était : %s"
+
+#: src/vigilo/connector/converttoxml.py:37
+msgid   "Got one-to-one message"
+msgstr  "Réception d'un message one-to-one"
+
+#: src/vigilo/connector/converttoxml.py:42
+msgid   "Got empty line"
+msgstr  "Réception d'une ligne vide"
+
+#: src/vigilo/connector/converttoxml.py:44
+msgid   "Got 'event' message"
+msgstr  "Réception d'un message 'event'"
+
+#: src/vigilo/connector/converttoxml.py:47
+msgid   "Got 'perf' message"
+msgstr  "Réception d'un message 'perf'"
+
+#: src/vigilo/connector/converttoxml.py:50
+msgid   "Got 'downtime' message"
+msgstr  "Réception d'un message 'downtime'"
+
+#: src/vigilo/connector/converttoxml.py:53
+msgid   "Got 'command' message"
+msgstr  "Réception d'un message 'command'"
+
+#: src/vigilo/connector/converttoxml.py:58
+#: src/vigilo/connector/converttoxml.py:65
+#: src/vigilo/connector/converttoxml.py:71
+#, python-format
+msgid   "Unknown/malformed message type: '%s'"
+msgstr  "Type de message inconnu ou message mal-formé: '%s'"
+
+#: src/vigilo/connector/converttoxml.py:75
+#, python-format
+msgid   "Got malformed message: %s"
+msgstr  "Réception d'un message mal-formé: %s"
+
+#: src/vigilo/connector/queuetonodefw.py:81
+#, python-format
+msgid   "Error callback in consumeQueue(): %s"
+msgstr  "Callback d'erreur dans consumeQueue(): %s"
+
+#: src/vigilo/connector/queuetonodefw.py:101
+msgid   "Received request to shutdown"
+msgstr  "Réception d'une demande d'arrêt"
+
+#: src/vigilo/connector/queuetonodefw.py:109
+msgid   "Item is None in consumeQueue, this should never happen!"
+msgstr  "Objet None reçu dans consumeQueue, ça ne devrait jamais arriver !"
+
+#: src/vigilo/connector/queuetonodefw.py:118
+msgid   "Stopping QueueToNodeForwarder."
+msgstr  "Arrêt de QueueToNodeForwarder."
+
+#: src/vigilo/connector/sockettonodefw.py:109
+#, python-format
+msgid   "Received message: %r"
+msgstr  "Réception d'un message : %r"
+
+#: src/vigilo/connector/sockettonodefw.py:152
+#: src/vigilo/connector/sockettonodefw.py:191
+#, python-format
+msgid   "Message from Socket impossible to forward (no connection to XMPP "
+        "server), the message is stored for later reemission (%s)"
+msgstr  "Impossible de relayer le message issu du Socket (pas de connexion au"
+        "serveur XMPP), le message a été sauvé pour transmission ultérieure (%s)"
+
+#: src/vigilo/connector/sockettonodefw.py:172
+#, python-format
+msgid   "Unable to forward the message (%(error)r), it has been stored for "
+        "later retransmission (%(xml_src)s)"
+msgstr  "Impossible de relayer le message (%(error)r), il a été sauvé pour "
+        "une transmission ultérieure (%(xml_src)s)"
+
+#: src/vigilo/connector/main.py:65
+#, python-format
+msgid   "Directory not found: '%(dir)s'"
+msgstr  "Dossier non trouvé : '%(dir)s'"
+
+#: src/vigilo/connector/main.py:70
+#, python-format
+msgid   "Directory not readable: '%(dir)s'"
+msgstr  "Dossier inaccessible en lecture : '%(dir)s'"
+
+#: src/vigilo/connector/main.py:75
+#, python-format
+msgid   "Directory not writable: '%(dir)s'"
+msgstr  "Dossier inaccessible en écriture : '%(dir)s'"
+
+#: src/vigilo/connector/main.py:80
+#, python-format
+msgid   "Directory not executable: '%(dir)s'"
+msgstr  "Dossier inaccessible en exécution : '%(dir)s'"
+
+#: src/vigilo/connector/nodetosocketfw.py:43
+msgid   "ConnectionInitialized"
+msgstr  "ConnectionInitialized"
+
+#: src/vigilo/connector/nodetosocketfw.py:120
+msgid   "Message impossible to forward (socket not connected), the message is "
+        "stored for later reemission"
+msgstr  "Impossible de relayer le message (socket non connecté), le message a été "
+        "sauvé pour une transmission ultérieure"
+
+#: src/vigilo/connector/nodetosocketfw.py:146
+#, python-format
+msgid   "Chat message to forward: '%s'"
+msgstr  "Message de discussion à relayer : '%s'"
+
+#: src/vigilo/connector/nodetosocketfw.py:175
+#, python-format
+msgid   "Message from BUS to forward: %s"
+msgstr  "Message du BUS à relayer : %s"

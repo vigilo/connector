@@ -117,8 +117,8 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         if self.__connector.state == 'connected':
             self.__connector.transport.write(msg + '\n')
         else:
-            LOGGER.error(_('Message impossible to forward (socket not ' +
-                           'connected), the message is stored for later ' +
+            LOGGER.error(_('Message impossible to forward (socket not '
+                           'connected), the message is stored for later '
                            'reemission'))
             self.retry.store(msg)
             self.__backuptoempty = True
@@ -143,8 +143,7 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
             # the data we need is just underneath
             # les données dont on a besoin sont juste en dessous
             for data in b.elements():
-                LOGGER.debug(_('Message from chat message to forward: ' +
-                               '%s') %
+                LOGGER.debug(_("Chat message to forward: '%s'") %
                                data.toXml().encode('utf8'))
                 self.messageForward(data.toXml().encode('utf8'))
 

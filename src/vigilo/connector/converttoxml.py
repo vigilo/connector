@@ -29,50 +29,50 @@ def text2xml(text):
     """
     elements = text.strip().split('|')
     if elements:
-        LOGGER.debug("Recieved: %s" % str(elements))
+        LOGGER.debug("Received: %s" % str(elements))
         try:
             enveloppe = None
             msg = None
             if len(elements) > 2 and elements[0] == MESSAGEONETOONE:
-                LOGGER.debug(_("Got One2One message"))
+                LOGGER.debug(_("Got one-to-one message"))
                 enveloppe = oneToOne2xml(elements[:2])
                 elements.pop(0)
                 elements.pop(0)
             if elements == ['']:
-                LOGGER.debug(_("empty line"))
+                LOGGER.debug(_("Got empty line"))
             elif elements[0] == "event":
-                LOGGER.debug(_("Got event message"))
+                LOGGER.debug(_("Got 'event' message"))
                 msg = event2xml(elements)
             elif elements[0] == "perf":
-                LOGGER.debug(_("Got perf message"))
+                LOGGER.debug(_("Got 'perf' message"))
                 msg =  perf2xml(elements)
             elif elements[0] == "downtime":
-                LOGGER.debug(_("Got downtime message"))
+                LOGGER.debug(_("Got 'downtime' message"))
                 msg = downtime2xml(elements)
             elif elements[0] == "command":
-                LOGGER.debug(_("Got command message"))
+                LOGGER.debug(_("Got 'command' message"))
                 msg = domish.Element((NS_COMMAND, 'command'))
                 msg['type'] = elements[1]
                 msg.addContent('|'.join(elements[2:]))
             else:
-                LOGGER.warning(_("unknown/malformed message " +
-                    "(type: '%s')") % elements[0])
+                LOGGER.warning(_("Unknown/malformed message type: '%s'") %
+                                elements[0])
             if enveloppe:
                 if msg:
                     enveloppe.addChild(msg)
                     return enveloppe
                 else:
-                    LOGGER.warning(_("unknown/malformed message " +
-                        "(type: '%s')") % elements[0])
+                    LOGGER.warning(_("Unknown/malformed message type: '%s'") %
+                                    elements[0])
             LOGGER.debug("Converted to: %s" % msg.toXml())
             return msg
 
         except (TypeError, AttributeError):
-            LOGGER.warning(_("unknown/malformed message " +
-                "(type: '%s')") % elements[0])
+            LOGGER.warning(_("Unknown/malformed message type: '%s'") %
+                            elements[0])
             return None
 
-    LOGGER.warning(_("unknown message type"))
+    LOGGER.warning(_("Got malformed message: %s"))
     return None
 
 def oneToOne2xml(onetoone_list):

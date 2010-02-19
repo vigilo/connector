@@ -106,7 +106,7 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
 
             # Ne devrait jamais se produire, mais au cas où...
             if item is None:
-                LOGGER.error(_('Item is None in consumeQueue, ' +
+                LOGGER.error(_('Item is None in consumeQueue, '
                                 'this should never happen!'))
                 continue
 

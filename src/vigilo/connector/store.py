@@ -113,7 +113,7 @@ class DbRetry(object):
                     return self.unstoremessage()
                 else:
                     LOGGER.error(
-                        _("Some operational error occured. " +
+                        _("Some operational error occured. "
                           "Original error message was: %s") %
                         str(e))
                     raise e
@@ -122,7 +122,7 @@ class DbRetry(object):
                 self.__connection.rollback()
                 cursor.close()
                 LOGGER.error(
-                    _("Some error occured. " +
+                    _("Some error occured. "
                       "Original error message was: %s") %
                     str(e))
                 raise e

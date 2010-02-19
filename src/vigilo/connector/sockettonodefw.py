@@ -148,10 +148,11 @@ class SocketToNodeForwarder(PubSubClient):
         msg.addElement("body", content=body)
         # if not connected store the message
         if self.xmlstream is None:
-            LOGGER.error(_('Message from Socket impossible to forward' + \
-                           ' (no connection to XMPP server), the mess' + \
-                           'age is stored for later reemission'))
-            self.retry.store(xml.toXml().encode('utf8'))
+            xml_src = xml.toXml().encode('utf8')
+            LOGGER.error(_('Message from Socket impossible to forward'
+                           ' (no connection to XMPP server), the mess'
+                           'age is stored for later reemission (%s)') % xml_src)
+            self.retry.store(xml_src)
             self._backuptoempty = True 
         else:
             self.send(msg)
@@ -188,8 +189,8 @@ class SocketToNodeForwarder(PubSubClient):
         except AttributeError:
             xml_src = xml.toXml().encode('utf8')
             LOGGER.error(_('Message from Socket impossible to forward'
-                           ' (no connection to XMPP server), the mess'
-                           'age is stored for later reemission (%s)') % xml_src)
+                           ' (no connection to XMPP server), the message '
+                           'is stored for later reemission (%s)') % xml_src)
             self.retry.store(xml_src)
             self._backuptoempty = True
 
