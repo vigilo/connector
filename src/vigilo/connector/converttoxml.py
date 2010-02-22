@@ -51,9 +51,7 @@ def text2xml(text):
                 msg = downtime2xml(elements)
             elif elements[0] == "command":
                 LOGGER.debug(_("Got 'command' message"))
-                msg = domish.Element((NS_COMMAND, 'command'))
-                msg['type'] = elements[1]
-                msg.addContent('|'.join(elements[2:]))
+                msg = command2xml(elements)
             else:
                 LOGGER.warning(_("Unknown/malformed message type: '%s'") %
                                 elements[0])
@@ -140,7 +138,6 @@ def perf2xml(perf_list):
     if len(perf_list) != 5:
         return None
 
-
     msg = domish.Element((NS_PERF, 'perf'))
     msg.addElement('timestamp', content=perf_list[1])
     msg.addElement('host', content=perf_list[2])
@@ -160,7 +157,6 @@ def downtime2xml(downtime_list):
              or None in non convertible text
     """
     
-    
     # to avoid error from message length
     if len(downtime_list) != 7:
         return None
@@ -172,4 +168,26 @@ def downtime2xml(downtime_list):
     msg.addElement('type', content=downtime_list[4])
     msg.addElement('author', content=downtime_list[5])
     msg.addElement('comment', content=downtime_list[6])
+    return msg
+
+
+def command2xml(command_list):
+    """ 
+    Called to return the XML from command message list 
+    
+    @param command_list: list contening a command type message to convert
+    @type command_list: C{list}
+    @return: xml object (twisted.words.xish.domish.Element)
+             representing the text given as argument
+             or None in non convertible text
+    """
+
+    # to avoid error from message length
+    if len(command_list) <= 3:
+        return None
+
+    msg = domish.Element((NS_COMMAND, 'command'))
+    msg.addElement('timestamp', content=command_list[1])
+    msg.addElement('type', content=command_list[2])
+    msg.addElement('value', content='|'.join(command_list[3:]))
     return msg
