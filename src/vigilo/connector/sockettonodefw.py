@@ -180,6 +180,10 @@ class SocketToNodeForwarder(PubSubClient):
 
         item = Item(payload=xml)
         
+        if xml.name not in self._nodetopublish:
+            LOGGER.error(_("No destination node configured for messages "
+                           "of type '%s'. Skipping.") % xml.name)
+            return
         node = self._nodetopublish[xml.name]
         try:
             result = self.publish(self._service, node, [item])
