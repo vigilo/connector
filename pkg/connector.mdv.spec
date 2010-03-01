@@ -45,13 +45,6 @@ make install \
 sed -i -e 's/^Twisted$/Twisted_Words/' $RPM_BUILD_ROOT%{_prefix}/lib*/python*/site-packages/vigilo_connector-*-py*.egg-info/requires.txt
 
 
-%post
-%_post_service %{name}
-
-%preun
-%_preun_service %{name}
-
-
 %clean
 rm -rf $RPM_BUILD_ROOT
 
