@@ -14,6 +14,7 @@ BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-build
 License:    GPLv2
 
 BuildRequires:   python-setuptools
+BuildRequires:   python-babel
 
 Requires:   python >= 2.5
 Requires:   python-setuptools
