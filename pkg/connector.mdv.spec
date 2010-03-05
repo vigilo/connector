@@ -1,7 +1,7 @@
 %define module  connector
 %define name    vigilo-%{module}
-%define version 1.0
-%define release 2
+%define version 1.1
+%define release 1%{?svn}
 
 Name:       %{name}
 Summary:    Vigilo XMPP connector library
@@ -18,6 +18,8 @@ BuildRequires:   python-setuptools
 Requires:   python >= 2.5
 Requires:   python-setuptools
 Requires:   vigilo-common vigilo-pubsub
+Requires:   python-twisted-words
+Requires:   python-wokkel
 
 Requires(pre): rpm-helper
 
@@ -48,9 +50,10 @@ sed -i -e 's/^Twisted$/Twisted_Words/' $RPM_BUILD_ROOT%{_prefix}/lib*/python*/si
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%files -f INSTALLED_FILES
+%files
 %defattr(-,root,root)
 %doc COPYING
+%{python_sitelib}/*
 
 
 %changelog
