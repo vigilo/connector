@@ -109,8 +109,8 @@ class DbRetry(object):
 
                 if str(e) == "database is locked":
                     LOGGER.warning(_("The database is locked"))
-                    time.sleep(5)
-                    return self.unstoremessage()
+                    time.sleep(1)
+                    return self.unstore()
                 else:
                     LOGGER.error(
                         _("Some operational error occured. "

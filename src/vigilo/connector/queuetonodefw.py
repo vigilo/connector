@@ -90,7 +90,7 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
                 try:
                     # Aucun message à renvoyer ?
                     # On récupère un message de la file dans ce cas.
-                    xml = self._queue.get(block=True)
+                    xml = self._queue.get()
                 except (IOError, OSError), e:
                     if e.errno != errno.EINTR:
                         raise
