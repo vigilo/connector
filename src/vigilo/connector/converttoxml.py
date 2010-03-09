@@ -188,6 +188,6 @@ def command2xml(command_list):
 
     msg = domish.Element((NS_COMMAND, 'command'))
     msg.addElement('timestamp', content=command_list[1])
-    msg.addElement('type', content=command_list[2])
+    msg.addElement('cmdname', content=command_list[2])
     msg.addElement('value', content='|'.join(command_list[3:]))
     return msg
