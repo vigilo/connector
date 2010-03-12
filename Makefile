@@ -1,5 +1,4 @@
 NAME := connector
-DESTDIR =
 all: build
 
 install:
