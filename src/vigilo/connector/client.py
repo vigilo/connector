@@ -19,7 +19,6 @@ class XMPPClient(client.XMPPClient):
         @TODO: vérifier que ça ne bloque pas la reconnexion automatique.
         """
         client.XMPPClient._disconnected(self, xs)
-        reactor.stop()
 
     def initializationFailed(self, failure):
         """
@@ -28,7 +27,7 @@ class XMPPClient(client.XMPPClient):
         """
         if failure.check(SASLNoAcceptableMechanism,SASLAuthError):
             log.err(failure, "Authentication failed:")
-            self.stopService()
+            reactor.stop()
             return
         client.XMPPClient.initializationFailed(self, failure)
 

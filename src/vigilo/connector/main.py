@@ -112,13 +112,12 @@ def do_main_program():
     reactor.run()
 
 def main(*args):
-    """ main function designed to launch the program """
-
-    from vigilo.common.daemonize import daemonize
-    context = daemonize()
-    with context:
-        do_main_program()
-
+    """Lancement avec Twistd"""
+    import sys
+    tac_file = os.path.join(os.path.dirname(__file__), "twisted_service.py")
+    sys.argv[1:1] = ["-y", tac_file]
+    from twisted.scripts.twistd import run
+    run()
 
 if __name__ == '__main__':
     main()
