@@ -51,6 +51,11 @@ setup(name='vigilo-connector',
             'vigilo',
             'vigilo.connector',
             ],
+        message_extractors={
+            'src': [
+                ('**.py', 'python', None),
+            ],
+        },
         entry_points={
         },
         extras_require={
