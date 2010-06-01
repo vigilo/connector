@@ -3,7 +3,8 @@
 from twisted.internet import reactor
 from twisted.python import log
 from twisted.words.protocols.jabber import xmlstream
-from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism,SASLAuthError
+from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism, \
+                                                SASLAuthError
 
 from wokkel import client
 
@@ -25,7 +26,7 @@ class XMPPClient(client.XMPPClient):
         Appelé si l'initialisation échoue. Ici, on ajoute la gestion de
         l'erreur d'authentification.
         """
-        if failure.check(SASLNoAcceptableMechanism,SASLAuthError):
+        if failure.check(SASLNoAcceptableMechanism, SASLAuthError):
             log.err(failure, "Authentication failed:")
             reactor.stop()
             return
