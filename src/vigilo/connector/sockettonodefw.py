@@ -183,13 +183,14 @@ class SocketToNodeForwarder(PubSubClient):
         if xml.name not in self._nodetopublish:
             LOGGER.error(_("No destination node configured for messages "
                            "of type '%s'. Skipping.") % xml.name)
+            del item
             return
         node = self._nodetopublish[xml.name]
         try:
             result = self.publish(self._service, node, [item])
             result.addErrback(eb, xml)
-            return True
             del result
+            return True
         except AttributeError:
             xml_src = xml.toXml().encode('utf8')
             LOGGER.error(_('Message from Socket impossible to forward'
@@ -197,4 +198,7 @@ class SocketToNodeForwarder(PubSubClient):
                            'is stored for later reemission (%s)') % xml_src)
             self.retry.store(xml_src)
             self._backuptoempty = True
+        finally:
+            del item
+            del eb
 
