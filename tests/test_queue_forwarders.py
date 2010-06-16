@@ -8,7 +8,6 @@ import threading
 
 from twisted.trial import unittest
 from twisted.internet import reactor
-unittest.TestCase.timeout = 5
 
 from twisted.internet.defer import Deferred
 from twisted.internet.threads import deferToThread
@@ -29,7 +28,7 @@ LOGGER = get_logger(__name__)
 
 class TestForwarders(unittest.TestCase):
     """Teste les échangeurs (forwarders) de messages."""
-    timeout = 2
+    timeout = 5
 
     def setUp(self):
         """Initialisation du test."""
