@@ -11,8 +11,18 @@ from wokkel import client
 class XMPPClient(client.XMPPClient):
     """Client XMPP Vigilo"""
 
-    def __init__(self, *args, **kw):
-        client.XMPPClient.__init__(self, *args, **kw)
+    def __init__(self, jid, password, host=None, port=5222, require_tls=False):
+        self.require_tls = require_tls
+        client.XMPPClient.__init__(self, jid, password, host, port)
+
+    def _connected(self, xs):
+        # On modifie dynamiquement l'attribut "required" du plugin
+        # d'authentification TLSInitiatingInitializer créé automatiquement
+        # par wokkel, pour imposer TLS si l'administrateur le souhaite.
+        for initializer in xs.initializers:
+            if isinstance(initializer, xmlstream.TLSInitiatingInitializer):
+                initializer.required = self.require_tls
+        client.XMPPClient._connected(self, xs)
 
     def _disconnected(self, xs):
         """
