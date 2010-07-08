@@ -21,6 +21,12 @@ Requires:   python-setuptools
 Requires:   vigilo-common vigilo-pubsub
 Requires:   python-twisted-words
 Requires:   python-wokkel
+######### Dependance from python dependance tree ########
+Requires:   python-twisted
+Requires:   python-wokkel
+Requires:   python-zope-interface
+Requires:   python-configobj
+Requires:   python-babel
 
 Requires(pre): rpm-helper
 
