@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
-import os
+import os, sys
 from setuptools import setup
 
 tests_require = [
@@ -62,6 +62,6 @@ setup(name='vigilo-connector',
             'tests': tests_require,
         },
         package_dir={'': 'src'},
-        data_files=install_i18n("i18n", "/usr/share/locale")
+        data_files=install_i18n("i18n", os.path.join(sys.prefix, 'share', 'locale'))
         )
 
