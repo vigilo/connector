@@ -28,7 +28,7 @@ LOGGER = get_logger(__name__)
 
 class TestForwarders(unittest.TestCase):
     """Teste les échangeurs (forwarders) de messages."""
-    timeout = 5
+    timeout = 10
 
     def setUp(self):
         """Initialisation du test."""
