@@ -19,11 +19,11 @@ NS_COMMAND = 'http://www.projet-vigilo.org/xmlns/command1'
 MESSAGEONETOONE = 'oneToOne'
 
 def text2xml(text):
-    """ 
+    """
     Called to return the XML from text message read from socket
     @param text: The text to convert
     @type  text: C{str}
-    @return: xml object (twisted.words.xish.domish.Element) 
+    @return: xml object (twisted.words.xish.domish.Element)
             representing the text given as argument
             or None in non convertible text
     """
@@ -74,10 +74,10 @@ def text2xml(text):
     return None
 
 def oneToOne2xml(onetoone_list):
-    """ 
-    Called to return the XML from MESSAGEONETOONE message list 
-    @param event_list: list contenning a MESSAGEONETOONE type message to convert
-    @type event_list: C{list}
+    """
+    Called to return the XML from MESSAGEONETOONE message list
+    @param onetoone_list: list contenning a MESSAGEONETOONE type message to convert
+    @type onetoone_list: C{list}
     @return: xml object (twisted.words.xish.domish.Element)
             representing the text given as argument
             or None in non convertible text
@@ -90,7 +90,7 @@ def oneToOne2xml(onetoone_list):
     # (\W+@\W+(?:\.\W+)+)
     # (<)?(\w+@\w+(?:\.\w+)+)(?(1)>)
 
-    
+
 
 
     msg = domish.Element((None, MESSAGEONETOONE))
@@ -98,20 +98,20 @@ def oneToOne2xml(onetoone_list):
     return msg
 
 def event2xml(event_list):
-    """ 
-    Called to return the XML from event message list 
+    """
+    Called to return the XML from event message list
     @param event_list: list contening a event type message to convert
     @type event_list: C{list}
-    @return: C{str} representing the event in xml format
-    @return: xml object (twisted.words.xish.domish.Element)
-            representing the text given as argument
-            or None in non convertible text
+    @rtype: C{str} or None
+    @return: xml object (L<twisted.words.xish.domish.Element>)
+        representing the text given as argument
+        or None in non convertible text
     """
 
     # to avoid error from message length
     if len(event_list) != 6:
         return None
-    
+
 
     msg = domish.Element((NS_EVENT, 'event'))
     msg.addElement('timestamp', content=event_list[1])
@@ -124,9 +124,9 @@ def event2xml(event_list):
 
 
 def perf2xml(perf_list):
-    """ 
-    Called to return the XML from perf message list 
-    
+    """
+    Called to return the XML from perf message list
+
     @param perf_list: list contening a perf type message to convert
     @type perf_list: C{list}
     @return: xml object (twisted.words.xish.domish.Element)
@@ -147,20 +147,20 @@ def perf2xml(perf_list):
 
 
 def downtime2xml(downtime_list):
-    """ 
-    Called to return the XML from downtime message list 
-    
+    """
+    Called to return the XML from downtime message list
+
     @param downtime_list: list contening a downtime type message to convert
     @type downtime_list: C{list}
     @return: xml object (twisted.words.xish.domish.Element)
              representing the text given as argument
              or None in non convertible text
     """
-    
+
     # to avoid error from message length
     if len(downtime_list) != 7:
         return None
-    
+
     msg = domish.Element((NS_DOWNTIME, 'downtime'))
     msg.addElement('timestamp', content=downtime_list[1])
     msg.addElement('host', content=downtime_list[2])
@@ -172,9 +172,9 @@ def downtime2xml(downtime_list):
 
 
 def command2xml(command_list):
-    """ 
-    Called to return the XML from command message list 
-    
+    """
+    Called to return the XML from command message list
+
     @param command_list: list contening a command type message to convert
     @type command_list: C{list}
     @return: xml object (twisted.words.xish.domish.Element)

@@ -16,9 +16,11 @@ class XMPPClient(client.XMPPClient):
         client.XMPPClient.__init__(self, jid, password, host, port)
 
     def _connected(self, xs):
-        # On modifie dynamiquement l'attribut "required" du plugin
-        # d'authentification TLSInitiatingInitializer créé automatiquement
-        # par wokkel, pour imposer TLS si l'administrateur le souhaite.
+        """
+        On modifie dynamiquement l'attribut "required" du plugin
+        d'authentification TLSInitiatingInitializer créé automatiquement
+        par wokkel, pour imposer TLS si l'administrateur le souhaite.
+        """
         for initializer in xs.initializers:
             if isinstance(initializer, xmlstream.TLSInitiatingInitializer):
                 initializer.required = self.require_tls

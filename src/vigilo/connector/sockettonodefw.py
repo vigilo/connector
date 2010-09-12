@@ -13,7 +13,7 @@ from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
 from wokkel import xmppim
 
-from vigilo.connector import converttoxml 
+from vigilo.connector import converttoxml
 from vigilo.connector.store import DbRetry
 from vigilo.common.gettext import translate
 _ = translate(__name__)
@@ -27,12 +27,12 @@ MESSAGEONETOONE = 'oneToOne'
 
 class Forwarder(LineReceiver):
     """ Protocol used for each line received from the socket """
-    
+
     delimiter = '\n'
 
     def lineReceived(self, line):
         """ redefinition of the lineReceived function"""
-        
+
         if len(line) == 0:
             # empty line -> can't parse it
             return
@@ -58,24 +58,24 @@ class SocketToNodeForwarder(PubSubClient):
     Receives messages on the socket and passes them to the xmpp bus,
     Forward socket to Node.
     """
-    def __init__(self, socket_filename, dbfilename, dbtable, 
+    def __init__(self, socket_filename, dbfilename, dbtable,
                  nodetopublish, service):
         """
         Instancie un connecteur socket vers BUS XMPP.
 
-        @param pipe_filename: le nom du fichier pipe qui accueillra les 
-        messages XMPP
-        @type pipe_filename: C{str}
-        @param dbfilename: le nom du fichier permettant la sauvegarde des 
-        messages en cas de problème d'éciture sur le BUS
-        @type dbfilename: C{str}
+        @param socket_filename: le nom du fichier pipe qui accueillra les
+                                messages XMPP
+        @type  socket_filename: C{str}
+        @param dbfilename: le nom du fichier permettant la sauvegarde des
+                           messages en cas de problème d'éciture sur le BUS
+        @type  dbfilename: C{str}
         @param dbtable: Le nom de la table SQL pour la sauvegarde des messages.
-        @type dbtable: C{str}
-        @param nodetopublish: dictionnaire pour la correspondance type de message 
+        @type  dbtable: C{str}
+        @param nodetopublish: dictionnaire pour la correspondance type de message
                               noeud PubSub de destination.
-        @type nodetopublish: C{dict}
+        @type  nodetopublish: C{dict}
         @param service: The publish subscribe service that keeps the node.
-        @type service: L{twisted.words.protocols.jabber.jid.JID}
+        @type  service: L{twisted.words.protocols.jabber.jid.JID}
         """
         PubSubClient.__init__(self)
         self.retry = DbRetry(dbfilename, dbtable)
@@ -133,12 +133,12 @@ class SocketToNodeForwarder(PubSubClient):
 
 
     def sendOneToOneXml(self, xml):
-        """ 
+        """
         function to send a XML msg to a particular jabber user
-        @param xml: le message a envoyé sous forme XML 
+        @param xml: le message a envoyé sous forme XML
         @type xml: twisted.words.xish.domish.Element
         """
-        # we need to send it to a particular receiver 
+        # we need to send it to a particular receiver
         # il faut l'envoyer vers un destinataire en particulier
         msg = domish.Element((None, "message"))
         msg["to"] = xml['to']
@@ -153,7 +153,7 @@ class SocketToNodeForwarder(PubSubClient):
                            ' (no connection to XMPP server), the mess'
                            'age is stored for later reemission (%s)') % xml_src)
             self.retry.store(xml_src)
-            self._backuptoempty = True 
+            self._backuptoempty = True
         else:
             self.send(msg)
             return True
@@ -161,9 +161,9 @@ class SocketToNodeForwarder(PubSubClient):
 
 
     def publishXml(self, xml):
-        """ 
-        function to publish a XML msg to node 
-        @param xml: le message a envoyé sous forme XML 
+        """
+        function to publish a XML msg to node
+        @param xml: le message a envoyé sous forme XML
         @type xml: twisted.words.xish.domish.Element
         """
         def eb(e, xml):
@@ -176,10 +176,10 @@ class SocketToNodeForwarder(PubSubClient):
                             'error': e,
                         })
             self.retry.store(xml_src)
-            self._backuptoempty = True 
+            self._backuptoempty = True
 
         item = Item(payload=xml)
-        
+
         if xml.name not in self._nodetopublish:
             LOGGER.error(_("No destination node configured for messages "
                            "of type '%s'. Skipping.") % xml.name)
