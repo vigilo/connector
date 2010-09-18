@@ -75,7 +75,7 @@ class SocketToNodeForwarder(PubSubClient):
                               noeud PubSub de destination.
         @type  nodetopublish: C{dict}
         @param service: The publish subscribe service that keeps the node.
-        @type  service: L{twisted.words.protocols.jabber.jid.JID}
+        @type  service: C{twisted.words.protocols.jabber.jid.JID}
         """
         PubSubClient.__init__(self)
         self.retry = DbRetry(dbfilename, dbtable)
