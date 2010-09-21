@@ -60,7 +60,7 @@ sed -i -e 's/^Twisted$/Twisted_Words/' $RPM_BUILD_ROOT%{_prefix}/lib*/python*/si
 rm -rf $RPM_BUILD_ROOT
 
 %files -f %{name}.lang
-%defattr(-,root,root)
+%defattr(644,root,root,755)
 %doc COPYING
 %{python_sitelib}/*
 
