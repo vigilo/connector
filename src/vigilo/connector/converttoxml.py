@@ -29,9 +29,9 @@ def text2xml(text):
     """
     text = text.strip()
     try:
-        text = unicode(text, 'UTF-8', errors='strict')
+        text = unicode(text, 'utf8', errors='strict')
     except UnicodeDecodeError:
-        text = unicode(text, 'ISO-8859-15', errors='replace')
+        text = unicode(text, 'iso-8859-15', errors='replace')
     elements = text.split('|')
     if elements:
         LOGGER.debug("Received: %s" % str(elements))
