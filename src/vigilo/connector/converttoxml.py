@@ -27,7 +27,12 @@ def text2xml(text):
             representing the text given as argument
             or None in non convertible text
     """
-    elements = text.strip().split('|')
+    text = text.strip()
+    try:
+        text = unicode(text, 'UTF-8', errors='strict')
+    except UnicodeDecodeError:
+        text = unicode(text, 'ISO-8859-15', errors='replace')
+    elements = text.split('|')
     if elements:
         LOGGER.debug("Received: %s" % str(elements))
         try:
@@ -62,7 +67,7 @@ def text2xml(text):
                 else:
                     LOGGER.warning(_("Unknown/malformed message type: '%s'") %
                                     elements[0])
-            LOGGER.debug("Converted to: %s" % msg.toXml())
+            LOGGER.debug(_("Converted to: %s") % msg.toXml())
             return msg
 
         except (TypeError, AttributeError):
