@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vigilo-connector 2.0.0\n"
 "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
-"POT-Creation-Date: 2010-04-23 16:00+0200\n"
+"POT-Creation-Date: 2010-09-23 15:05+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,37 +18,42 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/converttoxml.py:37
+#: src/vigilo/connector/converttoxml.py:42
 msgid "Got one-to-one message"
 msgstr ""
 
-#: src/vigilo/connector/converttoxml.py:42
+#: src/vigilo/connector/converttoxml.py:47
 msgid "Got empty line"
 msgstr ""
 
-#: src/vigilo/connector/converttoxml.py:44
+#: src/vigilo/connector/converttoxml.py:49
 msgid "Got 'event' message"
 msgstr ""
 
-#: src/vigilo/connector/converttoxml.py:47
+#: src/vigilo/connector/converttoxml.py:52
 msgid "Got 'perf' message"
 msgstr ""
 
-#: src/vigilo/connector/converttoxml.py:50
+#: src/vigilo/connector/converttoxml.py:55
 msgid "Got 'downtime' message"
 msgstr ""
 
-#: src/vigilo/connector/converttoxml.py:53
+#: src/vigilo/connector/converttoxml.py:58
 msgid "Got 'command' message"
 msgstr ""
 
-#: src/vigilo/connector/converttoxml.py:56 src/vigilo/connector/converttoxml.py:63
-#: src/vigilo/connector/converttoxml.py:69
+#: src/vigilo/connector/converttoxml.py:61 src/vigilo/connector/converttoxml.py:68
+#: src/vigilo/connector/converttoxml.py:74
 #, python-format
 msgid "Unknown/malformed message type: '%s'"
 msgstr ""
 
-#: src/vigilo/connector/converttoxml.py:73
+#: src/vigilo/connector/converttoxml.py:70
+#, python-format
+msgid "Converted to: %s"
+msgstr ""
+
+#: src/vigilo/connector/converttoxml.py:78
 #, python-format
 msgid "Got malformed message: %s"
 msgstr ""
@@ -125,7 +130,7 @@ msgid "Received message: %r"
 msgstr ""
 
 #: src/vigilo/connector/sockettonodefw.py:152
-#: src/vigilo/connector/sockettonodefw.py:195
+#: src/vigilo/connector/sockettonodefw.py:196
 #, python-format
 msgid ""
 "Message from Socket impossible to forward (no connection to XMPP server), the"
