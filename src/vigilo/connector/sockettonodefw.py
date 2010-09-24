@@ -128,7 +128,7 @@ class SocketToNodeForwarder(PubSubClient):
         # There's probably a way to configure it (on_sub vs on_sub_and_presence)
         # but the spec defaults to not sending subscriptions without presence.
         self.send(xmppim.AvailablePresence())
-        LOGGER.debug('connectionInitialized')
+        LOGGER.info(_('Connected to the XMPP bus'))
         self.sendQueuedMessages()
 
 

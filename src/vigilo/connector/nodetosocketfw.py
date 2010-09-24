@@ -36,11 +36,11 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         # add an observer to deal with chat message (oneToOne message)
         self.xmlstream.addObserver("/message[@type='chat']", self.chatReceived)
 
-        
+
         # There's probably a way to configure it (on_sub vs on_sub_and_presence)
         # but the spec defaults to not sending subscriptions without presence.
         self.send(xmppim.AvailablePresence())
-        LOGGER.info(_('ConnectionInitialized'))
+        LOGGER.info(_('Connected to the XMPP bus'))
 
 
 
@@ -48,10 +48,10 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         """
         Instancie un connecteur BUS XMPP vers socket.
 
-        @param socket_filename: le nom du fichier socket qui accueillra les 
+        @param socket_filename: le nom du fichier socket qui accueillra les
         messages du BUS XMPP
         @type socket_filename: C{str}
-        @param dbfilename: le nom du fichier permettant la sauvegarde des 
+        @param dbfilename: le nom du fichier permettant la sauvegarde des
         messages en cas de problème d'éciture sur le pipe
         @type dbfilename: C{str}
         @param dbtable: Le nom de la table SQL dans ce fichier.
@@ -59,8 +59,8 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         """
         PubSubClient.__init__(self)
         self.retry = DbRetry(dbfilename, dbtable)
-        self.__backuptoempty = os.path.exists(dbfilename) 
-        # using ReconnectingClientFactory using a backoff retry 
+        self.__backuptoempty = os.path.exists(dbfilename)
+        # using ReconnectingClientFactory using a backoff retry
         # (it try again and again with a delay incrising between attempt)
         self.__factory = twisted.internet.protocol.ReconnectingClientFactory()
 
@@ -103,7 +103,7 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         # reset the reconnecting delay after a succesfull connection
         self.__factory.resetDelay()
         self.sendQueuedMessages()
-    
+
     def buildProtocol(self, addr):
         """ Create an instance of a subclass of Protocol. """
         return self
@@ -127,9 +127,9 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
 
 
     def chatReceived(self, msg):
-        """ 
-        function to treat a received chat message 
-        
+        """
+        function to treat a received chat message
+
         @param msg: msg to treat
         @type  msg: twisted.words.xish.domish.Element
 
@@ -147,11 +147,11 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
                                data.toXml().encode('utf8'))
                 self.messageForward(data.toXml().encode('utf8'))
 
-    
+
     def itemsReceived(self, event):
-        """ 
-        function to treat a received item 
-        
+        """
+        function to treat a received item
+
         @param event: event to treat
         @type  event: twisted.words.xish.domish.Element
 
@@ -161,7 +161,7 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
             # Item is a domish.IElement and a domish.Element
             # Serialize as XML before queueing,
             # or we get harmless stderr pollution  × 5 lines:
-            # Exception RuntimeError: 'maximum recursion depth exceeded in 
+            # Exception RuntimeError: 'maximum recursion depth exceeded in
             # __subclasscheck__' in <type 'exceptions.AttributeError'> ignored
             # Stderr pollution caused by http://bugs.python.org/issue5508
             # and some touchiness on domish attribute access.
@@ -172,7 +172,7 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
                 continue
             it = [ it for it in item.elements() if item.name == "item" ]
             for i in it:
-                LOGGER.debug(_('Message from BUS to forward: %s') % 
+                LOGGER.debug(_('Message from BUS to forward: %s') %
                              i.toXml().encode('utf8'))
                 self.messageForward(i.toXml().encode('utf8'))
 
