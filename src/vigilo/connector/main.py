@@ -19,7 +19,7 @@ class ConnectorServiceMaker(object):
     #implements(service.IServiceMaker, IPlugin)
 
     def makeService(self):
-        """ the service that wraps everything the connector needs. """ 
+        """ the service that wraps everything the connector needs. """
         from vigilo.connector.nodetosocketfw import NodeToSocketForwarder
         from vigilo.connector.sockettonodefw import SocketToNodeForwarder
         from vigilo.pubsub.checknode import VerificationNode
@@ -49,7 +49,7 @@ class ConnectorServiceMaker(object):
         except KeyError:
             list_nodeSubscriber = []
 
-        verifyNode = VerificationNode(list_nodeOwner, list_nodeSubscriber, 
+        verifyNode = VerificationNode(list_nodeOwner, list_nodeSubscriber,
                                       doThings=True)
         verifyNode.setHandlerParent(xmpp_client)
         nodetopublish = settings.get('publications', {})
