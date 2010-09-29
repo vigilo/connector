@@ -150,8 +150,8 @@ class SocketToNodeForwarder(PubSubClient):
         if self.xmlstream is None:
             xml_src = xml.toXml().encode('utf8')
             LOGGER.error(_('Message from Socket impossible to forward'
-                           ' (no connection to XMPP server), the mess'
-                           'age is stored for later reemission (%s)') % xml_src)
+                           ' (no connection to XMPP server), the message '
+                           'is stored for later reemission (%s)') % xml_src)
             self.retry.store(xml_src)
             self._backuptoempty = True
         else:
@@ -201,4 +201,3 @@ class SocketToNodeForwarder(PubSubClient):
         finally:
             del item
             del eb
-
