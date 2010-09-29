@@ -18,6 +18,7 @@ URL:        http://www.projet-vigilo.org
 Group:      System/Servers
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-build
 License:    GPLv2
+Buildarch:  noarch
 
 BuildRequires:   python26-setuptools
 BuildRequires:   python26-babel
@@ -26,14 +27,6 @@ Requires:   python26-distribute
 Requires:   vigilo-common vigilo-pubsub
 Requires:   python26-twisted-words
 Requires:   python26-wokkel
-######### Dependance from python dependance tree ########
-Requires:   python26-twisted
-Requires:   python26-wokkel
-Requires:   python26-zope-interface
-Requires:   python26-configobj
-Requires:   python26-babel
-
-Buildarch:  noarch
 
 
 %description
