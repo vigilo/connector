@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2010-09-23 15:05+0200\n"
+"PO-Revision-Date: 2010-09-30 18:39+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -91,8 +91,9 @@ msgid "The queue is full, dropping incoming XML message! (%s)"
 msgstr "La file est pleine, le message XML entrant a été ignoré! (%s)"
 
 #: src/vigilo/connector/nodetosocketfw.py:43
-msgid "ConnectionInitialized"
-msgstr "ConnectionInitialized"
+#: src/vigilo/connector/sockettonodefw.py:131
+msgid "Connected to the XMPP bus"
+msgstr "Connecté au bus XMPP"
 
 #: src/vigilo/connector/nodetosocketfw.py:120
 msgid ""
@@ -174,3 +175,4 @@ msgstr ""
 #, python-format
 msgid "Some error occured. Original error message was: %s"
 msgstr "Une erreur est survenue. Le message d'erreur d'origine était : %s"
+

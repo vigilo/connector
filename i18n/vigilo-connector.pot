@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vigilo-connector 2.0.0\n"
 "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
-"POT-Creation-Date: 2010-09-23 15:05+0200\n"
+"POT-Creation-Date: 2010-09-30 18:39+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -88,7 +88,8 @@ msgid "The queue is full, dropping incoming XML message! (%s)"
 msgstr ""
 
 #: src/vigilo/connector/nodetosocketfw.py:43
-msgid "ConnectionInitialized"
+#: src/vigilo/connector/sockettonodefw.py:131
+msgid "Connected to the XMPP bus"
 msgstr ""
 
 #: src/vigilo/connector/nodetosocketfw.py:120
