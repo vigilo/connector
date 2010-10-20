@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vigilo-connector 2.0.0\n"
 "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
-"POT-Creation-Date: 2010-09-30 18:39+0200\n"
+"POT-Creation-Date: 2010-10-20 11:42+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,18 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
+
+#: src/vigilo/connector/client.py:48
+msgid "Authentication failure."
+msgstr ""
+
+#: src/vigilo/connector/client.py:49
+msgid "Authentication failed:"
+msgstr ""
+
+#: src/vigilo/connector/client.py:53 src/vigilo/connector/client.py:54
+msgid "Server does not support TLS encryption."
+msgstr ""
 
 #: src/vigilo/connector/converttoxml.py:42
 msgid "Got one-to-one message"

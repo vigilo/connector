@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2010-09-30 18:39+0200\n"
+"PO-Revision-Date: 2010-10-20 11:42+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -17,6 +17,18 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
+
+#: src/vigilo/connector/client.py:48
+msgid "Authentication failure."
+msgstr "Échec de l'authentification."
+
+#: src/vigilo/connector/client.py:49
+msgid "Authentication failed:"
+msgstr "L'authentification a échoué :"
+
+#: src/vigilo/connector/client.py:53 src/vigilo/connector/client.py:54
+msgid "Server does not support TLS encryption."
+msgstr "Le serveur ne supporte pas le chiffrement TLS."
 
 #: src/vigilo/connector/converttoxml.py:42
 msgid "Got one-to-one message"
@@ -175,4 +187,3 @@ msgstr ""
 #, python-format
 msgid "Some error occured. Original error message was: %s"
 msgstr "Une erreur est survenue. Le message d'erreur d'origine était : %s"
-
