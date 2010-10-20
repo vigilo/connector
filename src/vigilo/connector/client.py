@@ -38,9 +38,20 @@ class XMPPClient(client.XMPPClient):
         Appelé si l'initialisation échoue. Ici, on ajoute la gestion de
         l'erreur d'authentification.
         """
+        from vigilo.common.logging import get_logger
+        LOGGER = get_logger(__name__)
+
+        from vigilo.common.gettext import translate
+        _ = translate(__name__)
+
         if failure.check(SASLNoAcceptableMechanism, SASLAuthError):
-            log.err(failure, "Authentication failed:")
+            LOGGER.error(_("Authentication failure."))
+            log.err(failure, _("Authentication failed:"))
+            reactor.stop()
+            return
+        if failure.check(xmlstream.FeatureNotAdvertized):
+            LOGGER.error(_("Server does not support TLS encryption."))
+            log.err(failure, _("Server does not support TLS encryption."))
             reactor.stop()
             return
         client.XMPPClient.initializationFailed(self, failure)
-
