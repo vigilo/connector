@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2010-10-20 11:42+0200\n"
+"PO-Revision-Date: 2010-11-19 12:16+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -187,3 +187,4 @@ msgstr ""
 #, python-format
 msgid "Some error occured. Original error message was: %s"
 msgstr "Une erreur est survenue. Le message d'erreur d'origine était : %s"
+
