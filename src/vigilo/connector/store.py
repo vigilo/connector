@@ -11,6 +11,9 @@ LOGGER = get_logger(__name__)
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
+class MustRetryError(Exception):
+    """L'opération doit être retentée."""
+    pass
 
 class DbRetry(object):
     """
@@ -33,20 +36,26 @@ class DbRetry(object):
         # sont thread-safe, car check_same_thread=False désactive
         # toutes les vérifications faites normalement par pysqlite.
         self.__connection = sqlite.connect(filename, check_same_thread=False)
+
+        # Création de la table. Si une erreur se produit, elle sera
+        # tout simplement propagée à l'appelant, qui décidera de ce
+        # qu'il convient de faire.
         cursor = self.__connection.cursor()
-        cursor.execute('CREATE TABLE IF NOT EXISTS %s \
-                (id INTEGER PRIMARY KEY, msg TXT)' % table)
-        self.__connection.commit()
-        cursor.close()
+        try:
+            cursor.execute('CREATE TABLE IF NOT EXISTS %s \
+                    (id INTEGER PRIMARY KEY, msg TXT)' % table)
+            self.__connection.commit()
+        finally:
+            cursor.close()
 
     def __del__(self):
         """Libère la base de données locale."""
         self.__connection.close()
 
     def store(self, msg):
-        """ 
+        """
         Stocke un message XML dans la base de données locale en attendant
-        de pouvoir le retransmettre à son destinataire finale. 
+        de pouvoir le retransmettre à son destinataire final.
 
         @param msg: Le message à stocker.
         @type  msg: C{str}
@@ -56,6 +65,7 @@ class DbRetry(object):
         """
 
         cursor = self.__connection.cursor()
+        must_retry = False
 
         try:
             cursor.execute('INSERT INTO %s VALUES (null, ?)' %
@@ -66,13 +76,24 @@ class DbRetry(object):
 
         except sqlite.OperationalError, e:
             self.__connection.rollback()
+            if str(e) == "database is locked":
+                LOGGER.warning(_("The database is locked"))
+                must_retry = True
+            else:
+                LOGGER.exception(_("Got an exception:"))
+                raise e
+
+        except Exception, e:
+            self.__connection.rollback()
+            LOGGER.exception(_("Got an exception:"))
+            raise e
+
+        finally:
             cursor.close()
 
-            if e.__str__() == "database is locked":
-                time.sleep(1)
-                return self.store(msg)
-            else:
-                raise e
+        if must_retry:
+            time.sleep(1)
+            return self.store(msg)
         return False
 
     def unstore(self):
@@ -84,56 +105,78 @@ class DbRetry(object):
         @return: Un message stocké en attente de retransmission
             ou None lorsqu'il n'y a plus de message.
         @rtype: C{str} ou C{None}
-        @raise sqlite.OperationalError: Une erreur possible 
+        @raise sqlite.OperationalError: Une erreur possible
         @raise sqlite.Error:
         """
-
         cursor = self.__connection.cursor()
-        cursor.execute('SELECT MIN(id) FROM %s' % self.__table)
-        id_min = cursor.fetchone()[0]
-        
-        if id_min:
-            try:
-                cursor.execute('SELECT msg FROM %s WHERE id = ?' %
-                    self.__table, (id_min,))
-                msg = cursor.fetchone()[0]
-                cursor.execute('DELETE FROM %s WHERE id = ?' %
-                    self.__table, (id_min,))
-                self.__connection.commit()
-                cursor.close()
-                return msg.encode('utf8')
- 
-            except sqlite.OperationalError, e:
-                self.__connection.rollback()
-                cursor.close()
+        must_retry = False
 
-                if str(e) == "database is locked":
-                    LOGGER.warning(_("The database is locked"))
-                    time.sleep(1)
-                    return self.unstore()
-                else:
-                    LOGGER.error(
-                        _("Some operational error occured. "
-                          "Original error message was: %s") %
-                        str(e))
-                    raise e
- 
-            except sqlite.Error, e:
-                self.__connection.rollback()
-                cursor.close()
-                LOGGER.error(
-                    _("Some error occured. "
-                      "Original error message was: %s") %
-                    str(e))
+        try:
+            cursor.execute('SELECT MIN(id) FROM %s' % self.__table)
+
+            entry = cursor.fetchone()
+            if entry is None:
+                return None
+
+            id_min = entry[0]
+            del entry
+
+            if id_min is None:
+                return None
+
+            res = cursor.execute('SELECT msg FROM %s WHERE id = ?' %
+                self.__table, (id_min, ))
+
+            entry = cursor.fetchone()
+            if entry is None:
+                raise MustRetryError()
+
+            msg = entry[0]
+            del entry
+            cursor.execute('DELETE FROM %s WHERE id = ?' %
+                self.__table, (id_min, ))
+
+            if cursor.rowcount != 1:
+                raise MustRetryError()
+
+            self.__connection.commit()
+            return msg.encode('utf8')
+
+        except MustRetryError:
+            must_retry = True
+
+        except sqlite.OperationalError, e:
+            self.__connection.rollback()
+            if str(e) == "database is locked":
+                LOGGER.warning(_("The database is locked"))
+                print "database locked"
+                must_retry = True
+            else:
+                LOGGER.exception(_("Got an exception:"))
                 raise e
 
-        cursor.close()
+        except Exception, e:
+            self.__connection.rollback()
+            LOGGER.exception(_("Got an exception:"))
+            raise e
+
+        finally:
+            cursor.close()
+
+        if must_retry:
+            time.sleep(1)
+            return self.unstore()
         return None
 
     def vacuum(self):
-        """Effectue une optimisation de la base de données."""
+        """
+        Effectue une réorganisation de la base de données
+        afin d'optimiser les temps d'accès.
+        """
         cursor = self.__connection.cursor()
-        cursor.execute('VACUUM')
-        self.__connection.commit()
-        cursor.close()
 
+        try:
+            cursor.execute('VACUUM')
+            self.__connection.commit()
+        finally:
+            cursor.close()
