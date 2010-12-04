@@ -6,7 +6,7 @@ Extends pubsub clients to compute Socket message
 
 from __future__ import absolute_import
 
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, defer
 from twisted.protocols.basic import LineReceiver
 from twisted.words.xish import domish
 from wokkel.pubsub import PubSubClient, Item
@@ -14,6 +14,7 @@ from wokkel.generic import parseXml
 from wokkel import xmppim
 
 from vigilo.connector import converttoxml
+from vigilo.connector.converttoxml import MESSAGEONETOONE
 from vigilo.connector.store import DbRetry
 from vigilo.common.gettext import translate
 _ = translate(__name__)
@@ -22,8 +23,9 @@ LOGGER = get_logger(__name__)
 
 import os
 
-MESSAGEONETOONE = 'oneToOne'
 
+class NotConnectedError(Exception):
+    pass
 
 class Forwarder(LineReceiver):
     """ Protocol used for each line received from the socket """
@@ -47,9 +49,9 @@ class Forwarder(LineReceiver):
             # Couldn't parse this line
             return
         if xml.name == MESSAGEONETOONE:
-            self.factory.sendOneToOneXml(xml)
+            return self.factory.sendOneToOneXml(xml)
         else:
-            self.factory.publishXml(xml)
+            return self.factory.publishXml(xml)
 
 
 
@@ -93,33 +95,29 @@ class SocketToNodeForwarder(PubSubClient):
         self._nodetopublish = nodetopublish
         self.name = self.__class__.__name__
 
-
+    @defer.inlineCallbacks
     def sendQueuedMessages(self):
         """
         Called to send Message previously stored
+        @note: http://stackoverflow.com/questions/776631/using-twisteds-twisted-web-classes-how-do-i-flush-my-outgoing-buffers
         """
-        if self._backuptoempty:
-            self._backuptoempty = False
-            # XXX Ce code peut potentiellement boucler indéfiniment...
-            while True:
-                msg = self.retry.unstore()
-                if msg is None:
-                    break
+        if not self._backuptoempty:
+            return
+        self._backuptoempty = False
+        # XXX Ce code peut potentiellement boucler indéfiniment...
+        while True:
+            msg = self.retry.unstore()
+            if msg is None:
+                break
+            else:
+                LOGGER.debug(_('Received message: %r') % msg)
+                xml = parseXml(msg)
+                if xml.name == MESSAGEONETOONE:
+                    yield self.sendOneToOneXml(xml)
                 else:
-                    LOGGER.debug(_('Received message: %r') % msg)
-                    xml = parseXml(msg)
-                    if xml.name == MESSAGEONETOONE:
-                        if self.sendOneToOneXml(xml) is not True:
-                            # we loose the ability to send message again
-                            self._backuptoempty = True
-                            break
-                    else:
-                        if self.publishXml(xml) is not True:
-                            # we loose the ability to send message again
-                            self._backuptoempty = True
-                            break
+                    yield self.publishXml(xml)
 
-            self.retry.vacuum()
+        self.retry.vacuum()
 
 
     def connectionInitialized(self):
@@ -130,6 +128,23 @@ class SocketToNodeForwarder(PubSubClient):
         self.send(xmppim.AvailablePresence())
         LOGGER.info(_('Connected to the XMPP bus'))
         self.sendQueuedMessages()
+
+
+    def _send_failed(self, e, xml, errmsg=None):
+        """errback: remet le message en base"""
+        xml_src = xml.toXml().encode('utf8')
+        if errmsg is None:
+            if e.type == NotConnectedError:
+                errmsg = _('Message from Socket impossible to forward'
+                           ' (no connection to XMPP server), the message '
+                           'is stored for later reemission (%(xml_src)s)')
+            else:
+                errmsg = _('Unable to forward the message (%r), it '
+                           'has been stored for later retransmission '
+                           '(%%(xml_src)s)') % e
+        LOGGER.error(errmsg % {"xml_src": xml_src})
+        self.retry.store(xml_src)
+        self._backuptoempty = True
 
 
     def sendOneToOneXml(self, xml):
@@ -148,15 +163,11 @@ class SocketToNodeForwarder(PubSubClient):
         msg.addElement("body", content=body)
         # if not connected store the message
         if self.xmlstream is None:
-            xml_src = xml.toXml().encode('utf8')
-            LOGGER.error(_('Message from Socket impossible to forward'
-                           ' (no connection to XMPP server), the message '
-                           'is stored for later reemission (%s)') % xml_src)
-            self.retry.store(xml_src)
-            self._backuptoempty = True
+            result = defer.fail(NotConnectedError())
         else:
-            self.send(msg)
-            return True
+            result = self.send(msg)
+        result.addErrback(self._send_failed, msg)
+        return result
 
 
 
@@ -166,38 +177,18 @@ class SocketToNodeForwarder(PubSubClient):
         @param xml: le message a envoyé sous forme XML
         @type xml: twisted.words.xish.domish.Element
         """
-        def eb(e, xml):
-            """errback"""
-            xml_src = xml.toXml().encode('utf8')
-            LOGGER.error(_('Unable to forward the message (%(error)r), it '
-                        'has been stored for later retransmission '
-                        '(%(xml_src)s)') % {
-                            'xml_src': xml_src,
-                            'error': e,
-                        })
-            self.retry.store(xml_src)
-            self._backuptoempty = True
-
         item = Item(payload=xml)
-
         if xml.name not in self._nodetopublish:
             LOGGER.error(_("No destination node configured for messages "
                            "of type '%s'. Skipping.") % xml.name)
             del item
-            return
+            return defer.succeed(True)
         node = self._nodetopublish[xml.name]
         try:
             result = self.publish(self._service, node, [item])
-            result.addErrback(eb, xml)
-            del result
-            return True
         except AttributeError:
-            xml_src = xml.toXml().encode('utf8')
-            LOGGER.error(_('Message from Socket impossible to forward'
-                           ' (no connection to XMPP server), the message '
-                           'is stored for later reemission (%s)') % xml_src)
-            self.retry.store(xml_src)
-            self._backuptoempty = True
+            result = defer.fail(NotConnectedError())
         finally:
             del item
-            del eb
+        result.addErrback(self._send_failed, xml)
+        return result

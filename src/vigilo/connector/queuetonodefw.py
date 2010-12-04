@@ -4,7 +4,7 @@
 Ce module est un demi-connecteur qui assure la redirection des messages
 issus d'une file d'attente (C{Queue.Queue} ou compatible) vers le bus XMPP.
 """
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, defer
 from twisted.words.protocols.jabber.jid import JID
 from wokkel.pubsub import PubSubClient
 from wokkel.generic import parseXml
@@ -63,6 +63,7 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
         self._service = service
         self._nodetopublish = nodetopublish
 
+    @defer.inlineCallbacks
     def consumeQueue(self):
         """
         Consomme les messages enregistrés dans la file en vue des les
@@ -75,6 +76,8 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
         Cette méthode boucle jusqu'à ce que la valeur C{None}
         soit lue depuis la file. Le demi-connecteur se déconnecte
         alors du bus XMPP.
+
+        @note: http://stackoverflow.com/questions/776631/using-twisteds-twisted-web-classes-how-do-i-flush-my-outgoing-buffers
         """
         def eb(e, xml):
             """error callback"""
@@ -111,9 +114,9 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
                 continue
 
             if item.name == MESSAGEONETOONE:
-                self.sendOneToOneXml(item)
+                yield self.sendOneToOneXml(item)
             else:
-                self.publishXml(item)
+                yield self.publishXml(item)
 
         LOGGER.debug(_('Stopping QueueToNodeForwarder.'))
         self.disownHandlerParent(None)
