@@ -49,9 +49,9 @@ class Forwarder(LineReceiver):
             # Couldn't parse this line
             return
         if xml.name == MESSAGEONETOONE:
-            return self.factory.sendOneToOneXml(xml)
+            self.factory.sendOneToOneXml(xml)
         else:
-            return self.factory.publishXml(xml)
+            self.factory.publishXml(xml)
 
 
 
@@ -109,13 +109,12 @@ class SocketToNodeForwarder(PubSubClient):
             msg = self.retry.unstore()
             if msg is None:
                 break
+            LOGGER.debug(_('Received message: %r') % msg)
+            xml = parseXml(msg)
+            if xml.name == MESSAGEONETOONE:
+                yield self.sendOneToOneXml(xml)
             else:
-                LOGGER.debug(_('Received message: %r') % msg)
-                xml = parseXml(msg)
-                if xml.name == MESSAGEONETOONE:
-                    yield self.sendOneToOneXml(xml)
-                else:
-                    yield self.publishXml(xml)
+                yield self.publishXml(xml)
 
         self.retry.vacuum()
 
