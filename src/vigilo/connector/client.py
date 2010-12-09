@@ -5,8 +5,10 @@ from twisted.python import log
 from twisted.words.protocols.jabber import xmlstream
 from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism, \
                                                 SASLAuthError
-
 from wokkel import client
+
+from vigilo.common.gettext import translate
+_ = translate(__name__)
 
 class XMPPClient(client.XMPPClient):
     """Client XMPP Vigilo"""
@@ -55,3 +57,41 @@ class XMPPClient(client.XMPPClient):
             reactor.stop()
             return
         client.XMPPClient.initializationFailed(self, failure)
+
+
+def client_factory(settings):
+    from vigilo.pubsub.checknode import VerificationNode
+
+    try:
+        require_tls = settings['bus'].as_bool('require_tls')
+    except KeyError:
+        require_tls = False
+
+    xmpp_client = XMPPClient(
+            JID(settings['bus']['jid']),
+            settings['bus']['password'],
+            settings['bus']['host'],
+            require_tls = require_tls)
+    xmpp_client.setName('xmpp_client')
+
+    try:
+        xmpp_client.logTraffic = settings['bus'].as_bool('log_traffic')
+    except KeyError:
+        xmpp_client.logTraffic = False
+
+    try:
+        subscriptions = settings['bus'].as_list('subscriptions')
+    except KeyError:
+        try:
+            # Pour la rétro-compatibilité.
+            subscriptions = settings['bus'].as_list('watched_topics')
+            warnings.warn(DeprecationWarning(_(
+                'The "watched_topics" option has now been renamed '
+                'into "subscriptions"'
+            )))
+        except KeyError:
+            subscriptions = []
+
+    node_verifier = VerificationNode(subscriptions, doThings=True)
+    node_verifier.setHandlerParent(xmpp_client)
+    return xmpp_client
