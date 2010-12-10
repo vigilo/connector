@@ -49,13 +49,6 @@ class TestForwarders(unittest.TestCase):
         self.xmpp_client.logTraffic = True
         self.xmpp_client.startService()
 
-        list_nodeOwner = settings['bus']['owned_topics']
-        verifyNode = VerificationNode(
-                        list_nodeOwner,
-                        list_nodeOwner,
-                        doThings=True)
-        verifyNode.setHandlerParent(self.xmpp_client)
-
         conn_deferred = Deferred()
         conn_handler = subprotocols.XMPPHandler()
         def on_conn():
@@ -111,4 +104,3 @@ class TestForwarders(unittest.TestCase):
         qtnf.disownHandlerParent(self.xmpp_client)
         in_queue.close()
         out_queue.close()
-

@@ -5,6 +5,7 @@ from twisted.python import log
 from twisted.words.protocols.jabber import xmlstream
 from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism, \
                                                 SASLAuthError
+from twisted.words.protocols.jabber.jid import JID
 from wokkel import client
 
 from vigilo.common.gettext import translate
@@ -85,6 +86,7 @@ def client_factory(settings):
         try:
             # Pour la rétro-compatibilité.
             subscriptions = settings['bus'].as_list('watched_topics')
+            import warnings
             warnings.warn(DeprecationWarning(_(
                 'The "watched_topics" option has now been renamed '
                 'into "subscriptions"'

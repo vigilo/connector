@@ -22,36 +22,14 @@ class ConnectorServiceMaker(object):
         """ the service that wraps everything the connector needs. """
         from vigilo.connector.nodetosocketfw import NodeToSocketForwarder
         from vigilo.connector.sockettonodefw import SocketToNodeForwarder
-        from vigilo.pubsub.checknode import VerificationNode
+
         from vigilo.common.conf import settings
         settings.load_module(__name__)
         from vigilo.common.logging import get_logger
         LOGGER = get_logger(__name__)
 
-        xmpp_client = client.XMPPClient(
-                JID(settings['connector']['vigilo_connector_jid']),
-                settings['connector']['vigilo_connector_pass'],
-                settings['connector']['vigilo_connector_xmpp_server_host'])
-        xmpp_client.setName('xmpp_client')
+        xmpp_client = client.client_factory(settings)
 
-        try:
-            xmpp_client.logTraffic = settings['bus'].as_bool('log_traffic')
-        except KeyError:
-            xmpp_client.logTraffic = False
-
-        try:
-            list_nodeOwner = settings['bus'].as_list('owned_topics')
-        except KeyError:
-            list_nodeOwner = []
-
-        try:
-            list_nodeSubscriber = settings['bus'].as_list('watched_topics')
-        except KeyError:
-            list_nodeSubscriber = []
-
-        verifyNode = VerificationNode(list_nodeOwner, list_nodeSubscriber,
-                                      doThings=True)
-        verifyNode.setHandlerParent(xmpp_client)
         nodetopublish = settings.get('publications', {})
         _service = JID(settings['bus']['service'])
 
@@ -121,4 +99,3 @@ def main(*args):
 
 if __name__ == '__main__':
     main()
-
