@@ -39,23 +39,19 @@ def text2xml(text):
             enveloppe = None
             msg = None
             if len(elements) > 2 and elements[0] == MESSAGEONETOONE:
-                LOGGER.debug(_("Got one-to-one message"))
+                LOGGER.debug("Got one-to-one message")
                 enveloppe = oneToOne2xml(elements[:2])
                 elements.pop(0)
                 elements.pop(0)
             if elements == ['']:
-                LOGGER.debug(_("Got empty line"))
+                LOGGER.debug("Got empty line")
             elif elements[0] == "event":
-                LOGGER.debug(_("Got 'event' message"))
                 msg = event2xml(elements)
             elif elements[0] == "perf":
-                LOGGER.debug(_("Got 'perf' message"))
                 msg =  perf2xml(elements)
             elif elements[0] == "downtime":
-                LOGGER.debug(_("Got 'downtime' message"))
                 msg = downtime2xml(elements)
             elif elements[0] == "command":
-                LOGGER.debug(_("Got 'command' message"))
                 msg = command2xml(elements)
             else:
                 LOGGER.warning(_("Unknown/malformed message type: '%s'") %
@@ -67,7 +63,7 @@ def text2xml(text):
                 else:
                     LOGGER.warning(_("Unknown/malformed message type: '%s'") %
                                     elements[0])
-            LOGGER.debug(_("Converted to: %s") % msg.toXml())
+            LOGGER.debug("Converted to: %s", msg.toXml())
             return msg
 
         except (TypeError, AttributeError):

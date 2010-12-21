@@ -45,7 +45,7 @@ class SocketReceiver(LineReceiver):
             # Couldn't parse this line
             return
 
-        self.factory.parent.sendMessage(xml, source="socket")
+        self.factory.parent.forwardMessage(xml, source="socket")
 
 
 class SocketToNodeForwarder(PubSubForwarder):
