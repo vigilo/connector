@@ -23,11 +23,7 @@ class Socket(unittest.TestCase):
 
     def test_clean_send(self):
         """Suppression de la socket precedente si encore presente"""
-        SocketToNodeForwarder(
-                self.tmpsocket, self.tmpbackup,
-                "dummytable", "dummynode",
-                JID("dummy@example.com")
-        )
+        SocketToNodeForwarder(self.tmpsocket, self.tmpbackup, "dummytable")
 
 
 if __name__ == "__main__": 

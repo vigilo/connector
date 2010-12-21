@@ -1,11 +1,15 @@
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
 """
-function to store message to a sqlite DataBase
+Stockage des messages en attente dans une base de données SQLite.
+
+Peut-être faudrait-il passer à l'API BdD de Twisted ?
+(twisted.enterprise.adbapi)
+Peut-être pas, vu que la latence de SQLite est suffisamment basse.
 """
 from __future__ import absolute_import
 
+from twisted.internet import reactor, defer
 from sqlite3 import dbapi2 as sqlite
-import time
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 from vigilo.common.gettext import translate
@@ -72,7 +76,7 @@ class DbRetry(object):
                 self.__table, (msg,))
             self.__connection.commit()
             cursor.close()
-            return True
+            return defer.succeed(True)
 
         except sqlite.OperationalError, e:
             self.__connection.rollback()
@@ -92,9 +96,8 @@ class DbRetry(object):
             cursor.close()
 
         if must_retry:
-            time.sleep(1)
-            return self.store(msg)
-        return False
+            return reactor.callLater(1, self.store, msg)
+        return defer.fail()
 
     def unstore(self):
         """
@@ -116,13 +119,13 @@ class DbRetry(object):
 
             entry = cursor.fetchone()
             if entry is None:
-                return None
+                return defer.succeed(None)
 
             id_min = entry[0]
             del entry
 
             if id_min is None:
-                return None
+                return defer.succeed(None)
 
             res = cursor.execute('SELECT msg FROM %s WHERE id = ?' %
                 self.__table, (id_min, ))
@@ -140,7 +143,7 @@ class DbRetry(object):
                 raise MustRetryError()
 
             self.__connection.commit()
-            return msg.encode('utf8')
+            return defer.succeed(msg.encode('utf8'))
 
         except MustRetryError:
             must_retry = True
@@ -149,7 +152,6 @@ class DbRetry(object):
             self.__connection.rollback()
             if str(e) == "database is locked":
                 LOGGER.warning(_("The database is locked"))
-                print "database locked"
                 must_retry = True
             else:
                 LOGGER.exception(_("Got an exception:"))
@@ -164,9 +166,8 @@ class DbRetry(object):
             cursor.close()
 
         if must_retry:
-            time.sleep(1)
-            return self.unstore()
-        return None
+            return reactor.callLater(1, self.unstore)
+        return self.succeed(None)
 
     def vacuum(self):
         """

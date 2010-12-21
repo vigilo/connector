@@ -5,44 +5,28 @@ Extends pubsub clients to compute Node message.
 """
 from __future__ import absolute_import
 
-import twisted.internet.protocol
+from twisted.internet import protocol
 from twisted.internet import reactor
+from twisted.python.failure import Failure
 
 from vigilo.common.logging import get_logger
-from vigilo.connector.store import DbRetry
-import os
-from wokkel.pubsub import PubSubClient
-from wokkel import xmppim
+from vigilo.connector.forwarder import PubSubForwarder, NotConnectedError
 
 LOGGER = get_logger(__name__)
 
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
-class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
+
+class SocketNotConnectedError(NotConnectedError):
+    def __str__(self):
+        return _('socket not connected')
+
+class NodeToSocketForwarder(PubSubForwarder, protocol.Protocol):
     """
     Receives messages on the xmpp bus, and passes them to the socket.
     Forward Node to socket.
     """
-    def connectionInitialized(self):
-        """
-        redefinition in order to add :
-            - new observer for message type=chat;
-            - sending presence.
-
-        """
-        # Called when we are connected and authenticated
-        PubSubClient.connectionInitialized(self)
-        # add an observer to deal with chat message (oneToOne message)
-        self.xmlstream.addObserver("/message[@type='chat']", self.chatReceived)
-
-
-        # There's probably a way to configure it (on_sub vs on_sub_and_presence)
-        # but the spec defaults to not sending subscriptions without presence.
-        self.send(xmppim.AvailablePresence())
-        LOGGER.info(_('Connected to the XMPP bus'))
-
-
 
     def __init__(self, socket_filename, dbfilename, dbtable):
         """
@@ -57,37 +41,24 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         @param dbtable: Le nom de la table SQL dans ce fichier.
         @type dbtable: C{str}
         """
-        PubSubClient.__init__(self)
-        self.retry = DbRetry(dbfilename, dbtable)
-        self.__backuptoempty = os.path.exists(dbfilename)
-        # using ReconnectingClientFactory using a backoff retry
-        # (it try again and again with a delay incrising between attempt)
-        self.__factory = twisted.internet.protocol.ReconnectingClientFactory()
-
+        PubSubForwarder.__init__(self, dbfilename, dbtable)
+        # using ReconnectingClientFactory with a backoff retry
+        # (it tries again and again with a delay increasing between attempts)
+        self.__factory = protocol.ReconnectingClientFactory()
         self.__factory.buildProtocol = self.buildProtocol
         # creation socket
-        connector = reactor.connectUNIX(socket_filename, self.__factory,
-                                        timeout=3, checkPID=0)
-        self.__connector = connector
+        self._socket = reactor.connectUNIX(socket_filename, self.__factory,
+                                           timeout=3, checkPID=0)
 
-    def sendQueuedMessages(self):
-        """
-        Called to send Message previously stored
-        """
-        if self.__backuptoempty:
-            self.__backuptoempty = False
-            # XXX Ce code peut potentiellement boucler indéfiniment...
-            while True:
-                msg = self.retry.unstore()
-                if msg is None:
-                    break
-                else:
-                    if self.messageForward(msg) is not True:
-                        # we loose the ability to send message again
-                        self.__backuptoempty = True
-                        break
-            self.retry.vacuum()
 
+    def connectionInitialized(self):
+        """
+        redefinition in order to add new observer for message type=chat
+        """
+        # Called when we are connected and authenticated
+        PubSubForwarder.connectionInitialized(self)
+        # add an observer to deal with chat message (oneToOne message)
+        self.xmlstream.addObserver("/message[@type='chat']", self.chatReceived)
 
     def connectionMade(self):
         """Called when a connection is made.
@@ -99,31 +70,24 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
         stops blocking and a socket has been received.  If you need to
         send any greeting or initial message, do it here.
         """
-
         # reset the reconnecting delay after a succesfull connection
         self.__factory.resetDelay()
-        self.sendQueuedMessages()
 
     def buildProtocol(self, addr):
         """ Create an instance of a subclass of Protocol. """
         return self
 
-    def messageForward(self, msg):
+
+    def forwardMessage(self, msg, source="node"):
         """
         function to forward the message to the socket
         @param msg: message to forward
         @type msg: C{str}
         """
-        if self.__connector.state == 'connected':
-            self.__connector.transport.write(msg + '\n')
+        if self._socket.state == 'connected':
+            self._socket.transport.write(msg + '\n')
         else:
-            LOGGER.error(_('Message impossible to forward (socket not '
-                           'connected), the message is stored for later '
-                           'reemission'))
-            self.retry.store(msg)
-            self.__backuptoempty = True
-
-
+            self._send_failed(Failure(SocketNotConnectedError()), msg)
 
 
     def chatReceived(self, msg):
@@ -143,10 +107,9 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
             # the data we need is just underneath
             # les données dont on a besoin sont juste en dessous
             for data in b.elements():
-                LOGGER.debug(_("Chat message to forward: '%s'") %
-                               data.toXml().encode('utf8'))
-                self.messageForward(data.toXml().encode('utf8'))
-
+                LOGGER.debug("Chat message to forward: '%s'" %
+                             data.toXml().encode('utf8'))
+                self.forwardMessage(data.toXml().encode('utf8'))
 
     def itemsReceived(self, event):
         """
@@ -172,7 +135,7 @@ class NodeToSocketForwarder(PubSubClient, twisted.internet.protocol.Protocol):
                 continue
             it = [ it for it in item.elements() if item.name == "item" ]
             for i in it:
-                LOGGER.debug(_('Message from BUS to forward: %s') %
+                LOGGER.debug('Message from BUS to forward: %s' %
                              i.toXml().encode('utf8'))
-                self.messageForward(i.toXml().encode('utf8'))
+                self.forwardMessage(i.toXml().encode('utf8'))
 

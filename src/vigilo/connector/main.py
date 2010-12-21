@@ -30,9 +30,6 @@ class ConnectorServiceMaker(object):
 
         xmpp_client = client.client_factory(settings)
 
-        nodetopublish = settings.get('publications', {})
-        _service = JID(settings['bus']['service'])
-
         bkpfile = settings['connector'].get('backup_file', ':memory:')
         sw = settings['connector'].get('vigilo_socketw', None)
         sr = settings['connector'].get('vigilo_socketr', None)
@@ -70,11 +67,8 @@ class ConnectorServiceMaker(object):
 
         if sr is not None:
             message_publisher = SocketToNodeForwarder(
-                sr,
-                bkpfile,
-                settings['connector']['backup_table_to_bus'],
-                nodetopublish,
-                _service)
+                sr, bkpfile,
+                settings['connector']['backup_table_to_bus'])
             message_publisher.setHandlerParent(xmpp_client)
 
         root_service = service.MultiService()

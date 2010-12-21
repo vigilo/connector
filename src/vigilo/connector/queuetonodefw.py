@@ -4,26 +4,20 @@
 Ce module est un demi-connecteur qui assure la redirection des messages
 issus d'une file d'attente (C{Queue.Queue} ou compatible) vers le bus XMPP.
 """
-from twisted.internet import reactor, protocol, defer
-from twisted.words.protocols.jabber.jid import JID
-from wokkel.pubsub import PubSubClient
+from twisted.internet import reactor, defer, threads
 from wokkel.generic import parseXml
-from wokkel import xmppim
 
-import Queue as queue
 import errno
 
 from vigilo.common.logging import get_logger
-from vigilo.connector.store import DbRetry
-from vigilo.connector.sockettonodefw import MESSAGEONETOONE, \
-                                            SocketToNodeForwarder
+from vigilo.connector.forwarder import PubSubForwarder
 
 LOGGER = get_logger(__name__)
 
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
-class QueueToNodeForwarder(SocketToNodeForwarder):
+class QueueToNodeForwarder(PubSubForwarder):
     """
     Redirige les messages reçus depuis une file vers le bus XMPP.
 
@@ -31,7 +25,7 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
     (C{Queue.Queue}) et les publie sur un nœud XMPP.
     """
 
-    def __init__(self, queue, dbfilename, dbtable, nodetopublish, service):
+    def __init__(self, queue, dbfilename, dbtable):
         """
         Initialisation du demi-connecteur.
 
@@ -47,21 +41,11 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
         @param dbtable: Nom de la table à utiliser dans le fichier de
             sauvegarde L{dbfilename}.
         @type dbtable: C{basestring}
-        @param nodetopublish: Dictionnaire qui met en correspondance le
-            localName du message avec un nœud sur le bus XMPP.
-        @type nodetopublish: C{dict}
-        @param service: Service de publication XMPP.
-            Ex: C{JID("pubsub.localhost")}.
-        @type service: C{twisted.words.protocols.jabber.jid.JID}
         """
         # On appelle directement la méthode de PubSub car le __init__
         # de SocketToNodeForwarder essaye d'utiliser un socket UNIX.
-        PubSubClient.__init__(self)
+        PubSubForwarder.__init__(self, dbfilename, dbtable)
         self._queue = queue
-        # Défini comme public pour faciliter les tests.
-        self.retry = DbRetry(dbfilename, dbtable)
-        self._service = service
-        self._nodetopublish = nodetopublish
 
     @defer.inlineCallbacks
     def consumeQueue(self):
@@ -77,17 +61,11 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
         soit lue depuis la file. Le demi-connecteur se déconnecte
         alors du bus XMPP.
 
-        @note: http://stackoverflow.com/questions/776631/using-twisteds-twisted-web-classes-how-do-i-flush-my-outgoing-buffers
+        @note: U{http://stackoverflow.com/questions/776631/using-twisteds-twisted-web-classes-how-do-i-flush-my-outgoing-buffers}
         """
-        def eb(e, xml):
-            """error callback"""
-            LOGGER.error(_("Error callback in consumeQueue(): %s") %
-                            e.__str__())
-            self.retry.store(xml)
-
         while self.parent is not None:
             # On tente le renvoi d'un message.
-            xml = self.retry.unstore()
+            xml = threads.blockingCallFromThread(self.retry.unstore)
 
             if xml is None:
                 try:
@@ -101,7 +79,7 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
                         continue
                 else:
                     if not xml:
-                        LOGGER.debug(_('Received request to shutdown'))
+                        LOGGER.info(_('Received request to shutdown'))
                         break
 
 
@@ -113,12 +91,9 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
                                 'this should never happen!'))
                 continue
 
-            if item.name == MESSAGEONETOONE:
-                yield self.sendOneToOneXml(item)
-            else:
-                yield self.publishXml(item)
+            threads.blockingCallFromThread(self.forwardMessage, item, source="queue")
 
-        LOGGER.debug(_('Stopping QueueToNodeForwarder.'))
+        LOGGER.info(_('Stopping QueueToNodeForwarder.'))
         self.disownHandlerParent(None)
 
     def connectionInitialized(self):
@@ -130,10 +105,6 @@ class QueueToNodeForwarder(SocketToNodeForwarder):
 
         # On passe l'appel à la méthode dans SocketToNodeForwarder
         # pour éviter une boucle infinie dans sendQueuedMessages().
-        PubSubClient.connectionInitialized(self)
-        # There's probably a way to configure it (on_sub vs on_sub_and_presence)
-        # but the spec defaults to not sending subscriptions without presence.
-        self.send(xmppim.AvailablePresence())
-        LOGGER.debug('connectionInitialized')
+        PubSubForwarder.connectionInitialized(self)
         reactor.callInThread(self.consumeQueue)
 

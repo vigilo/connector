@@ -4,20 +4,18 @@
 Ce module est un demi-connecteur qui assure la redirection des messages
 issus du bus XMPP vers une file d'attente (C{Queue.Queue} ou compatible).
 """
-import os.path
+
 import Queue
 import errno
 
-from wokkel.pubsub import PubSubClient
-
 from vigilo.common.logging import get_logger
 from vigilo.common.gettext import translate
-from vigilo.connector.store import DbRetry
+from vigilo.connector.forwarder import PubSubForwarder
 
 LOGGER = get_logger(__name__)
 _ = translate(__name__)
 
-class NodeToQueueForwarder(PubSubClient, object):
+class NodeToQueueForwarder(PubSubForwarder):
     """
     Cette classe redirige les messages reçus depuis le bus XMPP
     vers une file d'attente compatible avec C{Queue.Queue}.
@@ -26,7 +24,7 @@ class NodeToQueueForwarder(PubSubClient, object):
     def __init__(self, queue, dbfilename, dbtable):
         """
         Initialisation du demi-connecteur.
-        
+
         @param queue: File d'attente vers laquelle les messages XMPP
             reçu seront transférés.
         @type queue: C{Queue.Queue}
@@ -40,18 +38,14 @@ class NodeToQueueForwarder(PubSubClient, object):
             sauvegarde L{dbfilename}.
         @type dbtable: C{basestring}
         """
-        super(NodeToQueueForwarder, self).__init__()
+        super(NodeToQueueForwarder, self).__init__(dbfilename, dbtable)
         self.__queue = queue
-        # Défini comme public pour faciliter les tests.
-        self.retry = DbRetry(dbfilename, dbtable)
-        self.__backuptoempty = os.path.exists(dbfilename) 
-        self.sendQueuedMessages()
 
     def itemsReceived(self, event):
         """
         Méthode appelée lorsque des éléments ont été reçus depuis
         le bus XMPP.
-        
+
         @param event: Événement XMPP reçu.
         @type event: C{twisted.words.xish.domish.Element}
         """
@@ -71,9 +65,9 @@ class NodeToQueueForwarder(PubSubClient, object):
                 # We receive retractations in FIFO order,
                 # ejabberd keeps 10 items before retracting old items.
                 continue
-            self.messageForward(xml)
+            self.forwardMessage(xml, source="node")
 
-    def messageForward(self, xml):
+    def forwardMessage(self, xml, source="node"):
         """
         Transfère un message XML sérialisé vers la file.
 
@@ -95,24 +89,4 @@ class NodeToQueueForwarder(PubSubClient, object):
         except Queue.Full:
             LOGGER.error(_('The queue is full, dropping incoming '
                 'XML message! (%s)') % xml)
-
-    def sendQueuedMessages(self):
-        """
-        Déclenche l'envoi des messages stockées localement (retransmission
-        des messages suite à une panne).
-        """
-        if self.__backuptoempty:
-            self.__backuptoempty = False
-            # XXX Ce code peut potentiellement boucler indéfiniment...
-            while True:
-                msg = self.retry.unstore()
-                if msg is None:
-                    break
-                else:
-                    if self.messageForward(msg) is not True:
-                        # we loose the ability to send message again
-                        self.__backuptoempty = True
-                        break
-            self.retry.vacuum()
-
 

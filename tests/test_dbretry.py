@@ -37,11 +37,15 @@ class TestDbRetry(unittest.TestCase):
         # et qu'ils nous sont transmis dans le même ordre que
         # celui dans lequel on les a stocké, comme une FIFO.
         for xml in xmls:
-            self.assertEquals(xml, self.db_retry.unstore())
+            d = self.db_retry.unstore()
+            d.addCallback(self.assertEquals, xml)
+            #self.assertEquals(xml, self.db_retry.unstore())
 
         # Arrivé ici, la base doit être vide, donc unstore()
         # renvoie None pour indiquer la fin des messages.
-        self.assertEquals(None, self.db_retry.unstore())
+        d = self.db_retry.unstore()
+        d.addCallback(self.assertEquals, None)
+        #self.assertEquals(None, self.db_retry.unstore())
 
 if __name__ == "__main__": 
     unittest.main()

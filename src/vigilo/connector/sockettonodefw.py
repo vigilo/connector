@@ -6,28 +6,24 @@ Extends pubsub clients to compute Socket message
 
 from __future__ import absolute_import
 
-from twisted.internet import reactor, protocol, defer
+import os
+import Queue
+
+from twisted.python.failure import Failure
+from twisted.internet import reactor, protocol, defer, threads
 from twisted.protocols.basic import LineReceiver
-from twisted.words.xish import domish
-from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
-from wokkel import xmppim
 
 from vigilo.connector import converttoxml
 from vigilo.connector.converttoxml import MESSAGEONETOONE
-from vigilo.connector.store import DbRetry
+from vigilo.connector.forwarder import PubSubForwarder, NotConnectedError
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
-import os
 
-
-class NotConnectedError(Exception):
-    pass
-
-class Forwarder(LineReceiver):
+class SocketReceiver(LineReceiver):
     """ Protocol used for each line received from the socket """
 
     delimiter = '\n'
@@ -48,20 +44,26 @@ class Forwarder(LineReceiver):
         if xml is None:
             # Couldn't parse this line
             return
-        if xml.name == MESSAGEONETOONE:
-            self.factory.sendOneToOneXml(xml)
-        else:
-            self.factory.publishXml(xml)
+
+        self.factory.parent.sendMessage(xml, source="socket")
 
 
-
-class SocketToNodeForwarder(PubSubClient):
+class SocketToNodeForwarder(PubSubForwarder):
     """
     Receives messages on the socket and passes them to the xmpp bus,
     Forward socket to Node.
+
+    @ivar _pending_replies: file des réponses à attendre de la part du serveur.
+        Pour traiter ce problème, le plus logique serait d'utiliser une
+        L{defer.DeferredList}, mais ça prend beaucoup plus de mémoire (~ 2.5x).
+        Quand un message est envoyé, son Deferred est ajouté dans cette file.
+        Quand elle est pleine (voir le paramètre de configuration
+        C{max_send_simult}), on doit attendre les réponses du serveurs, qui
+        vident la file en arrivant.
+    @type _pending_replies: C{Queue.Queue}
     """
-    def __init__(self, socket_filename, dbfilename, dbtable,
-                 nodetopublish, service):
+
+    def __init__(self, socket_filename, dbfilename, dbtable):
         """
         Instancie un connecteur socket vers BUS XMPP.
 
@@ -73,121 +75,48 @@ class SocketToNodeForwarder(PubSubClient):
         @type  dbfilename: C{str}
         @param dbtable: Le nom de la table SQL pour la sauvegarde des messages.
         @type  dbtable: C{str}
-        @param nodetopublish: dictionnaire pour la correspondance type de message
-                              noeud PubSub de destination.
-        @type  nodetopublish: C{dict}
-        @param service: The publish subscribe service that keeps the node.
-        @type  service: C{twisted.words.protocols.jabber.jid.JID}
         """
-        PubSubClient.__init__(self)
-        self.retry = DbRetry(dbfilename, dbtable)
-        self._backuptoempty = os.path.exists(dbfilename)
+        PubSubForwarder.__init__(self, dbfilename, dbtable)
 
         self.factory = protocol.ServerFactory()
-
-        self.factory.protocol = Forwarder
-        self.factory.publishXml = self.publishXml
-        self.factory.sendOneToOneXml = self.sendOneToOneXml
+        self.factory.protocol = SocketReceiver
+        self.factory.parent = self
         if os.path.exists(socket_filename):
             os.remove(socket_filename)
-        self.__connector = reactor.listenUNIX(socket_filename, self.factory)
-        self._service = service
-        self._nodetopublish = nodetopublish
-        self.name = self.__class__.__name__
+        self._socket = reactor.listenUNIX(socket_filename, self.factory)
 
-    @defer.inlineCallbacks
-    def sendQueuedMessages(self):
+
+    def forwardMessage(self, xml, source="socket"):
         """
-        Called to send Message previously stored
-        @note: http://stackoverflow.com/questions/776631/using-twisteds-twisted-web-classes-how-do-i-flush-my-outgoing-buffers
+        Envoi du message sur le bus, en respectant le nombre max d'envois
+        simultanés.
+
+        @return: un Deferred qui s'active quand le message I{a été envoyé}
+            (et non pas quand la réponse du serveur a été reçue).
+        @rtype: C{Deferred}
         """
-        if not self._backuptoempty:
-            return
-        self._backuptoempty = False
-        # XXX Ce code peut potentiellement boucler indéfiniment...
-        while True:
-            msg = self.retry.unstore()
-            if msg is None:
-                break
-            LOGGER.debug(_('Received message: %r') % msg)
-            xml = parseXml(msg)
-            if xml.name == MESSAGEONETOONE:
-                yield self.sendOneToOneXml(xml)
-            else:
-                yield self.publishXml(xml)
-
-        self.retry.vacuum()
-
-
-    def connectionInitialized(self):
-        """ redefinition of the function for flushing backup message """
-        PubSubClient.connectionInitialized(self)
-        # There's probably a way to configure it (on_sub vs on_sub_and_presence)
-        # but the spec defaults to not sending subscriptions without presence.
-        self.send(xmppim.AvailablePresence())
-        LOGGER.info(_('Connected to the XMPP bus'))
-        self.sendQueuedMessages()
-
-
-    def _send_failed(self, e, xml, errmsg=None):
-        """errback: remet le message en base"""
         xml_src = xml.toXml().encode('utf8')
-        if errmsg is None:
-            if e.type == NotConnectedError:
-                errmsg = _('Message from Socket impossible to forward'
-                           ' (no connection to XMPP server), the message '
-                           'is stored for later reemission (%(xml_src)s)')
-            else:
-                errmsg = _('Unable to forward the message (%r), it '
-                           'has been stored for later retransmission '
-                           '(%%(xml_src)s)') % e
-        LOGGER.error(errmsg % {"xml_src": xml_src})
-        self.retry.store(xml_src)
-        self._backuptoempty = True
-
-
-    def sendOneToOneXml(self, xml):
-        """
-        function to send a XML msg to a particular jabber user
-        @param xml: le message a envoyé sous forme XML
-        @type xml: twisted.words.xish.domish.Element
-        """
-        # we need to send it to a particular receiver
-        # il faut l'envoyer vers un destinataire en particulier
-        msg = domish.Element((None, "message"))
-        msg["to"] = xml['to']
-        msg["from"] = self.parent.jid.userhostJID().full()
-        msg["type"] = 'chat'
-        body = xml.firstChildElement()
-        msg.addElement("body", content=body)
-        # if not connected store the message
         if self.xmlstream is None:
-            result = defer.fail(NotConnectedError())
+            # Backup : doit s'arrêter de dépiler. Socket : doit mettre en base
+            self._send_failed(Failure(NotConnectedError()), xml_src)
+            return
+        if source != "backup" and \
+                (self._sendingbackup or self._waitingforreplies):
+            self.storeMessage(xml_src)
+            return
+
+        if xml.name == MESSAGEONETOONE:
+            result = self.sendOneToOneXml(xml)
         else:
-            result = self.send(msg)
-        result.addErrback(self._send_failed, msg)
-        return result
-
-
-
-    def publishXml(self, xml):
-        """
-        function to publish a XML msg to node
-        @param xml: le message a envoyé sous forme XML
-        @type xml: twisted.words.xish.domish.Element
-        """
-        item = Item(payload=xml)
-        if xml.name not in self._nodetopublish:
-            LOGGER.error(_("No destination node configured for messages "
-                           "of type '%s'. Skipping.") % xml.name)
-            del item
-            return defer.succeed(True)
-        node = self._nodetopublish[xml.name]
+            result = self.publishXml(xml)
+        # Pour attendre les réponses, le plus logique serait de faire un
+        # defer.DeferredList, mais ça utilise trop de RAM, voir ci-dessus la
+        # doc de la variable d'instance _pending_replies.
         try:
-            result = self.publish(self._service, node, [item])
-        except AttributeError:
-            result = defer.fail(NotConnectedError())
-        finally:
-            del item
-        result.addErrback(self._send_failed, xml)
-        return result
+            self._pending_replies.put_nowait(result)
+        except Queue.Full:
+            threads.deferToThread(self._pending_replies.put, result)
+            return self.waitForReplies()
+        else:
+            return defer.succeed(None)
+
