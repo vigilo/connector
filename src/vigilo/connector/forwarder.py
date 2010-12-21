@@ -97,13 +97,13 @@ class PubSubForwarder(PubSubClient):
         if self.retry is not None and not self._send_backup.running:
             self._send_backup.start(5)
 
-    def connectionLost(self):
+    def connectionLost(self, reason):
         """
         Lancée à la perte de la connexion au bus. Permet d'arrêter d'envoyer
         les messages en attente.
         """
-        PubSubClient.connectionLost(self)
-        LOGGER.info(_('Lost connection to the XMPP bus'))
+        PubSubClient.connectionLost(self, reason)
+        LOGGER.info(_('Lost connection to the XMPP bus (reason: %s)'), reason)
         if self.retry is not None and self._send_backup.running:
             self._send_backup.stop()
 
