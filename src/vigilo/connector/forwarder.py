@@ -78,8 +78,8 @@ class PubSubForwarder(PubSubClient):
         self._sendingbackup = False
         # File d'attente des réponses
         max_send_simult = int(settings['bus'].get('max_send_simult', 1000))
-        # marge de sécurité de 10%
-        max_send_simult = int(max_send_simult - (0.1 * max_send_simult))
+        # marge de sécurité de 30%
+        max_send_simult = int(max_send_simult * 0.7)
         self._pending_replies = Queue.Queue(max_send_simult)
         self._waitingforreplies = False
 
