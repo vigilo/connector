@@ -8,15 +8,11 @@ LOGGER = get_logger(__name__)
 
 from vigilo.common.gettext import translate
 
-_ = translate(__name__)
+from vigilo.pubsub.xml import NS_AGGR, NS_EVENT, NS_PERF, NS_STATE, \
+                              NS_DOWNTIME, NS_COMMAND
+from vigilo.connector import MESSAGEONETOONE
 
-NS_AGGR = 'http://www.projet-vigilo.org/xmlns/aggr1'
-NS_EVENT = 'http://www.projet-vigilo.org/xmlns/event1'
-NS_PERF = 'http://www.projet-vigilo.org/xmlns/perf1'
-NS_STATE = 'http://www.projet-vigilo.org/xmlns/state1'
-NS_DOWNTIME = 'http://www.projet-vigilo.org/xmlns/downtime1'
-NS_COMMAND = 'http://www.projet-vigilo.org/xmlns/command1'
-MESSAGEONETOONE = 'oneToOne'
+_ = translate(__name__)
 
 def text2xml(text):
     """

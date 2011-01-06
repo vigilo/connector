@@ -74,6 +74,9 @@ def client_factory(settings):
             settings['bus']['host'],
             require_tls = require_tls)
     xmpp_client.setName('xmpp_client')
+    # Temps max entre 2 tentatives de connexion (par défaut 1 min)
+    xmpp_client.factory.maxDelay = int(settings["bus"].get(
+                                       "max_reconnect_delay", 60))
 
     try:
         xmpp_client.logTraffic = settings['bus'].as_bool('log_traffic')

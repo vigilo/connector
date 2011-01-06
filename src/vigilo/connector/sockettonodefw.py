@@ -15,7 +15,7 @@ from twisted.protocols.basic import LineReceiver
 from wokkel.generic import parseXml
 
 from vigilo.connector import converttoxml
-from vigilo.connector.converttoxml import MESSAGEONETOONE
+from vigilo.connector import MESSAGEONETOONE
 from vigilo.connector.forwarder import PubSubForwarder, NotConnectedError
 from vigilo.common.gettext import translate
 _ = translate(__name__)
