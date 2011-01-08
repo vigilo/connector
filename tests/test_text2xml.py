@@ -4,12 +4,7 @@ from __future__ import absolute_import
 import unittest
 
 from vigilo.connector.converttoxml import text2xml
-
-NS_AGGR = 'http://www.projet-vigilo.org/xmlns/aggr1'
-NS_EVENT = 'http://www.projet-vigilo.org/xmlns/event1'
-NS_PERF = 'http://www.projet-vigilo.org/xmlns/perf1'
-NS_DOWNTIME = 'http://www.projet-vigilo.org/xmlns/downtime1'
-
+from vigilo.pubsub.xml import NS_AGGR, NS_EVENT, NS_PERF, NS_DOWNTIME
 
 
 class TestSequenceFunctions(unittest.TestCase):

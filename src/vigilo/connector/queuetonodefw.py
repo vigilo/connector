@@ -10,14 +10,14 @@ from wokkel.generic import parseXml
 import errno
 
 from vigilo.common.logging import get_logger
-from vigilo.connector.forwarder import PubSubForwarder
+from vigilo.connector.forwarder import PubSubSender
 
 LOGGER = get_logger(__name__)
 
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
-class QueueToNodeForwarder(PubSubForwarder):
+class QueueToNodeForwarder(PubSubSender):
     """
     Redirige les messages reçus depuis une file vers le bus XMPP.
 
@@ -42,10 +42,17 @@ class QueueToNodeForwarder(PubSubForwarder):
             sauvegarde L{dbfilename}.
         @type dbtable: C{basestring}
         """
-        # On appelle directement la méthode de PubSub car le __init__
-        # de SocketToNodeForwarder essaye d'utiliser un socket UNIX.
-        PubSubForwarder.__init__(self, dbfilename, dbtable)
-        self._queue = queue
+        super(QueueToNodeForwarder, self).__init__(dbfilename, dbtable)
+        self.input_queue = queue
+
+    def connectionInitialized(self):
+        """
+        Cette méthode est appelée lorsque la connexion avec le bus XMPP
+        est prête. On se contente d'appeler la méthode L{consumeQueue}
+        depuis le reactor de Twisted pour commencer le transfert.
+        """
+        super(QueueToNodeForwarder, self).connectionInitialized()
+        reactor.callInThread(self.consumeQueue)
 
     @defer.inlineCallbacks
     def consumeQueue(self):
@@ -64,47 +71,26 @@ class QueueToNodeForwarder(PubSubForwarder):
         @note: U{http://stackoverflow.com/questions/776631/using-twisteds-twisted-web-classes-how-do-i-flush-my-outgoing-buffers}
         """
         while self.parent is not None:
-            # On tente le renvoi d'un message.
-            xml = threads.blockingCallFromThread(self.retry.unstore)
-
-            if xml is None:
-                try:
-                    # Aucun message à renvoyer ?
-                    # On récupère un message de la file dans ce cas.
-                    xml = self._queue.get()
-                except (IOError, OSError), e:
-                    if e.errno != errno.EINTR:
-                        raise
-                    else:
-                        continue
+            try:
+                # On bloque jusqu'au prochain message
+                xml = self.input_queue.get()
+            except (IOError, OSError), e:
+                if e.errno != errno.EINTR:
+                    raise
                 else:
-                    if not xml:
-                        LOGGER.info(_('Received request to shutdown'))
-                        break
-
-
+                    continue
+            else:
+                if not xml:
+                    LOGGER.info(_('Received request to shutdown'))
+                    break
             item = parseXml(xml)
-
             # Ne devrait jamais se produire, mais au cas où...
             if item is None:
                 LOGGER.error(_('Item is None in consumeQueue, '
                                 'this should never happen!'))
                 continue
-
-            threads.blockingCallFromThread(self.forwardMessage, item, source="queue")
+            reactor.callFromThread(self.forwardMessage, item)
 
         LOGGER.info(_('Stopping QueueToNodeForwarder.'))
         self.disownHandlerParent(None)
-
-    def connectionInitialized(self):
-        """
-        Cette méthode est appelée lorsque la connexion avec le bus XMPP
-        est prête. On se contente d'appeler la méthode L{consumeQueue}
-        depuis le reactor de Twisted pour commencer le transfert.
-        """
-
-        # On passe l'appel à la méthode dans SocketToNodeForwarder
-        # pour éviter une boucle infinie dans sendQueuedMessages().
-        PubSubForwarder.connectionInitialized(self)
-        reactor.callInThread(self.consumeQueue)
 

@@ -30,7 +30,6 @@ def text2xml(text):
         text = unicode(text, 'iso-8859-15', errors='replace')
     elements = text.split('|')
     if elements:
-        LOGGER.debug("Received: %s" % str(elements))
         try:
             enveloppe = None
             msg = None
@@ -59,7 +58,7 @@ def text2xml(text):
                 else:
                     LOGGER.warning(_("Unknown/malformed message type: '%s'") %
                                     elements[0])
-            LOGGER.debug("Converted to: %s", msg.toXml())
+            #LOGGER.debug("Converted %s to %s", str(elements), msg.toXml())
             return msg
 
         except (TypeError, AttributeError):

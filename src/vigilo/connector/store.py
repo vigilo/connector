@@ -8,16 +8,16 @@ Peut-être pas, vu que la latence de SQLite est suffisamment basse.
 """
 from __future__ import absolute_import
 
+from collections import deque
+
 from twisted.internet import reactor, defer
-from sqlite3 import dbapi2 as sqlite
+from twisted.enterprise import adbapi
+
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
-class MustRetryError(Exception):
-    """L'opération doit être retentée."""
-    pass
 
 class DbRetry(object):
     """
@@ -35,149 +35,152 @@ class DbRetry(object):
         @type table: C{str}
         """
 
-        self.__table = table
-        # XXX Il faudrait s'assurer que les différents composants
-        # sont thread-safe, car check_same_thread=False désactive
-        # toutes les vérifications faites normalement par pysqlite.
-        self.__connection = sqlite.connect(filename, check_same_thread=False)
+        self.buffer_in = deque()
+        self.buffer_out = deque()
+        self._buffer_in_max = 100
+        self._buffer_out_min = 1000
+        self._load_batch_size = self._buffer_out_min * 10
+        self.__saving_buffer_in = False
+        self.initialized = False
+        self._table = table
+        # threads: http://twistedmatrix.com/trac/ticket/3629
+        self._db = adbapi.ConnectionPool("sqlite3.dbapi2", filename,
+                                         check_same_thread=False)
 
+    def initdb(self):
+        if self.initialized:
+            return defer.succeed(None)
         # Création de la table. Si une erreur se produit, elle sera
         # tout simplement propagée à l'appelant, qui décidera de ce
         # qu'il convient de faire.
-        cursor = self.__connection.cursor()
-        try:
-            cursor.execute('CREATE TABLE IF NOT EXISTS %s \
-                    (id INTEGER PRIMARY KEY, msg TXT)' % table)
-            self.__connection.commit()
-        finally:
-            cursor.close()
+        d = self._db.runOperation('CREATE TABLE IF NOT EXISTS %s '
+                    '(id INTEGER PRIMARY KEY, msg TXT)' % self._table)
+        def after_init(r):
+            self.initialized = True
+            return r
+        d.addCallback(after_init)
+        return d
 
-    def __del__(self):
-        """Libère la base de données locale."""
-        self.__connection.close()
-
-    def store(self, msg):
+    def flush(self):
         """
-        Stocke un message XML dans la base de données locale en attendant
-        de pouvoir le retransmettre à son destinataire final.
-
-        @param msg: Le message à stocker.
-        @type  msg: C{str}
-        @return: Un booléen indiquant si l'opération a réussi ou non.
-        @rtype: C{bool}
-        @raise sqlite.OperationalError: Une exception levée par sqlite.
+        Sauvegarde tout en base, avant de quitter
         """
+        def _flush(txn):
+            while len(self.buffer_out) > 0:
+                index, msg = self.buffer_out.popleft()
+                txn.execute("INSERT INTO %s VALUES (?, ?)" % self._table,
+                            (index, msg))
+            while len(self.buffer_in) > 0:
+                msg = self.buffer_in.popleft()
+                txn.execute("INSERT INTO %s VALUES (null, ?)" % self._table,
+                            (msg,))
+        LOGGER.debug("Flushing the buffers into the base")
+        d = self._db.runInteraction(_flush)
+        d.addCallback(lambda x: LOGGER.debug("Done flushing"))
+        return d
 
-        cursor = self.__connection.cursor()
-        must_retry = False
+    def qsize(self):
+        def add_buffers(dbresult):
+            return dbresult[0][0] + \
+                   len(self.buffer_out) + \
+                   len(self.buffer_in)
+        d = self._db.runQuery("SELECT count(*) FROM %s" % self._table)
+        d.addCallback(add_buffers)
+        return d
 
-        try:
-            cursor.execute('INSERT INTO %s VALUES (null, ?)' %
-                self.__table, (msg,))
-            self.__connection.commit()
-            cursor.close()
-            return defer.succeed(True)
+    # -- Récupération depuis la base
 
-        except sqlite.OperationalError, e:
-            self.__connection.rollback()
-            if str(e) == "database is locked":
-                LOGGER.warning(_("The database is locked"))
-                must_retry = True
+    def get(self):
+        """API similaire à C{Queue.Queue}. @see: L{pop}()"""
+        return self.pop()
+
+    def pop(self):
+        """
+        Récupère le prochain message en attente. Cette récupération est
+        faite depuis le buffer, qui est re-rempli s'il atteint le seuil
+        minimum.
+        @return: Le prochain message, dans un C{Deferred}
+        @rtype: C{Deferred}
+        """
+        def get_from_buffer(r):
+            try:
+                index, msg = self.buffer_out.popleft()
+            except IndexError:
+                return None # pas de message dans le buffer
             else:
-                LOGGER.exception(_("Got an exception:"))
-                raise e
+                return msg
+        if len(self.buffer_out) <= self._buffer_out_min:
+            d = self._db.runInteraction(self._fill_buffer_out)
+        else:
+            d = defer.succeed(None) # pas besoin de remplir le buffer
+        d.addCallback(get_from_buffer)
+        return d
 
-        except Exception, e:
-            self.__connection.rollback()
-            LOGGER.exception(_("Got an exception:"))
-            raise e
-
-        finally:
-            cursor.close()
-
-        if must_retry:
-            return reactor.callLater(1, self.store, msg)
-        return defer.fail()
-
-    def unstore(self):
+    def _fill_buffer_out(self, txn):
         """
-        Renvoie un message issu de la base de données locale.
-        Utilisez cette méthode lorsque la connexion avec le destinataire
-        du message est rétablie pour retransmettre les données.
-
-        @return: Un message stocké en attente de retransmission
-            ou None lorsqu'il n'y a plus de message.
-        @rtype: C{str} ou C{None}
-        @raise sqlite.OperationalError: Une erreur possible
-        @raise sqlite.Error:
+        Re-remplis le buffer de sortie depuis la base SQLite.
+        @note: Executé dans un thread par runInteraction, donc on a le droit
+            de bloquer
         """
-        cursor = self.__connection.cursor()
-        must_retry = False
+        msg_count = self._load_batch_size
+        txn.execute("SELECT id, msg FROM %s ORDER BY id LIMIT %s"
+                    % (self._table, msg_count))
+        msgs = txn.fetchall()
+        if not msgs:
+            # base vide, on utilise le contenu de la file d'entrée temporaire
+            if len(self.buffer_in):
+                LOGGER.debug("Filling output buffer with %d messages from "
+                             "input buffer", len(self.buffer_in))
+                while len(self.buffer_in) > 0:
+                    msg = self.buffer_in.popleft()
+                    self.buffer_out.append((None, msg))
+            return
+        min_id = msgs[0][0]
+        max_id = msgs[-1][0]
+        self.buffer_out.extend(msgs) # On stocke (id, msg)
+        txn.execute("DELETE FROM %s WHERE id >= ? AND id <= ?" % self._table,
+                    (min_id, max_id))
+        txn.execute("VACUUM")
+        LOGGER.debug("Filled output buffer with %d messages from database",
+                     len(msgs))
 
-        try:
-            cursor.execute('SELECT MIN(id) FROM %s' % self.__table)
+    # -- Insertion dans la base
 
-            entry = cursor.fetchone()
-            if entry is None:
-                return defer.succeed(None)
+    def put(self, msg):
+        """API similaire à C{Queue.Queue}. @see: L{append}"""
+        return self.append(msg)
 
-            id_min = entry[0]
-            del entry
-
-            if id_min is None:
-                return defer.succeed(None)
-
-            res = cursor.execute('SELECT msg FROM %s WHERE id = ?' %
-                self.__table, (id_min, ))
-
-            entry = cursor.fetchone()
-            if entry is None:
-                raise MustRetryError()
-
-            msg = entry[0]
-            del entry
-            cursor.execute('DELETE FROM %s WHERE id = ?' %
-                self.__table, (id_min, ))
-
-            if cursor.rowcount != 1:
-                raise MustRetryError()
-
-            self.__connection.commit()
-            return defer.succeed(msg.encode('utf8'))
-
-        except MustRetryError:
-            must_retry = True
-
-        except sqlite.OperationalError, e:
-            self.__connection.rollback()
-            if str(e) == "database is locked":
-                LOGGER.warning(_("The database is locked"))
-                must_retry = True
-            else:
-                LOGGER.exception(_("Got an exception:"))
-                raise e
-
-        except Exception, e:
-            self.__connection.rollback()
-            LOGGER.exception(_("Got an exception:"))
-            raise e
-
-        finally:
-            cursor.close()
-
-        if must_retry:
-            return reactor.callLater(1, self.unstore)
-        return self.succeed(None)
-
-    def vacuum(self):
+    def append(self, msg):
         """
-        Effectue une réorganisation de la base de données
-        afin d'optimiser les temps d'accès.
+        Enregristre le message en base. L'enregistrement est fait dans le
+        buffer d'entrée, qui est vidé en base SQLite s'il atteint le seuil
+        maximum défini.
+        @return: un C{Deferred} qui se déclenche quand l'insertion est
+            effectivement terminée (éventuellement en base)
+        @rtype: C{Deferred}
         """
-        cursor = self.__connection.cursor()
+        self.buffer_in.append(msg)
+        if len(self.buffer_in) > self._buffer_in_max:
+            return self._db.runInteraction(self._save_buffer_in)
+        else:
+            return defer.succeed(None)
 
-        try:
-            cursor.execute('VACUUM')
-            self.__connection.commit()
-        finally:
-            cursor.close()
+    def _save_buffer_in(self, txn):
+        """
+        Enregistre en base SQLite la totalité du buffer d'entrée. Un lock
+        est mis en place pour ne jamais exécuter cette fonction deux fois
+        simultanément.
+        @note: Executé dans un thread par runInteraction, donc on a le droit
+            de bloquer
+        """
+        if self.__saving_buffer_in:
+            return
+        self.__saving_buffer_in = True
+        total = len(self.buffer_in)
+        while len(self.buffer_in) > 0:
+            msg = self.buffer_in.popleft()
+            txn.execute("INSERT INTO %s VALUES (null, ?)" % self._table,
+                        (msg,))
+        LOGGER.debug("Saved %d messages from the input buffer", total)
+        self.__saving_buffer_in = False
+

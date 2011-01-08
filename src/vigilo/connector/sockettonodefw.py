@@ -16,7 +16,7 @@ from wokkel.generic import parseXml
 
 from vigilo.connector import converttoxml
 from vigilo.connector import MESSAGEONETOONE
-from vigilo.connector.forwarder import PubSubForwarder, NotConnectedError
+from vigilo.connector.forwarder import PubSubSender, NotConnectedError
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 from vigilo.common.logging import get_logger
@@ -45,10 +45,10 @@ class SocketReceiver(LineReceiver):
             # Couldn't parse this line
             return
 
-        self.factory.parent.forwardMessage(xml, source="socket")
+        reactor.callFromThread(self.factory.parent.forwardMessage, xml)
 
 
-class SocketToNodeForwarder(PubSubForwarder):
+class SocketToNodeForwarder(PubSubSender):
     """
     Receives messages on the socket and passes them to the xmpp bus,
     Forward socket to Node.
@@ -76,7 +76,7 @@ class SocketToNodeForwarder(PubSubForwarder):
         @param dbtable: Le nom de la table SQL pour la sauvegarde des messages.
         @type  dbtable: C{str}
         """
-        PubSubForwarder.__init__(self, dbfilename, dbtable)
+        super(SocketToNodeForwarder, self).__init__(dbfilename, dbtable)
 
         self.factory = protocol.ServerFactory()
         self.factory.protocol = SocketReceiver
@@ -84,39 +84,4 @@ class SocketToNodeForwarder(PubSubForwarder):
         if os.path.exists(socket_filename):
             os.remove(socket_filename)
         self._socket = reactor.listenUNIX(socket_filename, self.factory)
-
-
-    def forwardMessage(self, xml, source="socket"):
-        """
-        Envoi du message sur le bus, en respectant le nombre max d'envois
-        simultanés.
-
-        @return: un Deferred qui s'active quand le message I{a été envoyé}
-            (et non pas quand la réponse du serveur a été reçue).
-        @rtype: C{Deferred}
-        """
-        xml_src = xml.toXml().encode('utf8')
-        if self.xmlstream is None:
-            # Backup : doit s'arrêter de dépiler. Socket : doit mettre en base
-            self._send_failed(Failure(NotConnectedError()), xml_src)
-            return
-        if source != "backup" and \
-                (self._sendingbackup or self._waitingforreplies):
-            self.storeMessage(xml_src)
-            return
-
-        if xml.name == MESSAGEONETOONE:
-            result = self.sendOneToOneXml(xml)
-        else:
-            result = self.publishXml(xml)
-        # Pour attendre les réponses, le plus logique serait de faire un
-        # defer.DeferredList, mais ça utilise trop de RAM, voir ci-dessus la
-        # doc de la variable d'instance _pending_replies.
-        try:
-            self._pending_replies.put_nowait(result)
-        except Queue.Full:
-            threads.deferToThread(self._pending_replies.put, result)
-            return self.waitForReplies()
-        else:
-            return defer.succeed(None)
 

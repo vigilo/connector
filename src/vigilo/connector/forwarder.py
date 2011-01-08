@@ -8,14 +8,17 @@ from __future__ import absolute_import
 
 import os
 import Queue
+from collections import deque
 
 from twisted.internet import reactor, defer, threads, task
+from twisted.python.failure import Failure
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber.jid import JID
 from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
 from wokkel import xmppim
 
+from vigilo.connector import MESSAGEONETOONE
 from vigilo.connector.store import DbRetry
 from vigilo.common.gettext import translate
 _ = translate(__name__)
@@ -38,8 +41,6 @@ class PubSubForwarder(PubSubClient):
     Traite des messages en provenance de ou à destination du bus.
 
     @ivar _pending_replies: file des réponses à attendre de la part du serveur.
-        Pour traiter ce problème, le plus logique serait d'utiliser une
-        C{DeferredList}, mais ça prend beaucoup plus de mémoire (~ 2.5x).
         Quand un message est envoyé, son Deferred est ajouté dans cette file.
         Quand elle est pleine (voir le paramètre de configuration
         C{max_send_simult}), on doit attendre les réponses du serveurs, qui
@@ -63,78 +64,72 @@ class PubSubForwarder(PubSubClient):
         @param dbtable: Le nom de la table SQL pour la sauvegarde des messages.
         @type  dbtable: C{str}
         """
-        PubSubClient.__init__(self)
+        super(PubSubForwarder, self).__init__()
         self.name = self.__class__.__name__
         self._service = JID(settings['bus']['service'])
         self._nodetopublish = settings.get('publications', {})
+        self.queue = deque()
         # Base de backup
         if dbfilename is None or dbtable is None:
             self.retry = None
-            self._backuptoempty = False
         else:
             self.retry = DbRetry(dbfilename, dbtable)
-            self._backuptoempty = os.path.exists(dbfilename)
-            self._send_backup = task.LoopingCall(self.sendQueuedMessages)
-        self._sendingbackup = False
+            self.retry.initdb()
+        self._task_process_queue = task.LoopingCall(self.processQueue)
         # File d'attente des réponses
-        max_send_simult = int(settings['bus'].get('max_send_simult', 1000))
-        # marge de sécurité de 30%
-        max_send_simult = int(max_send_simult * 0.7)
-        self._pending_replies = Queue.Queue(max_send_simult)
-        self._waitingforreplies = False
-
+        self.max_send_simult = 1
+        self._pending_replies = []
+        self._processing_queue = False
+        self._messages_sent = 0
+        # stats
+        t = task.LoopingCall(self._print_stats)
+        #t.start(3)
 
     def connectionInitialized(self):
         """
         Lancée à la connexion (ou re-connexion).
         Redéfinie pour pouvoir vider les messages en attente.
         """
-        PubSubClient.connectionInitialized(self)
+        super(PubSubForwarder, self).connectionInitialized()
         # There's probably a way to configure it (on_sub vs on_sub_and_presence)
         # but the spec defaults to not sending subscriptions without presence.
         self.send(xmppim.AvailablePresence())
         LOGGER.info(_('Connected to the XMPP bus'))
-        if self.retry is not None and not self._send_backup.running:
-            self._send_backup.start(5)
+        if not self._task_process_queue.running:
+            if self.retry is None:
+                d = defer.succeed(None)
+            else:
+                d = self.retry.initdb()
+            d.addCallback(lambda x: self._task_process_queue.start(5))
+        self._messages_sent = 0
 
     def connectionLost(self, reason):
         """
         Lancée à la perte de la connexion au bus. Permet d'arrêter d'envoyer
         les messages en attente.
         """
-        PubSubClient.connectionLost(self, reason)
+        super(PubSubForwarder, self).connectionLost(reason)
         LOGGER.info(_('Lost connection to the XMPP bus (reason: %s)'), reason)
-        if self.retry is not None and self._send_backup.running:
-            self._send_backup.stop()
+        if self.retry is not None:
+            self.retry.flush()
 
-
-    @defer.inlineCallbacks
-    def sendQueuedMessages(self):
+    def isConnected(self):
         """
-        Vide la base de données des messages en attente. Prioritaire sur
-        l'envoi depuis la source nominale, puisque ces messages sont plus
-        anciens (et c'est important pour RRDTool).
-
-        @note: U{http://stackoverflow.com/questions/776631/using-twisteds-twisted-web-classes-how-do-i-flush-my-outgoing-buffers}
+        Teste si on est connecté à notre destination (par exemple: le bus, un
+        pipe, un socket, etc...)
         """
-        if self.retry is None:
-            return
-        if not self._backuptoempty:
-            return
-        self._backuptoempty = False
-        self._sendingbackup = True
-        while self.xmlstream is not None:
-            msg = yield self.retry.unstore()
-            if msg is None:
-                break
-            #LOGGER.debug(_('Loaded message from db: %r') % msg)
-            xml = parseXml(msg)
-            yield self.forwardMessage(xml, source="backup")
+        raise NotImplementedError()
 
-        self.retry.vacuum()
-        self._sendingbackup = False
-        LOGGER.info(_('Done sending backup'))
-
+    def _print_stats(self):
+        LOGGER.debug("Messages processed: %d", self._messages_sent)
+        LOGGER.debug("Queue: %d", len(self.queue))
+        if self.retry is not None:
+            LOGGER.debug("Backup input buffer: %d", len(self.retry.buffer_in))
+            LOGGER.debug("Backup output buffer: %d", len(self.retry.buffer_out))
+            backup_size_d = self.retry.qsize()
+            def log_size(size):
+                LOGGER.debug("Backup total size: %d", size)
+            backup_size_d.addCallback(log_size)
 
     def _send_failed(self, e, msg):
         """errback: remet le message en base"""
@@ -143,22 +138,83 @@ class PubSubForwarder(PubSubClient):
             errmsg += _('. it has been stored for later retransmission')
         LOGGER.error(errmsg % {"reason": e.getErrorMessage()})
         if self.retry is not None:
-            self.storeMessage(msg)
+            self.retry.put(msg)
 
-    def storeMessage(self, xml):
-        """Mise en base du message"""
-        if self.retry is None:
-            return
-        def cb(result):
-            self._backuptoempty = True
-        d = self.retry.store(xml)
-        d.addCallback(cb)
+    def forwardMessage(self, msg):
+        """
+        Envoi du message sur le bus, en respectant le nombre max d'envois
+        simultanés.
+        @param msg: le message à envoyer
+        """
+        self.queue.append(msg)
+        reactor.callLater(0, self.processQueue)
 
-    def forwardMessage(self, msg, source=""):
-        if source != "backup" and \
-                (self._sendingbackup or self._waitingforreplies):
-            self.storeMessage(msg)
+    @defer.inlineCallbacks
+    def processQueue(self):
+        """
+        Envoie les messages en attente, en commançant par le backup s'il en
+        contient. On respecte aussi le nombre max de messages simultanés
+        acceptés par le bus.
+
+        @note: U{http://stackoverflow.com/questions/776631/using-twisteds-twisted-web-classes-how-do-i-flush-my-outgoing-buffers}
+        """
+        if self._processing_queue:
             return
+        self._processing_queue = True
+        # Gestion du cas déconnecté
+        if not self.isConnected():
+            # on sauvegarde les messages
+            while len(self.queue) > 0:
+                msg = self.queue.popleft()
+                if not isinstance(msg, basestring):
+                    msg = msg.toXml().encode("utf-8")
+                yield self.retry.put(msg)
+            self._processing_queue = False
+            return
+        # Vérification qu'il y a bien quelque chose à faire
+        if self.retry is not None:
+            backup_size = yield self.retry.qsize()
+        else:
+            backup_size = 0
+        if len(self.queue) == 0 and backup_size == 0:
+            self._processing_queue = False
+            return # rien à faire
+        # Boucle principale de dépilement
+        while self.isConnected(): # arrêt si on perd la connexion
+            if self.retry is not None:
+                msg = yield self.retry.pop()
+            else:
+                msg = None
+            if msg is None:
+                # rien dans le backup, on essaye la file principale
+                try:
+                    msg = self.queue.popleft()
+                except IndexError:
+                    break # rien à faire
+            self._messages_sent += 1
+            result = self.processMessage(msg)
+            if self.max_send_simult <= 1 and result is not None:
+                yield result # pas d'envoi simultané
+            else:
+                if len(self._pending_replies) >= self.max_send_simult:
+                    LOGGER.info(_('Batch sent, waiting for %d replies from '
+                                  'the bus'), len(self._pending_replies))
+                    break # on fait une pause pour écouter les réponses
+        if self._pending_replies:
+            yield self.waitForReplies()
+        self._processing_queue = False
+        reactor.callLater(0, self.processQueue) # si la file est vide, on quittera au début
+
+    def processMessage(self, msg):
+        """
+        Traite un message, par exemple en l'envoyant sur le bus.
+        Ne sera pas lancé plus de L{max_send_simult} fois sans attendre les
+        réponses.
+        @param msg: message à traiter
+        @type  msg: C{str} ou C{twisted.words.xish.domish.Element}
+        @return: le C{Deferred} avec la réponse, ou C{None} si cela n'a pas
+            lieu d'être (message envoyé en push)
+        """
         raise NotImplementedError()
 
     def waitForReplies(self):
@@ -175,34 +231,59 @@ class PubSubForwarder(PubSubClient):
             arrivées
         @rtype:  C{Deferred}
         """
-        self._waitingforreplies = True
-        LOGGER.info(_('Batch sent, waiting for replies from the bus'))
-        def empty_queue():
-            try:
-                reply = self._pending_replies.get_nowait()
-            except Queue.Empty:
-                return
-            reply.addCallback(task_done)
-        def task_done(result):
-            self._pending_replies.task_done()
-            reactor.callLater(0, empty_queue)
-        def done_waiting(result):
-            LOGGER.info(_('Replies received, resuming sending'))
-            self._waitingforreplies = False
-            self.sendQueuedMessages()
-
-        empty_queue()
-        d = threads.deferToThread(self._pending_replies.join)
-        d.addCallback(done_waiting)
+        d = defer.DeferredList(self._pending_replies)
+        def purge_pending(r):
+            del self._pending_replies[:]
+        d.addCallback(purge_pending)
         return d
+
+
+class PubSubSender(PubSubForwarder):
+    """
+    Gère des messages à destination du bus
+    """
+
+    def __init__(self, dbfilename=None, dbtable=None):
+        super(PubSubSender, self).__init__(dbfilename, dbtable)
+        # Envoi simultanés sur le bus
+        max_send_simult = int(settings['bus'].get('max_send_simult', 1000))
+        # marge de sécurité de 20%
+        self.max_send_simult = int(max_send_simult * 0.8)
+
+    def isConnected(self):
+        """
+        Teste si on est connecté au bus
+        """
+        return self.xmlstream is not None
+
+    def processMessage(self, msg):
+        """
+        Traite un message en l'envoyant sur le bus.
+        Ne sera pas lancé plus de L{max_send_simult} fois sans attendre les
+        réponses.
+        @param msg: message à traiter
+        @type  msg: C{str} ou C{twisted.words.xish.domish.Element}
+        @return: le C{Deferred} avec la réponse, ou C{None} si cela n'a pas
+            lieu d'être (message envoyé en push)
+        """
+        if isinstance(msg, basestring):
+            msg = parseXml(msg)
+        if msg.name == MESSAGEONETOONE:
+            # pas de réponse du bus pour ce type de messages (push)
+            self.sendOneToOneXml(msg)
+        else:
+            result = self.publishXml(msg)
+            self._pending_replies.append(result)
+            return result
 
     def sendOneToOneXml(self, xml):
         """
-        function to send a XML msg to a particular jabber user
+        Envoi d'un message à un utilisateur particulier.
+        @note: il n'y a pas de réponse du bus à attendre, donc pas de
+            C{Deferred} retourné
         @param xml: le message a envoyé sous forme XML
         @type xml: twisted.words.xish.domish.Element
         """
-        # we need to send it to a particular receiver
         # il faut l'envoyer vers un destinataire en particulier
         msg = domish.Element((None, "message"))
         msg["to"] = xml['to']
@@ -211,12 +292,11 @@ class PubSubForwarder(PubSubClient):
         body = xml.firstChildElement()
         msg.addElement("body", content=body)
         # if not connected store the message
-        if self.xmlstream is None:
-            result = defer.fail(XMPPNotConnectedError())
+        if not self.isConnected():
+            self._send_failed(Failure(XMPPNotConnectedError()),
+                              xml.toXml().encode('utf8'))
         else:
-            result = self.send(msg)
-        result.addErrback(self._send_failed, msg.toXml().encode('utf8'))
-        return result
+            self.xmlstream.send(msg)
 
     def publishXml(self, xml):
         """
@@ -227,7 +307,7 @@ class PubSubForwarder(PubSubClient):
         item = Item(payload=xml)
         if xml.name not in self._nodetopublish:
             LOGGER.error(_("No destination node configured for messages "
-                           "of type '%s'. Skipping.") % xml.name)
+                           "of type '%s'. Skipping."), xml.name)
             del item
             return defer.succeed(True)
         node = self._nodetopublish[xml.name]
@@ -239,4 +319,43 @@ class PubSubForwarder(PubSubClient):
             del item
         result.addErrback(self._send_failed, xml.toXml().encode('utf8'))
         return result
+
+
+class PubSubListener(PubSubForwarder):
+    """
+    Gère des messages en provenance du bus
+    """
+
+    def connectionInitialized(self):
+        super(PubSubListener, self).connectionInitialized()
+        # Réceptionner les messages directs ("one-to-one")
+        self.xmlstream.addObserver("/message[@type='chat']", self.chatReceived)
+    def chatReceived(self, msg):
+        """
+        Fonction de traitement des messages de discussion reçus.
+        @param msg: Message à traiter.
+        @type  msg: C{twisted.words.xish.domish.Element}
+        """
+        # les données dont on a besoin sont juste en dessous
+        for data in msg.body.elements():
+            #LOGGER.debug('Chat message to forward: %s',
+            #             data.toXml().encode('utf8'))
+            self.forwardMessage(data)
+
+    def itemsReceived(self, event):
+        """
+        Fonction de traitement des événements XMPP reçus.
+        @param event: Événement XMPP à traiter.
+        @type  event: C{twisted.words.xish.domish.Element}
+        """
+        for item in event.items:
+            if item.name != 'item':
+                # The alternative is 'retract', which we silently ignore
+                # We receive retractations in FIFO order,
+                # ejabberd keeps 10 items before retracting old items.
+                continue
+            for data in item.elements():
+                #LOGGER.debug('Published message to forward: %s' %
+                #             data.toXml().encode('utf8'))
+                self.forwardMessage(data)
 

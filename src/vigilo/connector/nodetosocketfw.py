@@ -10,7 +10,7 @@ from twisted.internet import reactor
 from twisted.python.failure import Failure
 
 from vigilo.common.logging import get_logger
-from vigilo.connector.forwarder import PubSubForwarder, NotConnectedError
+from vigilo.connector.forwarder import PubSubListener, NotConnectedError
 
 LOGGER = get_logger(__name__)
 
@@ -22,7 +22,7 @@ class SocketNotConnectedError(NotConnectedError):
     def __str__(self):
         return _('socket not connected')
 
-class NodeToSocketForwarder(PubSubForwarder, protocol.Protocol):
+class NodeToSocketForwarder(PubSubListener, protocol.Protocol):
     """
     Receives messages on the xmpp bus, and passes them to the socket.
     Forward Node to socket.
@@ -41,7 +41,7 @@ class NodeToSocketForwarder(PubSubForwarder, protocol.Protocol):
         @param dbtable: Le nom de la table SQL dans ce fichier.
         @type dbtable: C{str}
         """
-        PubSubForwarder.__init__(self, dbfilename, dbtable)
+        super(NodeToSocketForwarder, self).__init__(dbfilename, dbtable)
         # using ReconnectingClientFactory with a backoff retry
         # (it tries again and again with a delay increasing between attempts)
         self.__factory = protocol.ReconnectingClientFactory()
@@ -49,16 +49,6 @@ class NodeToSocketForwarder(PubSubForwarder, protocol.Protocol):
         # creation socket
         self._socket = reactor.connectUNIX(socket_filename, self.__factory,
                                            timeout=3, checkPID=0)
-
-
-    def connectionInitialized(self):
-        """
-        redefinition in order to add new observer for message type=chat
-        """
-        # Called when we are connected and authenticated
-        PubSubForwarder.connectionInitialized(self)
-        # add an observer to deal with chat message (oneToOne message)
-        self.xmlstream.addObserver("/message[@type='chat']", self.chatReceived)
 
     def connectionMade(self):
         """Called when a connection is made.
@@ -77,65 +67,12 @@ class NodeToSocketForwarder(PubSubForwarder, protocol.Protocol):
         """ Create an instance of a subclass of Protocol. """
         return self
 
+    def isConnected(self):
+        return self._socket.state == 'connected'
 
-    def forwardMessage(self, msg, source="node"):
-        """
-        function to forward the message to the socket
-        @param msg: message to forward
-        @type msg: C{str}
-        """
-        if self._socket.state == 'connected':
+    def processMessage(self, msg):
+        if self.isConnected():
             self._socket.transport.write(msg + '\n')
         else:
             self._send_failed(Failure(SocketNotConnectedError()), msg)
-
-
-    def chatReceived(self, msg):
-        """
-        function to treat a received chat message
-
-        @param msg: msg to treat
-        @type  msg: twisted.words.xish.domish.Element
-
-        """
-        # It should only be one body
-        # Il ne devrait y avoir qu'un seul corps de message (body)
-        bodys = [element for element in msg.elements()
-                         if element.name in ('body',)]
-
-        for b in bodys:
-            # the data we need is just underneath
-            # les données dont on a besoin sont juste en dessous
-            for data in b.elements():
-                LOGGER.debug("Chat message to forward: '%s'" %
-                             data.toXml().encode('utf8'))
-                self.forwardMessage(data.toXml().encode('utf8'))
-
-    def itemsReceived(self, event):
-        """
-        function to treat a received item
-
-        @param event: event to treat
-        @type  event: twisted.words.xish.domish.Element
-
-        """
-        #event.headers
-        for item in event.items:
-            # Item is a domish.IElement and a domish.Element
-            # Serialize as XML before queueing,
-            # or we get harmless stderr pollution  × 5 lines:
-            # Exception RuntimeError: 'maximum recursion depth exceeded in
-            # __subclasscheck__' in <type 'exceptions.AttributeError'> ignored
-            # Stderr pollution caused by http://bugs.python.org/issue5508
-            # and some touchiness on domish attribute access.
-            if item.name != 'item':
-                # The alternative is 'retract', which we silently ignore
-                # We receive retractations in FIFO order,
-                # ejabberd keeps 10 items before retracting old items.
-                continue
-            it = [ it for it in item.elements() if item.name == "item" ]
-            for i in it:
-                LOGGER.debug('Message from BUS to forward: %s' %
-                             i.toXml().encode('utf8'))
-                self.forwardMessage(i.toXml().encode('utf8'))
 

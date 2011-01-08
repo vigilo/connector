@@ -2,14 +2,19 @@
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
 """Tests sur la communication avec le bus XMPP."""
 
+import os
 import Queue as queue
 import random
-import threading
+import tempfile
+import shutil
+import unittest
 
-from twisted.trial import unittest
-from twisted.internet import reactor
+# ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
+# produites par ce module !!!
+#from twisted.trial import unittest
+from nose.twistedtools import reactor, deferred
 
-from twisted.internet.defer import Deferred
+from twisted.internet.defer import Deferred, inlineCallbacks
 from twisted.internet.threads import deferToThread
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber.jid import JID
@@ -28,8 +33,8 @@ LOGGER = get_logger(__name__)
 
 class TestForwarders(unittest.TestCase):
     """Teste les échangeurs (forwarders) de messages."""
-    timeout = 10
 
+    @deferred(timeout=5)
     def setUp(self):
         """Initialisation du test."""
 
@@ -40,6 +45,9 @@ class TestForwarders(unittest.TestCase):
             self.stub = XmlStreamStub()
             self.protocol.xmlstream = self.stub.xmlstream
             self.protocol.connectionInitialized()
+
+        self.tmpdir = tempfile.mkdtemp(prefix="test-connector-")
+        self.base = os.path.join(self.tmpdir, "backup.sqlite")
 
         self.xmpp_client = client.XMPPClient(
                 JID(settings['bus']['jid']),
@@ -65,23 +73,22 @@ class TestForwarders(unittest.TestCase):
 
     def tearDown(self):
         """Destruction des objets de test."""
-        return self.xmpp_client.stopService()
+        self.xmpp_client.stopService()
+        shutil.rmtree(self.tmpdir)
 
+    @deferred(timeout=10)
+    @inlineCallbacks
     def testForwarders(self):
         """Transferts entre bus XMPP et des files."""
         in_queue = queue.Queue()
         out_queue = queue.Queue()
 
-        ntqf = NodeToQueueForwarder(out_queue, ':memory:', 'correlator')
+        ntqf = NodeToQueueForwarder(out_queue, self.base, 'ntqf')
+        yield ntqf.retry.initdb()
         ntqf.setHandlerParent(self.xmpp_client)
 
-        qtnf = QueueToNodeForwarder(
-                in_queue, ':memory:', 'correlator',
-                # On redirige la sortie de QueueToNodeForwarder
-                # vers l'entrée de NodeToQueueForwarder.
-                {'event': settings['bus']['owned_topics'][0]},
-                JID(settings['bus']['service']),
-                )
+        qtnf = QueueToNodeForwarder(in_queue, self.base, 'qtnf')
+        yield qtnf.retry.initdb()
         qtnf.setHandlerParent(self.xmpp_client)
 
         # On envoie un évènement dans le QueueToNodeForwarder,
@@ -93,14 +100,22 @@ class TestForwarders(unittest.TestCase):
 
         # On tente de récupérer l'évènement via le NodeToQueueForwarder.
         # Causes pylint to crash: http://www.logilab.org/ticket/8771
-        out_xml = yield deferToThread(lambda: out_queue.get(timeout=2.0))
-        item = parseXml(out_xml)
+        item = None
+        while True:
+            # on récupère le dernier, les premiers pouvant être des messages
+            # réémis par le bus (avec attribut <delay>, non-accessible
+            try:
+                item = yield deferToThread(out_queue.get, timeout=3.0)
+            except queue.Empty:
+                break
+        if item is None:
+            self.fail("Le message n'est pas arrivé dans le temps imparti")
 
         # On vérifie que ce qui a été reçu correspond à ce qui a été envoyé.
-        assert item.children[0].attributes['cookie'] == cookie
-        assert item.children[0].toXml() == dom.toXml()
+        self.assertEqual(item.attributes['cookie'], cookie,
+                         "Le cookie n'est pas bon")
+        self.assertEqual(item.toXml(), dom.toXml(),
+                         "le message XML n'est pas bon")
 
         ntqf.disownHandlerParent(self.xmpp_client)
         qtnf.disownHandlerParent(self.xmpp_client)
-        in_queue.close()
-        out_queue.close()
