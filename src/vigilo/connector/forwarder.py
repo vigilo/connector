@@ -6,11 +6,9 @@ Classe de base pour les composants d'un connecteur.
 
 from __future__ import absolute_import
 
-import os
-import Queue
 from collections import deque
 
-from twisted.internet import reactor, defer, threads, task
+from twisted.internet import reactor, defer, task
 from twisted.python.failure import Failure
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber.jid import JID
@@ -208,7 +206,8 @@ class PubSubForwarder(PubSubClient):
         if self._pending_replies:
             yield self.waitForReplies()
         self._processing_queue = False
-        reactor.callLater(0, self.processQueue) # si la file est vide, on quittera au début
+        # on relance : si la file est vide, on quittera au début
+        reactor.callLater(0, self.processQueue)
 
     def processMessage(self, msg):
         """
@@ -237,7 +236,7 @@ class PubSubForwarder(PubSubClient):
         @rtype:  C{Deferred}
         """
         d = defer.DeferredList(self._pending_replies)
-        def purge_pending(r):
+        def purge_pending(r): # pylint:disable-msg=W0613
             del self._pending_replies[:]
         d.addCallback(purge_pending)
         return d
@@ -356,6 +355,7 @@ class PubSubListener(PubSubForwarder):
     """
     Gère des messages en provenance du bus
     """
+    # pylint:disable-msg=W0223
 
     def connectionInitialized(self):
         super(PubSubListener, self).connectionInitialized()

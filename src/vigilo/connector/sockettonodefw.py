@@ -7,16 +7,13 @@ Extends pubsub clients to compute Socket message
 from __future__ import absolute_import
 
 import os
-import Queue
 
-from twisted.python.failure import Failure
-from twisted.internet import reactor, protocol, defer, threads
+from twisted.internet import reactor, protocol, defer
 from twisted.protocols.basic import LineReceiver
 from wokkel.generic import parseXml
 
 from vigilo.connector import converttoxml
-from vigilo.connector import MESSAGEONETOONE
-from vigilo.connector.forwarder import PubSubSender, NotConnectedError
+from vigilo.connector.forwarder import PubSubSender
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 from vigilo.common.logging import get_logger
@@ -50,17 +47,7 @@ class SocketReceiver(LineReceiver):
 
 class SocketToNodeForwarder(PubSubSender):
     """
-    Receives messages on the socket and passes them to the xmpp bus,
-    Forward socket to Node.
-
-    @ivar _pending_replies: file des réponses à attendre de la part du serveur.
-        Pour traiter ce problème, le plus logique serait d'utiliser une
-        L{defer.DeferredList}, mais ça prend beaucoup plus de mémoire (~ 2.5x).
-        Quand un message est envoyé, son Deferred est ajouté dans cette file.
-        Quand elle est pleine (voir le paramètre de configuration
-        C{max_send_simult}), on doit attendre les réponses du serveurs, qui
-        vident la file en arrivant.
-    @type _pending_replies: C{Queue.Queue}
+    Reçoit les messages depuis la socket et les transmet sur le bus
     """
 
     def __init__(self, socket_filename, dbfilename, dbtable):

@@ -5,7 +5,6 @@ import os
 
 from twisted.application import app, service
 from twisted.internet import reactor
-from twisted.words.protocols.jabber.jid import JID
 from wokkel import client
 
 from vigilo.common.gettext import translate

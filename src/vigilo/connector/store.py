@@ -10,7 +10,7 @@ from __future__ import absolute_import
 
 from collections import deque
 
-from twisted.internet import reactor, defer
+from twisted.internet import defer
 from twisted.enterprise import adbapi
 
 from vigilo.common.logging import get_logger
@@ -102,7 +102,7 @@ class DbRetry(object):
         @return: Le prochain message, dans un C{Deferred}
         @rtype: C{Deferred}
         """
-        def get_from_buffer(r):
+        def get_from_buffer(r): # pylint: disable-msg=W0612
             try:
                 index, msg = self.buffer_out.popleft()
             except IndexError:
