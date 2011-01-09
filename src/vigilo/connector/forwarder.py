@@ -18,6 +18,7 @@ from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
 from wokkel import xmppim
 
+from vigilo.pubsub.xml import NS_PERF
 from vigilo.connector import MESSAGEONETOONE
 from vigilo.connector.store import DbRetry
 from vigilo.common.gettext import translate
@@ -181,6 +182,7 @@ class PubSubForwarder(PubSubClient):
             return # rien à faire
         # Boucle principale de dépilement
         while self.isConnected(): # arrêt si on perd la connexion
+            # on commence par essayer le backup
             if self.retry is not None:
                 msg = yield self.retry.pop()
             else:
@@ -191,9 +193,12 @@ class PubSubForwarder(PubSubClient):
                     msg = self.queue.popleft()
                 except IndexError:
                     break # rien à faire
+            # envoi
             self._messages_sent += 1
             result = self.processMessage(msg)
-            if self.max_send_simult <= 1 and result is not None:
+            if result is None:
+                continue # pas besoin d'attendre
+            if self.max_send_simult <= 1:
                 yield result # pas d'envoi simultané
             else:
                 if len(self._pending_replies) >= self.max_send_simult:
@@ -249,6 +254,16 @@ class PubSubSender(PubSubForwarder):
         max_send_simult = int(settings['bus'].get('max_send_simult', 1000))
         # marge de sécurité de 20%
         self.max_send_simult = int(max_send_simult * 0.8)
+        # accumulation des messages de perf
+        try:
+            self.batch_send_perf = settings["bus"].as_bool("batch_send_perf")
+        except KeyError:
+            self.batch_send_perf = False
+        self._batch_perf_size = int(settings["bus"].get(
+                                        "batch_send_perf_size", 10))
+        self._batch_perf_queue = deque()
+        if "perf" in self._nodetopublish:
+            self._nodetopublish["perfs"] = self._nodetopublish["perf"]
 
     def isConnected(self):
         """
@@ -270,11 +285,28 @@ class PubSubSender(PubSubForwarder):
             msg = parseXml(msg)
         if msg.name == MESSAGEONETOONE:
             # pas de réponse du bus pour ce type de messages (push)
-            self.sendOneToOneXml(msg)
-        else:
-            result = self.publishXml(msg)
-            self._pending_replies.append(result)
-            return result
+            return self.sendOneToOneXml(msg)
+        # accumulation des messages de perf
+        msg = self._accumulate_perf_msgs(msg)
+        if msg is None:
+            return None
+        result = self.publishXml(msg)
+        self._pending_replies.append(result)
+        return result
+
+    def _accumulate_perf_msgs(self, msg):
+        if not self.batch_send_perf or msg.name != "perf":
+            return msg # on est pas concerné
+        self._batch_perf_queue.append(msg)
+        if len(self._batch_perf_queue) < self._batch_perf_size:
+            return None
+        batch_msg = domish.Element((NS_PERF, "perfs"))
+        for msg in self._batch_perf_queue:
+            batch_msg.addChild(msg)
+        self._batch_perf_queue.clear()
+        #LOGGER.info("Sent a batch perf message with %d messages",
+        #            self._batch_perf_size)
+        return batch_msg
 
     def sendOneToOneXml(self, xml):
         """
@@ -304,13 +336,12 @@ class PubSubSender(PubSubForwarder):
         @param xml: le message a envoyé sous forme XML
         @type xml: twisted.words.xish.domish.Element
         """
-        item = Item(payload=xml)
         if xml.name not in self._nodetopublish:
             LOGGER.error(_("No destination node configured for messages "
                            "of type '%s'. Skipping."), xml.name)
-            del item
             return defer.succeed(True)
         node = self._nodetopublish[xml.name]
+        item = Item(payload=xml)
         try:
             result = self.publish(self._service, node, [item])
         except AttributeError:
@@ -330,6 +361,7 @@ class PubSubListener(PubSubForwarder):
         super(PubSubListener, self).connectionInitialized()
         # Réceptionner les messages directs ("one-to-one")
         self.xmlstream.addObserver("/message[@type='chat']", self.chatReceived)
+
     def chatReceived(self, msg):
         """
         Fonction de traitement des messages de discussion reçus.
@@ -340,7 +372,11 @@ class PubSubListener(PubSubForwarder):
         for data in msg.body.elements():
             #LOGGER.debug('Chat message to forward: %s',
             #             data.toXml().encode('utf8'))
-            self.forwardMessage(data)
+            if data.name == "perfs":
+                for msg in data.elements():
+                    self.forwardMessage(msg)
+            else:
+                self.forwardMessage(data)
 
     def itemsReceived(self, event):
         """
@@ -357,5 +393,9 @@ class PubSubListener(PubSubForwarder):
             for data in item.elements():
                 #LOGGER.debug('Published message to forward: %s' %
                 #             data.toXml().encode('utf8'))
-                self.forwardMessage(data)
+                if data.name == "perfs":
+                    for msg in data.elements():
+                        self.forwardMessage(msg)
+                else:
+                    self.forwardMessage(data)
 
