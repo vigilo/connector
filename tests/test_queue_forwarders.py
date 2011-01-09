@@ -76,7 +76,7 @@ class TestForwarders(unittest.TestCase):
         self.xmpp_client.stopService()
         shutil.rmtree(self.tmpdir)
 
-    @deferred(timeout=10)
+    @deferred(timeout=30)
     @inlineCallbacks
     def testForwarders(self):
         """Transferts entre bus XMPP et des files."""
@@ -103,9 +103,9 @@ class TestForwarders(unittest.TestCase):
         item = None
         while True:
             # on récupère le dernier, les premiers pouvant être des messages
-            # réémis par le bus (avec attribut <delay>, non-accessible
+            # réémis par le bus (avec attribut <delay>, non-accessible)
             try:
-                item = yield deferToThread(out_queue.get, timeout=3.0)
+                item = yield deferToThread(out_queue.get, timeout=5.0)
             except queue.Empty:
                 break
         if item is None:
