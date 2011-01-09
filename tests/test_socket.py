@@ -5,6 +5,9 @@ import unittest
 import tempfile
 import os
 
+# A faire avant Twisted
+from nose.twistedtools import reactor
+
 from twisted.words.protocols.jabber.jid import JID
 
 from vigilo.connector.sockettonodefw import SocketToNodeForwarder
