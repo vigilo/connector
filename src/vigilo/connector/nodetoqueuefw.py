@@ -21,7 +21,7 @@ class NodeToQueueForwarder(PubSubListener):
     vers une file d'attente compatible avec C{Queue.Queue}.
     """
 
-    def __init__(self, queue, dbfilename, dbtable):
+    def __init__(self, queue, dbfilename=None, dbtable=None):
         """
         Initialisation du demi-connecteur.
 

@@ -25,7 +25,7 @@ class QueueToNodeForwarder(PubSubSender):
     (C{Queue.Queue}) et les publie sur un nœud XMPP.
     """
 
-    def __init__(self, queue, dbfilename, dbtable):
+    def __init__(self, queue, dbfilename=None, dbtable=None):
         """
         Initialisation du demi-connecteur.
 
@@ -54,7 +54,6 @@ class QueueToNodeForwarder(PubSubSender):
         super(QueueToNodeForwarder, self).connectionInitialized()
         reactor.callInThread(self.consumeQueue)
 
-    @defer.inlineCallbacks
     def consumeQueue(self):
         """
         Consomme les messages enregistrés dans la file en vue des les

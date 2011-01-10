@@ -34,7 +34,7 @@ class TestForwarder(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
 
-    @deferred(timeout=5)
+    @deferred(timeout=30)
     @defer.inlineCallbacks
     def test_store_message(self):
         """Stockage local d'un message lorsque le bus est indisponible."""
