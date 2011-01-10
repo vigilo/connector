@@ -109,7 +109,7 @@ class TestForwarders(unittest.TestCase):
             except queue.Empty:
                 break
             if newitem:
-                print "Reçu: %s" % newitem.toXml()
+                print u"Reçu: %s" % newitem.toXml().encode("utf-8")
                 item = newitem
         if item is None:
             self.fail("Le message n'est pas arrivé dans le temps imparti")
