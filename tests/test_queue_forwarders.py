@@ -105,10 +105,11 @@ class TestForwarders(unittest.TestCase):
             # on récupère le dernier, les premiers pouvant être des messages
             # réémis par le bus (avec attribut <delay>, non-accessible)
             try:
-                newitem = yield deferToThread(out_queue.get, timeout=5.0)
+                newitem = yield deferToThread(out_queue.get, timeout=3.0)
             except queue.Empty:
                 break
             if newitem:
+                print "Reçu: %s" % newitem.toXml()
                 item = newitem
         if item is None:
             self.fail("Le message n'est pas arrivé dans le temps imparti")
