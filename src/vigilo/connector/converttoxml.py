@@ -44,6 +44,8 @@ def text2xml(text):
                 msg = event2xml(elements)
             elif elements[0] == "perf":
                 msg =  perf2xml(elements)
+            elif elements[0] == "state":
+                msg = msg = state2xml(elements)
             elif elements[0] == "downtime":
                 msg = downtime2xml(elements)
             elif elements[0] == "command":
@@ -85,9 +87,6 @@ def oneToOne2xml(onetoone_list):
     # email regexp pattern
     # (\W+@\W+(?:\.\W+)+)
     # (<)?(\w+@\w+(?:\.\w+)+)(?(1)>)
-
-
-
 
     msg = domish.Element((None, MESSAGEONETOONE))
     msg['to'] = onetoone_list[1]
@@ -186,4 +185,30 @@ def command2xml(command_list):
     msg.addElement('timestamp', content=command_list[1])
     msg.addElement('cmdname', content=command_list[2])
     msg.addElement('value', content='|'.join(command_list[3:]))
+    return msg
+
+def state2xml(state_list):
+    """
+    Called to return the XML from command message list
+
+    @param command_list: list contening a command type message to convert
+    @type command_list: C{list}
+    @return: xml object (twisted.words.xish.domish.Element)
+             representing the text given as argument
+             or None in non convertible text
+    """
+
+    # to avoid error from message length
+    if len(state_list) != 9:
+        return None
+	   
+    msg = domish.Element((NS_STATE, 'state'))
+    msg.addElement('timestamp', content=state_list[1])
+    msg.addElement('host', content=state_list[2])
+    msg.addElement('ip', content=state_list[3])
+    msg.addElement('service', content=state_list[4])
+    msg.addElement('statename', content=state_list[5])
+    msg.addElement('type', content=state_list[6])
+    msg.addElement('attempt', content=state_list[7])
+    msg.addElement('message', content=state_list[8])
     return msg

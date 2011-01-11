@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import unittest
 
 from vigilo.connector.converttoxml import text2xml
-from vigilo.pubsub.xml import NS_AGGR, NS_EVENT, NS_PERF, NS_DOWNTIME
+from vigilo.pubsub.xml import NS_AGGR, NS_EVENT, NS_PERF, NS_DOWNTIME, NS_STATE
 
 
 class TestSequenceFunctions(unittest.TestCase):
@@ -51,6 +51,13 @@ class TestSequenceFunctions(unittest.TestCase):
         # with bad input function shall return None
         self.assertEqual(None, text2xml(""))
         self.assertEqual(None, text2xml("azerty"))
+
+
+    def test_state2xml(self):
+        """ Test the connector function state2xml """
+        dico = {'ns': NS_STATE}
+
+        self.assertEqual("""<state xmlns='%(ns)s'><timestamp>1239104006</timestamp><host>server.example.com</host><ip>192.168.1.1</ip><service>Load</service><statename>WARNING</statename><type>SOFT</type><attempt>2</attempt><message>WARNING: Load average is above 4 (4.5)</message></state>""" % dico, text2xml("""state|1239104006|server.example.com|192.168.1.1|Load|WARNING|SOFT|2|WARNING: Load average is above 4 (4.5)""").toXml())
 
 if __name__ == "__main__":
     unittest.main()
