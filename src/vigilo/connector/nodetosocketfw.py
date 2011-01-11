@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from twisted.internet import protocol
 from twisted.internet import reactor
 from twisted.python.failure import Failure
+from twisted.words.xish import domish
 
 from vigilo.common.logging import get_logger
 from vigilo.connector.forwarder import PubSubListener, NotConnectedError
@@ -28,7 +29,7 @@ class NodeToSocketForwarder(PubSubListener, protocol.Protocol):
     Forward Node to socket.
     """
 
-    def __init__(self, socket_filename, dbfilename, dbtable):
+    def __init__(self, socket_filename, dbfilename=None, dbtable=None):
         """
         Instancie un connecteur BUS XMPP vers socket.
 
@@ -71,6 +72,8 @@ class NodeToSocketForwarder(PubSubListener, protocol.Protocol):
         return self._socket.state == 'connected'
 
     def processMessage(self, msg):
+        if isinstance(msg, domish.Element):
+            msg = msg.toXml().encode("utf-8")
         if self.isConnected():
             self._socket.transport.write(msg + '\n')
         else:

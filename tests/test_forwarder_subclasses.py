@@ -28,6 +28,9 @@ from vigilo.pubsub.checknode import VerificationNode
 from vigilo.common.logging import get_logger
 from vigilo.connector.nodetoqueuefw import NodeToQueueForwarder
 from vigilo.connector.queuetonodefw import QueueToNodeForwarder
+from vigilo.connector.nodetosocketfw import NodeToSocketForwarder
+from vigilo.connector.sockettonodefw import SocketToNodeForwarder
+
 
 LOGGER = get_logger(__name__)
 
@@ -41,7 +44,7 @@ class HandlerStub(object):
     def send(self, obj):
         self.xmlstream.send(obj)
 
-class TestForwarders(unittest.TestCase):
+class TestForwarderSubclasses(unittest.TestCase):
     """Teste les échangeurs (forwarders) de messages."""
 
     #@deferred(timeout=5)
@@ -54,31 +57,8 @@ class TestForwarders(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp(prefix="test-connector-")
         self.base = os.path.join(self.tmpdir, "backup.sqlite")
 
-        #self.xmpp_client = client.XMPPClient(
-        #        JID(settings['bus']['jid']),
-        #        settings['bus']['password'],
-        #        settings['bus']['host'],
-        #        )
-        #self.xmpp_client.logTraffic = True
-        #self.xmpp_client.startService()
-
-        #conn_deferred = Deferred()
-        #conn_handler = subprotocols.XMPPHandler()
-        #def on_conn():
-        #    reactor.callLater(1., lambda: conn_deferred.callback(None))
-        #conn_handler.connectionInitialized = on_conn
-        #conn_handler.setHandlerParent(self.xmpp_client)
-
-        ## Wait a few seconds so the xml stream is established.
-        ## This allows us to use shorter timeouts later.
-        ## We have no way to get a deferred for startService,
-        ## which would have been quicker.
-        ##return deferToThread(lambda: time.sleep(1.5))
-        #return conn_deferred
-
     def tearDown(self):
         """Destruction des objets de test."""
-        #self.xmpp_client.stopService()
         shutil.rmtree(self.tmpdir)
 
     @deferred(timeout=10)
@@ -143,47 +123,93 @@ class TestForwarders(unittest.TestCase):
         d.addCallback(check_msg)
         return d
 
-    #@deferred(timeout=30)
-    #@inlineCallbacks
-    #def testForwarders(self):
-    #    """Transferts entre bus XMPP et des files."""
-    #    in_queue = queue.Queue()
-    #    out_queue = queue.Queue()
+    @deferred(timeout=10)
+    def testNodeToSocket(self):
+        """Transferts entre bus XMPP et un socket UNIX"""
 
-    #    ntqf = NodeToQueueForwarder(out_queue)
-    #    ntqf.setHandlerParent(self.xmpp_client)
+        from twisted.protocols.basic import LineOnlyReceiver
+        from twisted.internet.protocol import Factory
+        class TriggeringLineReceiver(LineOnlyReceiver):
+            delimiter = "\n"
+            def lineReceived(self, line):
+                self.factory.received(line)
+        class TriggeringFactory(Factory):
+            protocol = TriggeringLineReceiver
+            def __init__(self, deferred):
+                self.deferred = deferred
+            def received(self, line):
+                self.deferred.callback(line)
 
-    #    qtnf = QueueToNodeForwarder(in_queue)
-    #    qtnf.setHandlerParent(self.xmpp_client)
+        d = Deferred()
+        socket = os.path.join(self.tmpdir, "ntsf.sock")
+        reactor.listenUNIX(socket, TriggeringFactory(d))
 
-    #    # On envoie un évènement dans le QueueToNodeForwarder,
-    #    # qui a été configuré pour le transmettre à NodeToQueueForwarder.
-    #    dom = domish.Element(('foo', 'event'))
-    #    cookie = str(random.random())
-    #    dom['cookie'] = cookie
-    #    in_queue.put_nowait(dom.toXml())
+        ntsf = NodeToSocketForwarder(socket, None, None)
+        ntsf.setHandlerParent(HandlerStub(self.stub.xmlstream))
+        ntsf.xmlstream = self.stub.xmlstream
+        ntsf.connectionInitialized()
 
-    #    # On tente de récupérer l'évènement via le NodeToQueueForwarder.
-    #    # Causes pylint to crash: http://www.logilab.org/ticket/8771
-    #    item = None
-    #    while True:
-    #        # on récupère le dernier, les premiers pouvant être des messages
-    #        # réémis par le bus (avec attribut <delay>, non-accessible)
-    #        try:
-    #            newitem = yield deferToThread(out_queue.get, timeout=3.0)
-    #        except queue.Empty:
-    #            break
-    #        if newitem:
-    #            print u"Reçu: %s" % newitem.toXml().encode("utf-8")
-    #            item = newitem
-    #    if item is None:
-    #        self.fail("Le message n'est pas arrivé dans le temps imparti")
+        # On envoie un évènement sur le pseudo-bus
+        cookie = str(random.random())
+        dom = parseXml("""<message from='pubsub.localhost' to='connectorx@localhost'>
+            <event xmlns='http://jabber.org/protocol/pubsub#event'>
+            <items node='/home/localhost/connectorx/bus'><item>
+                <event xmlns='foo' cookie='%s'/>
+            </item></items>
+            </event></message>""" % cookie)
+        self.stub.send(dom)
 
-    #    # On vérifie que ce qui a été reçu correspond à ce qui a été envoyé.
-    #    self.assertEqual(item.attributes['cookie'], cookie,
-    #                     "Le cookie n'est pas bon")
-    #    self.assertEqual(item.toXml(), dom.toXml(),
-    #                     "le message XML n'est pas bon")
+        def check_msg(msg):
+            self.assertEquals(msg, dom.event.items.item.event.toXml(),
+                              "Le message reçu n'est pas identique au message envoyé")
+        d.addCallback(check_msg)
+        return d
 
-    #    ntqf.disownHandlerParent(self.xmpp_client)
-    #    qtnf.disownHandlerParent(self.xmpp_client)
+    @deferred(timeout=10)
+    def testSocketToNode(self):
+        """Transfert entre un socket UNIX et le bus XMPP"""
+
+        from twisted.internet.protocol import ClientFactory
+        from twisted.protocols.basic import LineOnlyReceiver
+        class SendingHandler(LineOnlyReceiver):
+            delimiter = "\n"
+            def connectionMade(self):
+                self.sendLine(self.factory.message)
+        class SendingFactory(ClientFactory):
+            protocol = SendingHandler
+            def __init__(self, message):
+                self.message = message
+
+        cookie = str(random.random())
+        msg_sent = "event|dummy|dummy|dummy|dummy|dummy"
+        msg_sent_xml = parseXml("""
+                <event xmlns='http://www.projet-vigilo.org/xmlns/event1'>
+                    <timestamp>dummy</timestamp>
+                    <host>dummy</host>
+                    <service>dummy</service>
+                    <state>dummy</state>
+                    <message>dummy</message>
+                </event>""")
+        socket = os.path.join(self.tmpdir, "stnf.sock")
+
+        # serveur
+        stnf = SocketToNodeForwarder(socket, None, None)
+        stnf.setHandlerParent(HandlerStub(self.stub.xmlstream))
+        stnf.xmlstream = self.stub.xmlstream
+        stnf.connectionInitialized()
+
+        # client
+        reactor.connectUNIX(socket, SendingFactory(msg_sent))
+
+        d = Deferred()
+        def get_output():
+            msg = self.stub.output[-1]
+            event = msg.pubsub.publish.item.event
+            d.callback(event)
+        def check_msg(msg):
+            print msg.toXml().encode("utf-8")
+            self.assertEquals(msg.toXml(), msg_sent_xml.toXml())
+        reactor.callLater(0.5, get_output) # On laisse un peu de temps pour traiter
+        d.addCallback(check_msg)
+        return d
+
