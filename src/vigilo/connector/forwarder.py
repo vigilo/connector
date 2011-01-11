@@ -254,12 +254,7 @@ class PubSubSender(PubSubForwarder):
         # marge de sécurité de 20%
         self.max_send_simult = int(max_send_simult * 0.8)
         # accumulation des messages de perf
-        try:
-            self.batch_send_perf = settings["bus"].as_bool("batch_send_perf")
-        except KeyError:
-            self.batch_send_perf = False
-        self._batch_perf_size = int(settings["bus"].get(
-                                        "batch_send_perf_size", 10))
+        self.batch_send_perf = int(settings["bus"].get("batch_send_perf", 1))
         self._batch_perf_queue = deque()
         if "perf" in self._nodetopublish:
             self._nodetopublish["perfs"] = self._nodetopublish["perf"]
@@ -294,17 +289,17 @@ class PubSubSender(PubSubForwarder):
         return result
 
     def _accumulate_perf_msgs(self, msg):
-        if not self.batch_send_perf or msg.name != "perf":
+        if self.batch_send_perf <= 1 or msg.name != "perf":
             return msg # on est pas concerné
         self._batch_perf_queue.append(msg)
-        if len(self._batch_perf_queue) < self._batch_perf_size:
+        if len(self._batch_perf_queue) < self.batch_send_perf:
             return None
         batch_msg = domish.Element((NS_PERF, "perfs"))
         for msg in self._batch_perf_queue:
             batch_msg.addChild(msg)
         self._batch_perf_queue.clear()
         #LOGGER.info("Sent a batch perf message with %d messages",
-        #            self._batch_perf_size)
+        #            self.batch_send_perf)
         return batch_msg
 
     def sendOneToOneXml(self, xml):
