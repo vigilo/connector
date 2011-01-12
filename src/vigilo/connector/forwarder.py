@@ -79,10 +79,7 @@ class PubSubForwarder(PubSubClient):
         self.max_send_simult = 1
         self._pending_replies = []
         self._processing_queue = False
-        self._messages_sent = 0
-        # stats
-        t = task.LoopingCall(self._print_stats)
-        #t.start(3)
+        self._messages_forwarded = 0
 
     def connectionInitialized(self):
         """
@@ -100,7 +97,7 @@ class PubSubForwarder(PubSubClient):
             else:
                 d = self.retry.initdb()
             d.addCallback(lambda x: self._task_process_queue.start(5))
-        self._messages_sent = 0
+        self._messages_forwarded = 0
 
     def connectionLost(self, reason):
         """
@@ -119,16 +116,23 @@ class PubSubForwarder(PubSubClient):
         """
         raise NotImplementedError()
 
-    def _print_stats(self):
-        LOGGER.debug("Messages processed: %d", self._messages_sent)
-        LOGGER.debug("Queue: %d", len(self.queue))
-        if self.retry is not None:
-            LOGGER.debug("Backup input buffer: %d", len(self.retry.buffer_in))
-            LOGGER.debug("Backup output buffer: %d", len(self.retry.buffer_out))
+    def getStats(self):
+        """Récupère des métriques de fonctionnement du connecteur"""
+        stats = {
+            "forwarded": self._messages_forwarded,
+            "queue": len(self.queue),
+            }
+        if self.retry is None:
+            return defer.succeed(stats)
+        else:
+            stats["backup_in_buf"] = len(self.retry.buffer_in)
+            stats["backup_out_buf"] = len(self.retry.buffer_out)
             backup_size_d = self.retry.qsize()
-            def log_size(size):
-                LOGGER.debug("Backup total size: %d", size)
-            backup_size_d.addCallback(log_size)
+            def add_backup_size(backup_size):
+                stats["backup"] = backup_size
+                return stats
+            backup_size_d.addCallback(add_backup_size)
+            return backup_size_d
 
     def _send_failed(self, e, msg):
         """errback: remet le message en base"""
@@ -192,7 +196,7 @@ class PubSubForwarder(PubSubClient):
                 except IndexError:
                     break # rien à faire
             # envoi
-            self._messages_sent += 1
+            self._messages_forwarded += 1
             result = self.processMessage(msg)
             if result is None:
                 continue # pas besoin d'attendre
@@ -249,6 +253,7 @@ class PubSubSender(PubSubForwarder):
 
     def __init__(self, dbfilename=None, dbtable=None):
         super(PubSubSender, self).__init__(dbfilename, dbtable)
+        self._messages_sent = 0
         # Envoi simultanés sur le bus
         max_send_simult = int(settings['bus'].get('max_send_simult', 1000))
         # marge de sécurité de 20%
@@ -258,6 +263,19 @@ class PubSubSender(PubSubForwarder):
         self._batch_perf_queue = deque()
         if "perf" in self._nodetopublish:
             self._nodetopublish["perfs"] = self._nodetopublish["perf"]
+
+    def connectionInitialized(self):
+        super(PubSubSender, self).connectionInitialized()
+        self._messages_sent = 0 # c'est un COUNTER, on peut réinitialiser
+
+    def getStats(self):
+        """Récupère des métriques de fonctionnement du connecteur"""
+        d = super(PubSubSender, self).getStats()
+        def add_messages_sent(stats):
+            stats["sent"] = self._messages_sent
+            return stats
+        d.addCallback(add_messages_sent)
+        return d
 
     def isConnected(self):
         """
@@ -275,6 +293,7 @@ class PubSubSender(PubSubForwarder):
         @return: le C{Deferred} avec la réponse, ou C{None} si cela n'a pas
             lieu d'être (message envoyé en push)
         """
+        self._messages_sent += 1
         if isinstance(msg, basestring):
             msg = parseXml(msg)
         if msg.name == MESSAGEONETOONE:
