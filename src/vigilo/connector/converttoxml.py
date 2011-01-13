@@ -207,7 +207,7 @@ def state2xml(state_list):
     msg.addElement('host', content=state_list[2])
     msg.addElement('ip', content=state_list[3])
     msg.addElement('service', content=state_list[4])
-    msg.addElement('statename', content=state_list[5])
+    msg.addElement('return_code', content=state_list[5])
     msg.addElement('type', content=state_list[6])
     msg.addElement('attempt', content=state_list[7])
     msg.addElement('message', content=state_list[8])

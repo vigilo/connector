@@ -57,7 +57,7 @@ class TestSequenceFunctions(unittest.TestCase):
         """ Test the connector function state2xml """
         dico = {'ns': NS_STATE}
 
-        self.assertEqual("""<state xmlns='%(ns)s'><timestamp>1239104006</timestamp><host>server.example.com</host><ip>192.168.1.1</ip><service>Load</service><statename>WARNING</statename><type>SOFT</type><attempt>2</attempt><message>WARNING: Load average is above 4 (4.5)</message></state>""" % dico, text2xml("""state|1239104006|server.example.com|192.168.1.1|Load|WARNING|SOFT|2|WARNING: Load average is above 4 (4.5)""").toXml())
+        self.assertEqual("""<state xmlns='%(ns)s'><timestamp>1239104006</timestamp><host>server.example.com</host><ip>192.168.1.1</ip><service>Load</service><statename>WARNING</statename><type>SOFT</type><attempt>2</attempt><message>WARNING: Load average is above 4 (4.5)</message></state>""" % dico, text2xml("""state|1239104006|server.example.com|192.168.1.1|Load|1|SOFT|2|WARNING: Load average is above 4 (4.5)""").toXml())
 
 if __name__ == "__main__":
     unittest.main()
