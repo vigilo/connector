@@ -20,7 +20,7 @@ from twisted.words.xish import domish
 from twisted.words.protocols.jabber.jid import JID
 from wokkel import client, subprotocols
 from wokkel.generic import parseXml
-from wokkel.test.helpers import XmlStreamStub
+from helpers import XmlStreamStub
 
 from vigilo.common.conf import settings
 settings.load_module(__name__)

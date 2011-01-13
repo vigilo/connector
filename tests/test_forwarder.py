@@ -18,6 +18,8 @@ from twisted.words.xish import domish
 from vigilo.connector.forwarder import PubSubSender
 from vigilo.pubsub.xml import NS_PERF
 
+from helpers import XmlStreamStub, wait
+
 
 class TestForwarder(unittest.TestCase):
     """Teste la sauvegarde locale de messages en cas d'erreur."""
@@ -46,6 +48,37 @@ class TestForwarder(unittest.TestCase):
         yield self.publisher.processMessage(msg)
         after = yield self.publisher.retry.qsize()
         self.assertEqual(after, before + 1)
+
+    @deferred(timeout=5)
+    @defer.inlineCallbacks
+    def test_unstore_order(self):
+        msg1 = domish.Element((NS_PERF, 'perf'))
+        msg1.addElement('test', content="1")
+        stub = XmlStreamStub()
+        yield self.publisher.processMessage(msg1)
+        # Le message est maintenant en base de backup
+        backup_size = yield self.publisher.retry.qsize()
+        self.assertEqual(backup_size, 1)
+        # On se connecte
+        self.publisher.xmlstream = stub.xmlstream
+        self.publisher.connectionInitialized()
+        # On en envoie un deuxième
+        msg2 = domish.Element((NS_PERF, 'perf'))
+        msg2.addElement('test', content="2")
+        # pas de yield, la réponse n'arrivera jamais (stub)
+        self.publisher.processMessage(msg2)
+        # On attend un peu
+        yield wait(0.5)
+        # On vérifie que les deux messages ont bien été envoyés dans le bon ordre
+        for msg in [msg1, msg2]:
+            msg_out = stub.output.pop()
+            try:
+                msg_out.pubsub.publish.item.perf
+            except AttributeError:
+                self.fail("Le message n'a pas été transmis correctement")
+            self.assertEqual(msg_out.pubsub.publish.item.perf.toXml(), msg.toXml())
+
+
 
 
 if __name__ == "__main__":
