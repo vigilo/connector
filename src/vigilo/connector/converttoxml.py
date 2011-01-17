@@ -191,8 +191,8 @@ def state2xml(state_list):
     """
     Called to return the XML from command message list
 
-    @param command_list: list contening a command type message to convert
-    @type command_list: C{list}
+    @param state_list: list contening a state type message to convert
+    @type  state_list: C{list}
     @return: xml object (twisted.words.xish.domish.Element)
              representing the text given as argument
              or None in non convertible text
@@ -201,7 +201,7 @@ def state2xml(state_list):
     # to avoid error from message length
     if len(state_list) != 9:
         return None
-	   
+
     msg = domish.Element((NS_STATE, 'state'))
     msg.addElement('timestamp', content=state_list[1])
     msg.addElement('host', content=state_list[2])

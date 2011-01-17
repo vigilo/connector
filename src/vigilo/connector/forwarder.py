@@ -51,6 +51,9 @@ class PubSubForwarder(PubSubClient):
     @type _nodetopublish: C{dict}
     @ivar _service: Le service pubsub qui héberge le nœud de publication.
     @type _service: C{twisted.words.protocols.jabber.jid.JID}
+    @ivar max_send_simult: le nombre de messages qu'on est autorisé à envoyer
+        en simultané avant de devoir s'arrêter pour écouter les réponses du bus
+    @type max_send_simult: C{int}
     """
 
     def __init__(self, dbfilename=None, dbtable=None):
@@ -233,7 +236,7 @@ class PubSubForwarder(PubSubClient):
 
         Note: l'implémentation n'utilise pas {defer.inlineDeferred} car on va
         déjà faire appel à cette méthode par un C{yield} dans
-        L{sendQueuedMessages}, donc on a pas le droit de I{yielder} nous-même.
+        L{processQueue}, donc on a pas le droit de I{yielder} nous-même.
 
         @return: un Deferred qui se déclenche quand toutes les réponses sont
             arrivées

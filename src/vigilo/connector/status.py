@@ -22,16 +22,23 @@ LOGGER = get_logger(__name__)
 
 
 class StatusPublisher(PubSubSender):
+    """
+    Supervision et métrologie d'un connecteur.
+    """
 
     def __init__(self, forwarder, hostname, servicename, frequency=300):
         """
-        Instancie un connecteur vers le bus XMPP.
-
-        @param dbfilename: le nom du fichier permettant la sauvegarde des
-                           messages en cas de problème d'éciture sur le BUS
-        @type  dbfilename: C{str}
-        @param dbtable: Le nom de la table SQL pour la sauvegarde des messages.
-        @type  dbtable: C{str}
+        @param forwarder: le conecteur à superviser
+        @type  forwarder: instance de L{PubSubForwarder
+            <vigilo.connector.forwarder.PubSubForwarder>} (ou une de ses
+            sous-classes)
+        @param hostname: le nom d'hôte à utiliser pour le message Nagios
+        @type  hostname: C{str}
+        @param servicename: le nom de service Nagios à utiliser
+        @type  servicename: C{str}
+        @param frequency: la fréquence à laquelle envoyer les messages d'état,
+            en secondes
+        @type  frequency: C{int}
         """
         super(StatusPublisher, self).__init__()
         self.forwarder = forwarder
