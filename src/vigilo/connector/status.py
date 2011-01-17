@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import time
 import socket
 
-from twisted.internet import task
+from twisted.internet import reactor, task
 from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
 
@@ -52,14 +52,18 @@ class StatusPublisher(PubSubSender):
         Lancée à la connexion (ou re-connexion).
         """
         super(StatusPublisher, self).connectionInitialized()
-        self.task.start(self.frequency)
+        if not self.task.running:
+            # Normalement on a pas besoin d'être abonné au bus pour envoyer les
+            # messages, mais on laisse un peu de temps quand même pour les
+            # autres tâches potentielles d'initialisation
+            reactor.callLater(10, self.task.start, self.frequency)
 
     def connectionLost(self, reason):
         """
         Lancée à la perte de la connexion au bus.
         """
         super(StatusPublisher, self).connectionLost(reason)
-        self.task.stop()
+        #self.task.stop() # on doit continuer à générer des stats
 
     def sendStatus(self):
         timestamp = int(time.time())
@@ -76,7 +80,8 @@ class StatusPublisher(PubSubSender):
                 "service": self.servicename,
                 }
              )
-        self.forwardMessage(msg_state)
+        if self.isConnected():
+            self.forwardMessage(msg_state)
         # Métrologie
         msg_perf = ('<perf xmlns="%(namespace)s">'
                         '<timestamp>%(timestamp)d</timestamp>'
@@ -91,12 +96,15 @@ class StatusPublisher(PubSubSender):
                         }
                      )
         stats = self.forwarder.getStats()
-        def send_stats(stats):
-            for statname, statvalue in stats.iteritems():
-                self.forwardMessage(msg_perf % {
-                        "datasource": statname,
-                        "value": statvalue})
-                LOGGER.debug("Stats for %s: %s = %s" %
-                             (self.servicename, statname, statvalue))
-        stats.addCallback(send_stats)
+        stats.addCallback(self._send_stats, msg_perf)
 
+    def _send_stats(self, stats, msg_perf):
+        forward_method = self.forwardMessage
+        if isinstance(self.forwarder, PubSubSender):
+            # comme ça on profite de la base de backup
+            forward_method = self.forwarder.forwardMessage
+        for statname, statvalue in stats.iteritems():
+            forward_method(msg_perf % {"datasource": statname,
+                                       "value": statvalue})
+            LOGGER.debug("Stats for %s: %s = %s" %
+                         (self.servicename, statname, statvalue))
