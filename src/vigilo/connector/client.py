@@ -91,8 +91,8 @@ def client_factory(settings):
             subscriptions = settings['bus'].as_list('watched_topics')
             import warnings
             warnings.warn(DeprecationWarning(_(
-                'The "watched_topics" option has now been renamed '
-                'into "subscriptions"'
+                'The "watched_topics" option has now been renamed into '
+                '"subscriptions". Please update your configuration file.'
             )))
         except KeyError:
             subscriptions = []
