@@ -44,17 +44,18 @@ class XMPPClient(client.XMPPClient):
         from vigilo.common.logging import get_logger
         LOGGER = get_logger(__name__)
 
-        from vigilo.common.gettext import translate
+        from vigilo.common.gettext import translate, translate_narrow
         _ = translate(__name__)
+        N_ = translate(__name__)
 
         if failure.check(SASLNoAcceptableMechanism, SASLAuthError):
             LOGGER.error(_("Authentication failure."))
-            log.err(failure, _("Authentication failed:"))
+            log.err(failure, N_("Authentication failed:"))
             reactor.stop()
             return
         if failure.check(xmlstream.FeatureNotAdvertized):
             LOGGER.error(_("Server does not support TLS encryption."))
-            log.err(failure, _("Server does not support TLS encryption."))
+            log.err(failure, N_("Server does not support TLS encryption."))
             reactor.stop()
             return
         client.XMPPClient.initializationFailed(self, failure)
