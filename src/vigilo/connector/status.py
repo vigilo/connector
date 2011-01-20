@@ -59,11 +59,13 @@ class StatusPublisher(PubSubSender):
         Lancée à la connexion (ou re-connexion).
         """
         super(StatusPublisher, self).connectionInitialized()
-        if not self.task.running:
-            # Normalement on a pas besoin d'être abonné au bus pour envoyer les
-            # messages, mais on laisse un peu de temps quand même pour les
-            # autres tâches potentielles d'initialisation
-            reactor.callLater(10, self.task.start, self.frequency)
+        def start_task():
+            if not self.task.running:
+                self.task.start(self.frequency)
+        # Normalement on a pas besoin d'être abonné au bus pour envoyer les
+        # messages, mais on laisse un peu de temps quand même pour les autres
+        # tâches potentielles d'initialisation
+        reactor.callLater(10, start_task)
 
     def connectionLost(self, reason):
         """

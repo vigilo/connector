@@ -99,7 +99,10 @@ class PubSubForwarder(PubSubClient):
                 d = defer.succeed(None)
             else:
                 d = self.retry.initdb()
-            d.addCallback(lambda x: self._task_process_queue.start(5))
+            def start_task(r):
+                if not self._task_process_queue.running:
+                    self._task_process_queue.start(5)
+            d.addCallback(start_task)
         self._messages_forwarded = 0
 
     def connectionLost(self, reason):
