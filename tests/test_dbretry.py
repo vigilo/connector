@@ -75,5 +75,37 @@ class TestDbRetry(unittest.TestCase):
 
         return main_d
 
+    @deferred(timeout=5)
+    @defer.inlineCallbacks
+    def test_put_buffer(self):
+        """
+        Teste le buffer d'entrée
+        """
+        xml = '<abc foo="bar">def</abc>'
+        yield self.db.put(xml)
+        self.assertEqual(len(self.db.buffer_in), 1)
+        for i in range(self.db._buffer_in_max):
+            yield self.db.put(xml)
+        self.assertEqual(len(self.db.buffer_in), 0)
+        backup_size = yield self.db.qsize()
+        self.assertEqual(backup_size, self.db._buffer_in_max + 1)
+
+    @deferred(timeout=5)
+    @defer.inlineCallbacks
+    def test_get_buffer(self):
+        """
+        Teste le buffer de sortie
+        """
+        xml = '<abc foo="bar">def</abc>'
+        msg_count = (self.db._buffer_in_max + 1) * 2
+        for i in range(msg_count):
+            yield self.db.put(xml)
+        self.assertEqual(len(self.db.buffer_out), 0)
+        got_xml = yield self.db.get()
+        self.assertEqual(len(self.db.buffer_out), msg_count - 1) # il y a un message en moins, c'est 'got_xml'
+        backup_size = yield self.db.qsize()
+        self.assertEqual(backup_size, len(self.db.buffer_out))
+
+
 if __name__ == "__main__": 
     unittest.main()
