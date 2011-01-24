@@ -66,14 +66,17 @@ class DbRetry(object):
         Sauvegarde tout en base, avant de quitter
         """
         def _flush(txn):
-            while len(self.buffer_out) > 0:
-                index, msg = self.buffer_out.popleft()
-                txn.execute("INSERT INTO %s VALUES (?, ?)" % self._table,
-                            (index, msg))
-            while len(self.buffer_in) > 0:
-                msg = self.buffer_in.popleft()
-                txn.execute("INSERT INTO %s VALUES (null, ?)" % self._table,
-                            (msg,))
+            def get_from_buffer_out():
+                while len(self.buffer_out) > 0:
+                    yield self.buffer_out.popleft()
+            txn.executemany("INSERT INTO %s VALUES (?, ?)" % self._table,
+                            get_from_buffer_out())
+            def get_from_buffer_in():
+                while len(self.buffer_in) > 0:
+                    msg = self.buffer_in.popleft()
+                    yield (msg, )
+            txn.executemany("INSERT INTO %s VALUES (null, ?)" % self._table,
+                            get_from_buffer_in())
         LOGGER.debug("Flushing the buffers into the base")
         d = self._db.runInteraction(_flush)
         d.addCallback(lambda x: LOGGER.debug("Done flushing"))
@@ -177,10 +180,12 @@ class DbRetry(object):
             return
         self.__saving_buffer_in = True
         total = len(self.buffer_in)
-        while len(self.buffer_in) > 0:
-            msg = self.buffer_in.popleft()
-            txn.execute("INSERT INTO %s VALUES (null, ?)" % self._table,
-                        (msg,))
+        def get_from_buffer_in():
+            while len(self.buffer_in) > 0:
+                msg = self.buffer_in.popleft()
+                yield (msg, )
+        txn.executemany("INSERT INTO %s VALUES (null, ?)" % self._table,
+                        get_from_buffer_in())
         LOGGER.debug("Saved %d messages from the input buffer", total)
         self.__saving_buffer_in = False
 

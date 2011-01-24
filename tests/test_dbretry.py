@@ -106,6 +106,23 @@ class TestDbRetry(unittest.TestCase):
         backup_size = yield self.db.qsize()
         self.assertEqual(backup_size, len(self.db.buffer_out))
 
+    @deferred(timeout=5)
+    @defer.inlineCallbacks
+    def test_get_buffer(self):
+        """
+        Teste le buffer de sortie
+        """
+        xml = '<abc foo="bar">def</abc>'
+        msg_count = (self.db._buffer_in_max + 1)
+        for i in range(msg_count):
+            self.db.buffer_in.append(xml)
+            self.db.buffer_out.append((None, xml))
+        yield self.db.flush()
+        self.assertEqual(len(self.db.buffer_in), 0)
+        self.assertEqual(len(self.db.buffer_out), 0)
+        backup_size = yield self.db.qsize()
+        self.assertEqual(backup_size, msg_count * 2)
+
 
 if __name__ == "__main__": 
     unittest.main()
