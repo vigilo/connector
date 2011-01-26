@@ -26,7 +26,7 @@ class StatusPublisher(PubSubSender):
     Supervision et métrologie d'un connecteur.
     """
 
-    def __init__(self, forwarder, hostname, servicename, frequency=300):
+    def __init__(self, forwarder, hostname, servicename, frequency=60):
         """
         @param forwarder: le conecteur à superviser
         @type  forwarder: instance de L{PubSubForwarder
