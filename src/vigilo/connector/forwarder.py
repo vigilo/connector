@@ -209,9 +209,12 @@ class PubSubForwarder(PubSubClient):
             if self.max_send_simult <= 1:
                 yield result # pas d'envoi simultané
             else:
+                self._pending_replies.append(result)
                 if len(self._pending_replies) >= self.max_send_simult:
-                    LOGGER.info(_('Batch sent, waiting for %d replies from '
-                                  'the bus'), len(self._pending_replies))
+                    if self.max_send_simult >= 100:
+                        LOGGER.info(_('Batch sent, waiting for %d replies '
+                                      'from the bus'),
+                                    len(self._pending_replies))
                     break # on fait une pause pour écouter les réponses
         if self._pending_replies:
             yield self.waitForReplies()
@@ -310,7 +313,6 @@ class PubSubSender(PubSubForwarder):
         if msg is None:
             return None
         result = self.publishXml(msg)
-        self._pending_replies.append(result)
         return result
 
     def _accumulate_perf_msgs(self, msg):
