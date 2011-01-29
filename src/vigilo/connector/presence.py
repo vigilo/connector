@@ -6,6 +6,8 @@ Gestion de la présence, avec éventuellement de la répartition de charge
 
 from __future__ import absolute_import
 
+import random
+
 from twisted.internet import reactor, task
 from wokkel import xmppim
 
@@ -28,7 +30,7 @@ class PresenceManager(xmppim.PresenceClientProtocol):
     place de la répartition de charge.
     """
 
-    def __init__(self, change_frequency=15):
+    def __init__(self, change_frequency=10):
         super(PresenceManager, self).__init__()
         self.priority = None
         self._priorities = {}
@@ -41,7 +43,7 @@ class PresenceManager(xmppim.PresenceClientProtocol):
             if not self._task.running:
                 self._task.start(self.change_frequency)
         # Ne pas lancer trop tôt pour récupérer les présences des autres
-        reactor.callLater(5, start_sending)
+        reactor.callLater(random.randrange(2, 8), start_sending)
 
     def connectionLost(self, reason):
         """
@@ -73,7 +75,6 @@ class PresenceManager(xmppim.PresenceClientProtocol):
             priority = self.choosePriority()
         if priority == self.priority:
             return
-        self.priority = priority
         LOGGER.debug("Sending presence with priority %d", priority)
         self.xmlstream.send(xmppim.AvailablePresence(priority=priority))
 
@@ -86,6 +87,7 @@ class PresenceManager(xmppim.PresenceClientProtocol):
         if not self.isMyAccount(entity):
             return
         if self.parent.jid == entity: # C'est ma propre présence
+            self.priority = priority
             return
         self._priorities[entity.resource] = priority
         if priority == self.priority:
