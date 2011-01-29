@@ -6,6 +6,7 @@ Classe de base pour les composants d'un connecteur.
 
 from __future__ import absolute_import
 
+import sqlite3
 from collections import deque
 
 from twisted.internet import reactor, defer, task
@@ -169,17 +170,23 @@ class PubSubForwarder(PubSubClient):
         self._processing_queue = True
         # Gestion du cas déconnecté
         if not self.isConnected():
-            # on sauvegarde les messages
-            while len(self.queue) > 0:
-                msg = self.queue.popleft()
-                if not isinstance(msg, basestring):
-                    msg = msg.toXml().encode("utf-8")
-                yield self.retry.put(msg)
+            if self.retry is not None:
+                # on sauvegarde les messages
+                while len(self.queue) > 0:
+                    msg = self.queue.popleft()
+                    if not isinstance(msg, basestring):
+                        msg = msg.toXml().encode("utf-8")
+                    yield self.retry.put(msg)
             self._processing_queue = False
             return
         # Vérification qu'il y a bien quelque chose à faire
         if self.retry is not None:
-            backup_size = yield self.retry.qsize()
+            try:
+                backup_size = yield self.retry.qsize()
+            except sqlite3.OperationalError:
+                self._processing_queue = False
+                reactor.callLater(0.5, self.processQueue)
+                return
         else:
             backup_size = 0
         if len(self.queue) == 0 and backup_size == 0:

@@ -6,11 +6,11 @@ Gestion de la présence, avec éventuellement de la répartition de charge
 
 from __future__ import absolute_import
 
-from twisted.internet import task
+from twisted.internet import reactor, task
 from wokkel import xmppim
 
-#from vigilo.common.gettext import translate
-#_ = translate(__name__)
+from vigilo.common.gettext import translate
+_ = translate(__name__)
 #from vigilo.common.conf import settings
 #settings.load_module(__name__)
 from vigilo.common.logging import get_logger
@@ -32,13 +32,16 @@ class PresenceManager(xmppim.PresenceClientProtocol):
         super(PresenceManager, self).__init__()
         self.priority = None
         self._priorities = {}
+        self.change_frequency = change_frequency
         self._task = task.LoopingCall(self.sendPresence)
-        self._task_frequency = change_frequency
 
     def connectionInitialized(self):
         super(PresenceManager, self).connectionInitialized()
-        if not self._task.running:
-            self._task.start(self._task_frequency)
+        def start_sending():
+            if not self._task.running:
+                self._task.start(self.change_frequency)
+        # Ne pas lancer trop tôt pour récupérer les présences des autres
+        reactor.callLater(5, start_sending)
 
     def connectionLost(self, reason):
         """
@@ -70,6 +73,7 @@ class PresenceManager(xmppim.PresenceClientProtocol):
             priority = self.choosePriority()
         if priority == self.priority:
             return
+        self.priority = priority
         LOGGER.debug("Sending presence with priority %d", priority)
         self.xmlstream.send(xmppim.AvailablePresence(priority=priority))
 
@@ -82,11 +86,18 @@ class PresenceManager(xmppim.PresenceClientProtocol):
         if not self.isMyAccount(entity):
             return
         if self.parent.jid == entity: # C'est ma propre présence
-            self.priority = priority
             return
         self._priorities[entity.resource] = priority
         if priority == self.priority:
-            self.sendPresence() # race condition
+            LOGGER.warning(_("Another instance of %(user)s@%(host)s has "
+                             "priority %(priority)d ! (me: %(me)s, other: "
+                             "%(other)s)"),
+                           {"user": self.parent.jid.user,
+                            "host": self.parent.jid.host,
+                            "priority": priority,
+                            "me": self.parent.jid.resource,
+                            "other": entity.resource})
+            self.sendPresence()
 
     def unavailableReceived(self, entity, statuses=None):
         if not self.isMyAccount(entity):
