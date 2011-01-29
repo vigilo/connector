@@ -6,6 +6,8 @@ Envoi d'états concernant le connecteur pour l'auto-supervision
 
 from __future__ import absolute_import
 
+import os
+import sys
 import time
 import socket
 
@@ -26,7 +28,7 @@ class StatusPublisher(PubSubSender):
     Supervision et métrologie d'un connecteur.
     """
 
-    def __init__(self, forwarder, hostname, servicename, frequency=60):
+    def __init__(self, forwarder, hostname, servicename=None, frequency=60):
         """
         @param forwarder: le conecteur à superviser
         @type  forwarder: instance de L{PubSubForwarder
@@ -43,7 +45,10 @@ class StatusPublisher(PubSubSender):
         super(StatusPublisher, self).__init__()
         self.forwarder = forwarder
         self.hostname = hostname
-        self.servicename = servicename
+        if servicename is not None:
+            self.servicename = servicename
+        else:
+            self.servicename = os.path.basename(sys.argv[0])
         self.frequency = frequency
         if self.hostname is None:
             self.hostname = socket.gethostname()

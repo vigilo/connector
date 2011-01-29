@@ -90,9 +90,6 @@ class PubSubForwarder(PubSubClient):
         Redéfinie pour pouvoir vider les messages en attente.
         """
         super(PubSubForwarder, self).connectionInitialized()
-        # There's probably a way to configure it (on_sub vs on_sub_and_presence)
-        # but the spec defaults to not sending subscriptions without presence.
-        self.xmlstream.send(xmppim.AvailablePresence())
         LOGGER.info(_('Connected to the XMPP bus'))
         if not self._task_process_queue.running:
             if self.retry is None:
