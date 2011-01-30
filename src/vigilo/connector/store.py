@@ -8,6 +8,7 @@ Peut-être pas, vu que la latence de SQLite est suffisamment basse.
 """
 from __future__ import absolute_import
 
+import sqlite3
 from collections import deque
 
 from twisted.internet import defer
