@@ -43,7 +43,7 @@ class PresenceManager(xmppim.PresenceClientProtocol):
             if not self._task.running:
                 self._task.start(self.change_frequency)
         # Ne pas lancer trop tôt pour récupérer les présences des autres
-        reactor.callLater(random.randrange(2, 8), start_sending)
+        reactor.callLater(random.randrange(2, 15), start_sending)
 
     def connectionLost(self, reason):
         """

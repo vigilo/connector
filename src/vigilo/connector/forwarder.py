@@ -135,7 +135,8 @@ class PubSubForwarder(PubSubClient):
             def add_backup_size(backup_size):
                 stats["backup"] = backup_size
                 return stats
-            backup_size_d.addCallback(add_backup_size)
+            backup_size_d.addCallbacks(add_backup_size,
+                                       lambda e: add_backup_size("U"))
             return backup_size_d
 
     def _send_failed(self, e, msg):
