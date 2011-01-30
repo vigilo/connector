@@ -154,7 +154,8 @@ class PubSubForwarder(PubSubClient):
         @param msg: le message à envoyer
         """
         self.queue.append(msg)
-        reactor.callLater(0, self.processQueue)
+        if not self._processing_queue:
+            reactor.callLater(0, self.processQueue)
 
     @defer.inlineCallbacks
     def processQueue(self):

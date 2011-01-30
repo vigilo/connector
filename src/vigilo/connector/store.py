@@ -126,8 +126,12 @@ class DbRetry(object):
             de bloquer
         """
         msg_count = self._load_batch_size
-        txn.execute("SELECT id, msg FROM %s ORDER BY id LIMIT %s"
-                    % (self._table, msg_count))
+        try:
+            txn.execute("SELECT id, msg FROM %s ORDER BY id LIMIT %s"
+                        % (self._table, msg_count))
+        except sqlite3.OperationalError, e:
+            LOGGER.warning(_("Could not fill the output buffer: %s"), e)
+            return
         msgs = txn.fetchall()
         if not msgs:
             # base vide, on utilise le contenu de la file d'entrée temporaire
