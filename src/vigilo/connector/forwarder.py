@@ -198,7 +198,12 @@ class PubSubForwarder(PubSubClient):
         while self.isConnected(): # arrêt si on perd la connexion
             # on commence par essayer le backup
             if self.retry is not None:
-                msg = yield self.retry.pop()
+                try:
+                    msg = yield self.retry.pop()
+                except sqlite3.OperationalError:
+                    self._processing_queue = False
+                    reactor.callLater(0.5, self.processQueue)
+                    return
             else:
                 msg = None
             if msg is None:
@@ -282,6 +287,12 @@ class PubSubSender(PubSubForwarder):
     def connectionInitialized(self):
         super(PubSubSender, self).connectionInitialized()
         self._messages_sent = 0 # c'est un COUNTER, on peut réinitialiser
+
+    def connectionLost(self, reason):
+        if self.retry is not None and self._batch_perf_queue:
+            for msg in self._batch_perf_queue:
+                self.retry.put(msg)
+        super(PubSubSender, self).connectionLost(reason)
 
     def getStats(self):
         """Récupère des métriques de fonctionnement du connecteur"""

@@ -6,35 +6,47 @@ from twisted.words.protocols.jabber import xmlstream
 from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism, \
                                                 SASLAuthError
 from twisted.words.protocols.jabber.jid import JID
-from wokkel import client
+from wokkel.client import XMPPClient
+
+from vigilo.connector.compression import CompressInitiatingInitializer
 
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
-class XMPPClient(client.XMPPClient):
+class VigiloXMPPClient(XMPPClient):
     """Client XMPP Vigilo"""
 
-    def __init__(self, jid, password, host=None, port=5222, require_tls=False):
+    def __init__(self, jid, password, host=None, port=5222,
+                 require_tls=False, max_delay=60):
+        XMPPClient.__init__(self, jid, password, host, port)
         self.require_tls = require_tls
-        client.XMPPClient.__init__(self, jid, password, host, port)
+        self.factory.maxDelay = max_delay
 
     def _connected(self, xs):
         """
         On modifie dynamiquement l'attribut "required" du plugin
         d'authentification TLSInitiatingInitializer créé automatiquement
-        par wokkel, pour imposer TLS si l'administrateur le souhaite.
+        par wokkel, pour imposer TLS si l'administrateur le souhaite, et
+        insérer la compression zlib.
         """
-        for initializer in xs.initializers:
+        for index, initializer in enumerate(xs.initializers[:]):
             if isinstance(initializer, xmlstream.TLSInitiatingInitializer):
-                initializer.required = self.require_tls
-        client.XMPPClient._connected(self, xs)
+                if self.require_tls:
+                    xs.initializers[index].required = True
+                else:
+                    # on ajoute la compression zlib et on désactive TLS
+                    # (ils sont incompatibles, voir XEP-0138)
+                    xs.initializers[index].wanted = False
+                    xs.initializers.insert(index+1,
+                            CompressInitiatingInitializer(xs))
+        XMPPClient._connected(self, xs)
 
     def _disconnected(self, xs):
         """
         Ajout de l'arrêt à la déconnexion
         @TODO: vérifier que ça ne bloque pas la reconnexion automatique.
         """
-        client.XMPPClient._disconnected(self, xs)
+        XMPPClient._disconnected(self, xs)
 
     def initializationFailed(self, failure):
         """
@@ -58,7 +70,7 @@ class XMPPClient(client.XMPPClient):
             log.err(failure, N_("Server does not support TLS encryption."))
             reactor.stop()
             return
-        client.XMPPClient.initializationFailed(self, failure)
+        XMPPClient.initializationFailed(self, failure)
 
 
 def client_factory(settings):
@@ -69,15 +81,16 @@ def client_factory(settings):
     except KeyError:
         require_tls = False
 
-    xmpp_client = XMPPClient(
+    # Temps max entre 2 tentatives de connexion (par défaut 1 min)
+    max_delay = int(settings["bus"].get("max_reconnect_delay", 60))
+
+    xmpp_client = VigiloXMPPClient(
             JID(settings['bus']['jid']),
             settings['bus']['password'],
             settings['bus']['host'],
-            require_tls = require_tls)
+            require_tls=require_tls,
+            max_delay=max_delay)
     xmpp_client.setName('xmpp_client')
-    # Temps max entre 2 tentatives de connexion (par défaut 1 min)
-    xmpp_client.factory.maxDelay = int(settings["bus"].get(
-                                       "max_reconnect_delay", 60))
 
     try:
         xmpp_client.logTraffic = settings['bus'].as_bool('log_traffic')
@@ -101,3 +114,5 @@ def client_factory(settings):
     node_verifier = VerificationNode(subscriptions, doThings=True)
     node_verifier.setHandlerParent(xmpp_client)
     return xmpp_client
+
+

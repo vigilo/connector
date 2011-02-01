@@ -149,9 +149,12 @@ class DbRetry(object):
         self.buffer_out.extend(msgs) # On stocke (id, msg)
         txn.execute("DELETE FROM %s WHERE id >= ? AND id <= ?" % self._table,
                     (min_id, max_id))
-        txn.execute("VACUUM")
         LOGGER.debug("Filled output buffer with %d messages from database",
                      len(msgs))
+        try:
+            txn.execute("VACUUM")
+        except sqlite3.OperationalError, e:
+            LOGGER.info(_("Could VACUUM the database: %s"), e)
 
     # -- Insertion dans la base
 

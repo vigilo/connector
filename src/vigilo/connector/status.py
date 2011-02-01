@@ -19,6 +19,8 @@ from vigilo.pubsub.xml import NS_PERF, NS_COMMAND
 from vigilo.connector.forwarder import PubSubSender
 #from vigilo.common.conf import settings
 #settings.load_module(__name__)
+from vigilo.common.gettext import translate
+_ = translate(__name__)
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
@@ -120,5 +122,7 @@ class StatusPublisher(PubSubSender):
         for statname, statvalue in stats.iteritems():
             forward_method(msg_perf % {"datasource": statname,
                                        "value": statvalue})
-            LOGGER.debug("Stats for %s: %s = %s" %
-                         (self.servicename, statname, statvalue))
+            LOGGER.info(_("Stats for %(service)s: %(name)s = %(value)s")
+                        % {"service": self.servicename,
+                           "name": statname,
+                           "value": statvalue})
