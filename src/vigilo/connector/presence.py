@@ -76,7 +76,8 @@ class PresenceManager(xmppim.PresenceClientProtocol):
         if priority == self.priority:
             return
         LOGGER.debug("Sending presence with priority %d", priority)
-        self.xmlstream.send(xmppim.AvailablePresence(priority=priority))
+        if self.xmlstream is not None:
+            self.xmlstream.send(xmppim.AvailablePresence(priority=priority))
 
     def isMyAccount(self, entity):
         """seul mon propre compte m'intéresse (Narcisse-style)"""
@@ -100,6 +101,9 @@ class PresenceManager(xmppim.PresenceClientProtocol):
                             "me": self.parent.jid.resource,
                             "other": entity.resource})
             self.sendPresence()
+            # On décale le changement de présence pour éviter les collisions
+            self._task.stop()
+            reactor.callLater(3, self._task.start, self.change_frequency, now=False)
 
     def unavailableReceived(self, entity, statuses=None):
         if not self.isMyAccount(entity):

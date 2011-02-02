@@ -1,6 +1,6 @@
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
 
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.python import log
 from twisted.words.protocols.jabber import xmlstream
 from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism, \
@@ -72,6 +72,16 @@ class VigiloXMPPClient(XMPPClient):
             return
         XMPPClient.initializationFailed(self, failure)
 
+    def stopService(self):
+        XMPPClient.stopService(self)
+        stops = []
+        for e in self:
+            if not hasattr(e, "stop"):
+                continue
+            d = e.stop()
+            if d is not None:
+                stops.append(d)
+        return defer.DeferredList(stops)
 
 def client_factory(settings):
     from vigilo.pubsub.checknode import VerificationNode

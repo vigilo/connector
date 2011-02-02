@@ -13,6 +13,7 @@ from twisted.internet import reactor, defer, task
 from twisted.python.failure import Failure
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber.jid import JID
+from twisted.words.protocols.jabber import error
 from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
 from wokkel import xmppim
@@ -72,6 +73,7 @@ class PubSubForwarder(PubSubClient):
         self._service = JID(settings['bus']['service'])
         self._nodetopublish = settings.get('publications', {})
         self.queue = deque()
+        self._initialized = False
         # Base de backup
         if dbfilename is None or dbtable is None:
             self.retry = None
@@ -91,6 +93,7 @@ class PubSubForwarder(PubSubClient):
         Redéfinie pour pouvoir vider les messages en attente.
         """
         super(PubSubForwarder, self).connectionInitialized()
+        self._initialized = True
         LOGGER.info(_('Connected to the XMPP bus'))
         if not self._task_process_queue.running:
             if self.retry is None:
@@ -109,6 +112,7 @@ class PubSubForwarder(PubSubClient):
         les messages en attente.
         """
         super(PubSubForwarder, self).connectionLost(reason)
+        self._initialized = False
         LOGGER.info(_('Lost connection to the XMPP bus (reason: %s)'), reason)
         if self.retry is not None:
             self.retry.flush()
@@ -142,6 +146,10 @@ class PubSubForwarder(PubSubClient):
     def _send_failed(self, e, msg):
         """errback: remet le message en base"""
         errmsg = _('Unable to forward the message (%(reason)s)')
+        if isinstance(e.value, error.StanzaError) and \
+                e.value.condition == "not-acceptable":
+            LOGGER.error(errmsg % {"reason": e.getErrorMessage()})
+            return # pas de sauvegarde, sinon on boucle
         if self.retry is not None:
             errmsg += _('. it has been stored for later retransmission')
         LOGGER.error(errmsg % {"reason": e.getErrorMessage()})
@@ -155,8 +163,7 @@ class PubSubForwarder(PubSubClient):
         @param msg: le message à envoyer
         """
         self.queue.append(msg)
-        if not self._processing_queue:
-            reactor.callLater(0, self.processQueue)
+        reactor.callLater(0, self.processQueue)
 
     @defer.inlineCallbacks
     def processQueue(self):
@@ -265,6 +272,9 @@ class PubSubForwarder(PubSubClient):
         d.addCallback(purge_pending)
         return d
 
+    def stop(self):
+        if self.retry is not None:
+            return self.retry.flush()
 
 class PubSubSender(PubSubForwarder):
     """
@@ -307,7 +317,7 @@ class PubSubSender(PubSubForwarder):
         """
         Teste si on est connecté au bus
         """
-        return self.xmlstream is not None
+        return self._initialized
 
     def processMessage(self, msg):
         """

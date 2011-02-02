@@ -47,8 +47,13 @@ class _CompressedMixin(object):
         if self._compressor is None:
             self._compressor = zlib.compressobj()
         compressed = self._compressor.compress(data)
-        compressed += self._compressor.flush(zlib.Z_SYNC_FLUSH)
-        Connection.write(self, compressed)
+        syncdata = self._compressor.flush(zlib.Z_SYNC_FLUSH)
+        compressed += syncdata
+        try:
+            Connection.write(self, compressed)
+        except zlib.error, e:
+            print e
+            raise
 
     def doRead(self):
         if self._decompressor is None:

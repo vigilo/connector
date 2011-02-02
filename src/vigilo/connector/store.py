@@ -12,6 +12,7 @@ import sqlite3
 from collections import deque
 
 from twisted.internet import defer, task, reactor
+from twisted.words.xish import domish
 from twisted.enterprise import adbapi
 
 from vigilo.common.logging import get_logger
@@ -38,7 +39,7 @@ class DbRetry(object):
 
         self.buffer_in = deque()
         self.buffer_out = deque()
-        self._buffer_in_max = 100
+        self._buffer_in_max = 1000
         self._buffer_out_min = 1000
         self._load_batch_size = self._buffer_out_min * 10
         self.__saving_buffer_in = False
@@ -70,18 +71,24 @@ class DbRetry(object):
             def get_from_buffer_out():
                 while len(self.buffer_out) > 0:
                     yield self.buffer_out.popleft()
-            txn.executemany("INSERT INTO %s VALUES (?, ?)" % self._table,
-                            get_from_buffer_out())
+            if self.buffer_out:
+                txn.executemany("INSERT INTO %s VALUES (?, ?)" % self._table,
+                                get_from_buffer_out())
             def get_from_buffer_in():
                 while len(self.buffer_in) > 0:
                     msg = self.buffer_in.popleft()
+                    if isinstance(msg, domish.Element):
+                        msg = msg.toXml()
                     yield (msg, )
-            txn.executemany("INSERT INTO %s VALUES (null, ?)" % self._table,
-                            get_from_buffer_in())
+            if self.buffer_in:
+                txn.executemany("INSERT INTO %s VALUES (null, ?)" % self._table,
+                                get_from_buffer_in())
         LOGGER.debug("Flushing the buffers into the base")
         d = self._db.runInteraction(_flush)
-        d.addCallbacks(lambda x: LOGGER.debug("Done flushing"),
-                       lambda e: task.deferLater(reactor, 0.5, self.flush))
+        def eb(f):
+            LOGGER.debug("Error flushing: %s", f)
+            task.deferLater(reactor, 0.5, self.flush)
+        d.addCallbacks(lambda x: LOGGER.debug("Done flushing"), eb)
         return d
 
     def qsize(self):
@@ -187,11 +194,15 @@ class DbRetry(object):
         """
         if self.__saving_buffer_in:
             return
-        self.__saving_buffer_in = True
         total = len(self.buffer_in)
+        if total == 0:
+            return
+        self.__saving_buffer_in = True
         def get_from_buffer_in():
             while len(self.buffer_in) > 0:
                 msg = self.buffer_in.popleft()
+                if isinstance(msg, domish.Element):
+                    msg = msg.toXml()
                 yield (msg, )
         try:
             txn.executemany("INSERT INTO %s VALUES (null, ?)" % self._table,
