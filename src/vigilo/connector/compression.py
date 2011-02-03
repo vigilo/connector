@@ -43,7 +43,7 @@ class CompressedTransport(ProtocolWrapper):
         self.transport.write(compressed)
 
     def writeSequence(self, dataSequence):
-        if not data:
+        if not dataSequence:
             return
         compressed = [ self._compressor.compress(data)
                        for data in dataSequence ]
