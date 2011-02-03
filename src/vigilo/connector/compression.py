@@ -2,20 +2,15 @@
 """
 Gestion de compression zlib dans la connexion au bus XMPP (XEP-0138)
 
-Très lourdement inspiré de l'initialisation TLS dans twisted. Proposé pour
-évaluation sur la liste twisted-jabber:
-U{http://www.mail-archive.com/twisted-jabber@ik.nu/msg00330.html}
-(et re-modifié depuis).
+Ce code a été proposé pour inclusion dans Twisted:
+http://www.mail-archive.com/twisted-jabber@ik.nu/msg00334.html
 """
 
 import zlib
-import socket
 
-from twisted.internet import defer, main
-from twisted.internet.tcp import Connection, EWOULDBLOCK
-from twisted.words.protocols.jabber.xmlstream import BaseFeatureInitiatingInitializer, Reset
+from twisted.internet import defer
+from twisted.protocols.policies import ProtocolWrapper
 from twisted.words.xish import domish
-
 from twisted.python import log
 from twisted.words.protocols.jabber import xmlstream
 
@@ -24,64 +19,58 @@ NS_XMPP_FEATURE_COMPRESS = "http://jabber.org/features/compress"
 NS_XMPP_COMPRESS = "http://jabber.org/protocol/compress"
 
 
-def _getCompressClass(klass, _existing={}):
-    if klass not in _existing:
-        class CompressedConnection(_CompressedMixin, klass):
-            pass
-        _existing[klass] = CompressedConnection
-    return _existing[klass]
-
-class _CompressedMixin(object):
+class CompressedTransport(ProtocolWrapper):
     """
     Surchargement des méthodes de lecture et d'écriture pour introduire la
     compression zlib. Pour l'utilisation de la biblio zlib, inspiré de
     U{http://www.doughellmann.com/PyMOTW/zlib/}.
     """
 
-    _compressor = None
-    _decompressor = None
+    def __init__(self, wrappedProtocol):
+        ProtocolWrapper.__init__(self, None, wrappedProtocol)
+        self._compressor = zlib.compressobj()
+        self._decompressor = zlib.decompressobj()
+
+    def makeConnection(self, transport):
+        ProtocolWrapper.makeConnection(self, transport)
+        transport.protocol = self
 
     def write(self, data):
         if not data:
             return
-        if self._compressor is None:
-            self._compressor = zlib.compressobj()
         compressed = self._compressor.compress(data)
-        syncdata = self._compressor.flush(zlib.Z_SYNC_FLUSH)
-        compressed += syncdata
-        try:
-            Connection.write(self, compressed)
-        except zlib.error, e:
-            print e
-            raise
+        compressed += self._compressor.flush(zlib.Z_SYNC_FLUSH)
+        self.transport.write(compressed)
 
-    def doRead(self):
-        if self._decompressor is None:
-            self._decompressor = zlib.decompressobj()
-        try:
-            data = self.socket.recv(self.bufferSize)
-        except socket.error, se:
-            if se.args[0] == EWOULDBLOCK:
-                return
-            else:
-                return main.CONNECTION_LOST
+    def writeSequence(self, dataSequence):
         if not data:
-            remainder = self._decompressor.flush()
-            if remainder:
-                return self.protocol.dataReceived(remainder)
-            return main.CONNECTION_DONE
+            return
+        compressed = [ self._compressor.compress(data)
+                       for data in dataSequence ]
+        compressed.append(self._compressor.flush(zlib.Z_SYNC_FLUSH))
+        self.transport.writeSequence(compressed)
+
+    def dataReceived(self, data):
         to_decompress = self._decompressor.unconsumed_tail + data
         decompressed = self._decompressor.decompress(to_decompress)
-        return self.protocol.dataReceived(decompressed)
+        self.wrappedProtocol.dataReceived(decompressed)
+
+    def connectionMade(self):
+        self.wrappedProtocol.makeConnection(self)
+
+    def connectionLost(self, reason):
+        self.dataReceived(self._decompressor.flush())
+        self.wrappedProtocol.connectionLost(reason)
 
 
 class CompressError(Exception):
     """Compress base exception."""
+
 class CompressFailed(CompressError):
     """Exception indicating failed Compress negotiation"""
 
 
-class CompressInitiatingInitializer(BaseFeatureInitiatingInitializer):
+class CompressInitiatingInitializer(xmlstream.BaseFeatureInitiatingInitializer):
     """
     Détecte la fonctionnalité quand elle est proposée par le bus, et active la
     compression en conséquence
@@ -93,11 +82,9 @@ class CompressInitiatingInitializer(BaseFeatureInitiatingInitializer):
 
     def onProceed(self, obj):
         self.xmlstream.removeObserver('/failure', self.onFailure)
-        self.xmlstream.transport.__class__ = \
-                _getCompressClass(self.xmlstream.transport.__class__)
-        self.xmlstream.reset()
-        self.xmlstream.sendHeader()
-        self._deferred.callback(Reset)
+        compressedTransport = CompressedTransport(self.xmlstream)
+        compressedTransport.makeConnection(self.xmlstream.transport)
+        self._deferred.callback(xmlstream.Reset)
 
     def onFailure(self, obj):
         self.xmlstream.removeObserver('/compressed', self.onProceed)
@@ -105,6 +92,10 @@ class CompressInitiatingInitializer(BaseFeatureInitiatingInitializer):
 
     def start(self):
         if not self.wanted:
+            return defer.succeed(None)
+        if self.xmlstream.transport.TLS:
+            # TLS and stream compression are mutually exclusive: XEP-0138 says
+            # that compression may be offered if TLS failed.
             return defer.succeed(None)
         allowed_methods = [ str(m) for m in
                             self.xmlstream.features[self.feature].elements() ]
