@@ -30,7 +30,8 @@ class StatusPublisher(PubSubSender):
     Supervision et métrologie d'un connecteur.
     """
 
-    def __init__(self, forwarder, hostname, servicename=None, frequency=60):
+    def __init__(self, forwarder, hostname, servicename=None, frequency=60,
+                 node=None):
         """
         @param forwarder: le conecteur à superviser
         @type  forwarder: instance de L{PubSubForwarder
@@ -43,6 +44,9 @@ class StatusPublisher(PubSubSender):
         @param frequency: la fréquence à laquelle envoyer les messages d'état,
             en secondes
         @type  frequency: C{int}
+        @param node: le noeud de publication à utiliser, si on ne veut pas
+            utiliser les noeuds par défaut du connecteur
+        @type  node: C{str}
         """
         super(StatusPublisher, self).__init__()
         self.forwarder = forwarder
@@ -56,6 +60,9 @@ class StatusPublisher(PubSubSender):
             self.hostname = socket.gethostname()
             if "." in self.hostname: # on ne veut pas le FQDN
                 self.hostname = self.hostname[:self.hostname.index(".")]
+        if node is not None:
+            for msgtype in self._nodetopublish:
+                self._nodetopublish[msgtype] = node
         self.task = task.LoopingCall(self.sendStatus)
         # Pas d'envoi simultané
         self.max_send_simult = 1
@@ -115,13 +122,9 @@ class StatusPublisher(PubSubSender):
         stats.addCallback(self._send_stats, msg_perf)
 
     def _send_stats(self, stats, msg_perf):
-        forward_method = self.forwardMessage
-        if isinstance(self.forwarder, PubSubSender):
-            # comme ça on profite de la base de backup
-            forward_method = self.forwarder.forwardMessage
         for statname, statvalue in stats.iteritems():
-            forward_method(msg_perf % {"datasource": statname,
-                                       "value": statvalue})
+            self.forwardMessage(msg_perf % {"datasource": statname,
+                                            "value": statvalue})
             LOGGER.info(_("Stats for %(service)s: %(name)s = %(value)s")
                         % {"service": self.servicename,
                            "name": statname,

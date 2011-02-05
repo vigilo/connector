@@ -185,7 +185,11 @@ class PubSubForwarder(PubSubClient):
                     msg = self.queue.popleft()
                     if not isinstance(msg, basestring):
                         msg = msg.toXml().encode("utf-8")
-                    yield self.retry.put(msg)
+                    try:
+                        yield self.retry.put(msg)
+                    except Exception, e:
+                        LOGGER.error(_("Error trying to save a message to "
+                                       "the backup database: %s"), str(e))
             self._processing_queue = False
             return
         # Vérification qu'il y a bien quelque chose à faire
