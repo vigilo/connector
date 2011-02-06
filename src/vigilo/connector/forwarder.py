@@ -37,6 +37,7 @@ class XMPPNotConnectedError(NotConnectedError):
     def __str__(self):
         return _('no connection to the XMPP server')
 
+
 class PubSubForwarder(PubSubClient):
     """
     Traite des messages en provenance de ou à destination du bus.
@@ -279,6 +280,7 @@ class PubSubForwarder(PubSubClient):
     def stop(self):
         if self.retry is not None:
             return self.retry.flush()
+
 
 class PubSubSender(PubSubForwarder):
     """

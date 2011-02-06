@@ -13,8 +13,8 @@ from wokkel import xmppim
 
 from vigilo.common.gettext import translate
 _ = translate(__name__)
-#from vigilo.common.conf import settings
-#settings.load_module(__name__)
+from vigilo.common.conf import settings
+settings.load_module(__name__)
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
@@ -30,12 +30,13 @@ class PresenceManager(xmppim.PresenceClientProtocol):
     place de la répartition de charge.
     """
 
-    def __init__(self, change_frequency=10):
+    def __init__(self, change_frequency=10, forwarder=None):
         super(PresenceManager, self).__init__()
         self.priority = None
         self._priorities = {}
         self.change_frequency = change_frequency
         self._task = task.LoopingCall(self.sendPresence)
+        self.forwarder = forwarder
 
     def connectionInitialized(self):
         super(PresenceManager, self).connectionInitialized()
@@ -71,13 +72,31 @@ class PresenceManager(xmppim.PresenceClientProtocol):
         return available_priorities[0] # On prend la première dispo
 
     def sendPresence(self, priority=None):
+        if self.isOverloaded() and self.priority >= 0:
+            LOGGER.info(_("Queue size too high! Switching presence to "
+                          "unavailable."))
+            self.unavailable()
+            self.priority = -1
+            return
         if priority is None:
             priority = self.choosePriority()
         if priority == self.priority:
             return
         LOGGER.debug("Sending presence with priority %d", priority)
         if self.xmlstream is not None:
-            self.xmlstream.send(xmppim.AvailablePresence(priority=priority))
+            self.available(priority=priority)
+
+    def isOverloaded(self):
+        if not self.forwarder:
+            return False
+        max_queue_size = settings["connector"].get("max_queue_size", 0)
+        try:
+            max_queue_size = int(max_queue_size)
+        except ValueError:
+            return False
+        if max_queue_size and len(self.forwarder.queue) >= max_queue_size:
+            return True
+        return False
 
     def isMyAccount(self, entity):
         """seul mon propre compte m'intéresse (Narcisse-style)"""
