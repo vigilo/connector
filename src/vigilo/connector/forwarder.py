@@ -72,7 +72,8 @@ class PubSubForwarder(PubSubClient):
         super(PubSubForwarder, self).__init__()
         self.name = self.__class__.__name__
         self._service = JID(settings['bus']['service'])
-        self._nodetopublish = settings.get('publications', {})
+        # copy: on modifie la hashmap dans status.py
+        self._nodetopublish = settings.get('publications', {}).copy()
         self.queue = deque()
         self._initialized = False
         # Base de backup
