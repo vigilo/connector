@@ -39,7 +39,7 @@ class CompressedTransport(ProtocolWrapper):
         if not data:
             return
         # Contournement de https://support.process-one.net/browse/EJAB-1397
-        if len(data) == 7168:
+        if len(data) % 7168 == 0:
             data = data + "<!-- -->"
         compressed = self._compressor.compress(data)
         compressed += self._compressor.flush(zlib.Z_SYNC_FLUSH)
