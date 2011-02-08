@@ -38,6 +38,9 @@ class CompressedTransport(ProtocolWrapper):
     def write(self, data):
         if not data:
             return
+        # Contournement de https://support.process-one.net/browse/EJAB-1397
+        if len(data) == 7168:
+            data = data + "<!-- -->"
         compressed = self._compressor.compress(data)
         compressed += self._compressor.flush(zlib.Z_SYNC_FLUSH)
         self.transport.write(compressed)
