@@ -61,8 +61,8 @@ class VigiloXMPPClient(XMPPClient):
         N_ = translate(__name__)
 
         if failure.check(SASLNoAcceptableMechanism, SASLAuthError):
-            LOGGER.error(_("Authentication failure."))
-            log.err(failure, N_("Authentication failed:"))
+            LOGGER.error(_("Authentication failure: %s"),
+                         failure.getErrorMessage())
             reactor.stop()
             return
         if failure.check(xmlstream.FeatureNotAdvertized):
