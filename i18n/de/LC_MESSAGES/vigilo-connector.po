@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: vigilo-connector 2.0.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-11-19 12:16+0100\n"
-"PO-Revision-Date: 2010-11-19 12:16+0100\n"
+"PO-Revision-Date: 2011-02-09 15:52+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: de <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -18,173 +18,158 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/client.py:48
-msgid "Authentication failure."
+#: src/vigilo/connector/client.py:64
+#, python-format
+msgid "Authentication failure: %s"
 msgstr ""
 
-#: src/vigilo/connector/client.py:49
-msgid "Authentication failed:"
-msgstr ""
-
-#: src/vigilo/connector/client.py:53 src/vigilo/connector/client.py:54
+#: src/vigilo/connector/client.py:69 src/vigilo/connector/client.py:70
 msgid "Server does not support TLS encryption."
 msgstr ""
 
-#: src/vigilo/connector/converttoxml.py:42
-msgid "Got one-to-one message"
-msgstr "One-to-one Nachricht vorhanden"
+#: src/vigilo/connector/client.py:117
+msgid ""
+"The \"watched_topics\" option has now been renamed into "
+"\"subscriptions\". Please update your configuration file."
+msgstr ""
 
-#: src/vigilo/connector/converttoxml.py:47
-msgid "Got empty line"
-msgstr "Leere Zeile vorhanden"
-
-#: src/vigilo/connector/converttoxml.py:49
-msgid "Got 'event' message"
-msgstr "'Ereignis'-Nachricht vorhanden"
-
-#: src/vigilo/connector/converttoxml.py:52
-msgid "Got 'perf' message"
-msgstr "'perf' Nachricht vorhanden"
-
-#: src/vigilo/connector/converttoxml.py:55
-msgid "Got 'downtime' message"
-msgstr "'Downtime'-Nachricht vorhanden"
-
-#: src/vigilo/connector/converttoxml.py:58
-msgid "Got 'command' message"
-msgstr "'Befehl'-Nachricht vorhanden"
-
+#: src/vigilo/connector/converttoxml.py:54
 #: src/vigilo/connector/converttoxml.py:61
-#: src/vigilo/connector/converttoxml.py:68
-#: src/vigilo/connector/converttoxml.py:74
+#: src/vigilo/connector/converttoxml.py:67
 #, python-format
 msgid "Unknown/malformed message type: '%s'"
 msgstr "Unbekannter/fehlerhafter Nachrichtentyp: '%s'"
 
-#: src/vigilo/connector/converttoxml.py:70
-#, python-format
-msgid "Converted to: %s"
-msgstr "Umgewandelt in: %s"
-
-#: src/vigilo/connector/converttoxml.py:78
+#: src/vigilo/connector/converttoxml.py:71
 #, python-format
 msgid "Got malformed message: %s"
 msgstr "Fehlerhafte Nachricht: %s vorhanden"
 
-#: src/vigilo/connector/main.py:65
+#: src/vigilo/connector/forwarder.py:34
+msgid "no connection"
+msgstr ""
+
+#: src/vigilo/connector/forwarder.py:38
+msgid "no connection to the XMPP server"
+msgstr ""
+
+#: src/vigilo/connector/forwarder.py:99
+msgid "Connected to the XMPP bus"
+msgstr "Mit XMPP-Bus verbunden"
+
+#: src/vigilo/connector/forwarder.py:118
+#, python-format
+msgid "Lost connection to the XMPP bus (reason: %s)"
+msgstr ""
+
+#: src/vigilo/connector/forwarder.py:150
+#, python-format
+msgid "Unable to forward the message (%(reason)s)"
+msgstr ""
+
+#: src/vigilo/connector/forwarder.py:156
+msgid ". it has been stored for later retransmission"
+msgstr ". Wird gespeichert und später erneut gesendet"
+
+#: src/vigilo/connector/forwarder.py:193
+#, python-format
+msgid "Error trying to save a message to the backup database: %s"
+msgstr ""
+
+#: src/vigilo/connector/forwarder.py:239
+#, python-format
+msgid "Batch sent, waiting for %d replies from the bus"
+msgstr ""
+
+#: src/vigilo/connector/forwarder.py:395
+#, python-format
+msgid "No destination node configured for messages of type '%s'. Skipping."
+msgstr "Kein Zielknoten für Nachrichten vom Typ '%s' konfiguriert. Überspringen."
+
+#: src/vigilo/connector/main.py:39
 #, python-format
 msgid "Directory not found: '%(dir)s'"
 msgstr "Verzeichnis: '%(dir)s' nicht gefunden"
 
-#: src/vigilo/connector/main.py:70
+#: src/vigilo/connector/main.py:44
 #, python-format
 msgid "Directory not readable: '%(dir)s'"
 msgstr "Verzeichnis: '%(dir)s' nicht lesbar"
 
-#: src/vigilo/connector/main.py:75
+#: src/vigilo/connector/main.py:49
 #, python-format
 msgid "Directory not writable: '%(dir)s'"
 msgstr "Verzeichnis: '%(dir)s' nicht überschreibbar"
 
-#: src/vigilo/connector/main.py:80
+#: src/vigilo/connector/main.py:54
 #, python-format
 msgid "Directory not executable: '%(dir)s'"
 msgstr "Verzeichnis: '%(dir)s' nicht ausführbar"
 
-#: src/vigilo/connector/nodetoqueuefw.py:91
+#: src/vigilo/connector/nodetoqueuefw.py:59
 msgid "Incoming message is too big to be stored in the queue, dropping it."
 msgstr ""
 "Eingehende Nachricht ist zu groß, um in der Warteschlange gespeichert zu "
 "werden, abbrechen."
 
-#: src/vigilo/connector/nodetoqueuefw.py:96
+#: src/vigilo/connector/nodetoqueuefw.py:64
 #, python-format
 msgid "The queue is full, dropping incoming XML message! (%s)"
 msgstr ""
 "Die Warteschlange ist voll, eingehende XML Nachricht wird abgebrochen! "
 "(%s)"
 
-#: src/vigilo/connector/nodetosocketfw.py:43
-#: src/vigilo/connector/sockettonodefw.py:131
-msgid "Connected to the XMPP bus"
-msgstr "Mit XMPP-Bus verbunden"
-
-#: src/vigilo/connector/nodetosocketfw.py:120
-msgid ""
-"Message impossible to forward (socket not connected), the message is "
-"stored for later reemission"
+#: src/vigilo/connector/nodetosocketfw.py:24
+msgid "socket not connected"
 msgstr ""
-"Nachricht kann nicht weitergeleitet werden (Socket nicht verbunden),  "
-"Nachricht wird gespeichert und später erneut gesendet"
 
-#: src/vigilo/connector/nodetosocketfw.py:146
+#: src/vigilo/connector/options.py:13
+msgid "Choose the service name"
+msgstr ""
+
+#: src/vigilo/connector/options.py:14
+msgid "Load this settings.ini file"
+msgstr ""
+
+#: src/vigilo/connector/options.py:25
+msgid "The configuration file does not exist"
+msgstr ""
+
+#: src/vigilo/connector/presence.py:76
+msgid "Queue size too high! Switching presence to unavailable."
+msgstr ""
+
+#: src/vigilo/connector/presence.py:114
 #, python-format
-msgid "Chat message to forward: '%s'"
-msgstr "Chat Nachricht zur Weiterleitung: '%s'"
+msgid ""
+"Another instance of %(user)s@%(host)s has priority %(priority)d ! (me: "
+"%(me)s, other: %(other)s)"
+msgstr ""
 
-#: src/vigilo/connector/nodetosocketfw.py:175
-#, python-format
-msgid "Message from BUS to forward: %s"
-msgstr "Nachricht von BUS zur Weiterleitung: %s"
-
-#: src/vigilo/connector/queuetonodefw.py:81
-#, python-format
-msgid "Error callback in consumeQueue(): %s"
-msgstr "Fehler-Rückruf in consumeQueue(): %s"
-
-#: src/vigilo/connector/queuetonodefw.py:101
+#: src/vigilo/connector/queuetonodefw.py:83
 msgid "Received request to shutdown"
 msgstr "Anforderung zum Herunterfahren erhalten "
 
-#: src/vigilo/connector/queuetonodefw.py:109
+#: src/vigilo/connector/queuetonodefw.py:88
 msgid "Item is None in consumeQueue, this should never happen!"
 msgstr "Element ist Keine in consumeQueue, dies sollte nie  vorkommen!"
 
-#: src/vigilo/connector/queuetonodefw.py:118
+#: src/vigilo/connector/queuetonodefw.py:93
 msgid "Stopping QueueToNodeForwarder."
 msgstr "WarteschlangeToNodeForwarder beendet."
 
-#: src/vigilo/connector/sockettonodefw.py:109
+#: src/vigilo/connector/status.py:128
 #, python-format
-msgid "Received message: %r"
-msgstr "Nachricht: %r erhalten"
-
-#: src/vigilo/connector/sockettonodefw.py:152
-#: src/vigilo/connector/sockettonodefw.py:196
-#, python-format
-msgid ""
-"Message from Socket impossible to forward (no connection to XMPP server),"
-" the message is stored for later reemission (%s)"
+msgid "Stats for %(service)s: %(name)s = %(value)s"
 msgstr ""
-"Nachricht aus Socket kann nicht weitergeleitet werden (keine Verbindung "
-"mit dem XMPP-Server), die Nachricht wird gespeichert und später erneut "
-"gesendet (%s)"
 
-#: src/vigilo/connector/sockettonodefw.py:172
+#: src/vigilo/connector/store.py:142 src/vigilo/connector/store.py:211
 #, python-format
-msgid ""
-"Unable to forward the message (%(error)r), it has been stored for later "
-"retransmission (%(xml_src)s)"
+msgid "Could not fill the output buffer: %s"
 msgstr ""
-"Die Nachricht (%(error)r) kann nicht weitergeleitet werden, wird "
-"gespeichert und später erneut gesendet (%(xml_src)s)"
 
-#: src/vigilo/connector/sockettonodefw.py:184
+#: src/vigilo/connector/store.py:164
 #, python-format
-msgid "No destination node configured for messages of type '%s'. Skipping."
-msgstr "Kein Zielknoten für Nachrichten vom Typ '%s' konfiguriert. Überspringen."
-
-#: src/vigilo/connector/store.py:111
-msgid "The database is locked"
-msgstr "Die Datenbank ist gesperrt"
-
-#: src/vigilo/connector/store.py:116
-#, python-format
-msgid "Some operational error occured. Original error message was: %s"
-msgstr "Bedienungsfehler. Ursprüngliche Fehlermeldung: %s"
-
-#: src/vigilo/connector/store.py:125
-#, python-format
-msgid "Some error occured. Original error message was: %s"
-msgstr "Fehler. Ursprüngliche Fehlermeldung: %s"
+msgid "Could VACUUM the database: %s"
+msgstr ""
 
