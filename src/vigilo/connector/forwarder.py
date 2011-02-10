@@ -18,13 +18,12 @@ from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
 from wokkel import xmppim
 
+from vigilo.common.conf import settings
 from vigilo.pubsub.xml import NS_PERF
 from vigilo.connector import MESSAGEONETOONE
 from vigilo.connector.store import DbRetry
 from vigilo.common.gettext import translate
 _ = translate(__name__)
-from vigilo.common.conf import settings
-settings.load_module(__name__)
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 

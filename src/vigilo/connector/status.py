@@ -17,8 +17,6 @@ from wokkel.generic import parseXml
 
 from vigilo.pubsub.xml import NS_PERF, NS_COMMAND
 from vigilo.connector.forwarder import PubSubSender
-#from vigilo.common.conf import settings
-#settings.load_module(__name__)
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 from vigilo.common.logging import get_logger

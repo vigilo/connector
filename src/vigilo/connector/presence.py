@@ -11,10 +11,9 @@ import random
 from twisted.internet import reactor, task
 from wokkel import xmppim
 
+from vigilo.common.conf import settings
 from vigilo.common.gettext import translate
 _ = translate(__name__)
-from vigilo.common.conf import settings
-settings.load_module(__name__)
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
