@@ -29,19 +29,23 @@ class PresenceManager(xmppim.PresenceClientProtocol):
     place de la répartition de charge.
     """
 
-    def __init__(self, change_frequency=10, forwarder=None):
+    def __init__(self, forwarder=None):
         super(PresenceManager, self).__init__()
         self.priority = None
         self._priorities = {}
-        self.change_frequency = change_frequency
         self._task = task.LoopingCall(self.sendPresence)
         self.forwarder = forwarder
+        try:
+            self.static_priority = int(settings["bus"]["priority"])
+        except (KeyError, ValueError):
+            self.static_priority = None
+
 
     def connectionInitialized(self):
         super(PresenceManager, self).connectionInitialized()
         def start_sending():
             if not self._task.running:
-                self._task.start(self.change_frequency)
+                self._task.start(self.getFrequency())
         # Ne pas lancer trop tôt pour récupérer les présences des autres
         reactor.callLater(random.randrange(2, 15), start_sending)
 
@@ -54,9 +58,24 @@ class PresenceManager(xmppim.PresenceClientProtocol):
         if self._task.running:
             self._task.stop()
 
+    def getFrequency(self):
+        """
+        Retourne la fréquence de changement de priorité. Fonction du nombre de
+        connecteurs visibles.
+        Commence à 10s quand on est tout seul, avec une asymptote réelle des
+        changements du groupe à 5s quand le nombre de connecteurs visibles
+        augmente.
+        Attention, cela détermine aussi la fréquence à laquelle on va vérifier
+        que la file d'attente n'est pas trop chargée (qui augmente donc
+        géométriquement avec un facteur 5 pour chaque connecteur).
+        """
+        return 10 + len(self._priorities) * 5
+
     def choosePriority(self):
+        if self.static_priority is not None:
+            return self.static_priority
         if not self._priorities:
-            return 1 # pas besoin de changer
+            return 1 # tout seul, pas besoin de changer
         # Range + 3: un slot pour ma propre priortié, un slot pour pouvoir
         # changer, et un parce que la seconde borne de range() est exclue
         available_priorities = range(1, len(self._priorities) + 3)
@@ -84,6 +103,8 @@ class PresenceManager(xmppim.PresenceClientProtocol):
         LOGGER.debug("Sending presence with priority %d", priority)
         if self.xmlstream is not None:
             self.available(priority=priority)
+        # On met à jour l'intervalle au cas où le nombre de frères aurait changé
+        self._task.interval = self.getFrequency()
 
     def isOverloaded(self):
         if not self.forwarder:
@@ -109,7 +130,7 @@ class PresenceManager(xmppim.PresenceClientProtocol):
             self.priority = priority
             return
         self._priorities[entity.resource] = priority
-        if priority == self.priority:
+        if priority == self.priority and self.static_priority is None:
             LOGGER.warning(_("Another instance of %(user)s@%(host)s has "
                              "priority %(priority)d ! (me: %(me)s, other: "
                              "%(other)s)"),
@@ -122,7 +143,7 @@ class PresenceManager(xmppim.PresenceClientProtocol):
             # On décale le changement de présence pour éviter les collisions
             self._task.stop()
             reactor.callLater(random.randrange(3, 7), self._task.start,
-                              self.change_frequency, now=False)
+                              self.getFrequency(), now=False)
 
     def unavailableReceived(self, entity, statuses=None):
         if not self.isMyAccount(entity):
