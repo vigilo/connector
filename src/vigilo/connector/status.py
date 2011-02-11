@@ -15,7 +15,7 @@ from twisted.internet import reactor, task
 from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
 
-from vigilo.pubsub.xml import NS_PERF, NS_STATE
+from vigilo.pubsub.xml import NS_PERF, NS_COMMAND
 from vigilo.connector.forwarder import PubSubSender
 from vigilo.common.gettext import translate
 _ = translate(__name__)
@@ -90,14 +90,12 @@ class StatusPublisher(PubSubSender):
         timestamp = int(time.time())
         # État Nagios
         msg_state = (
-            '<state xmlns="%(namespace)s">'
+            '<command xmlns="%(namespace)s">'
                 '<timestamp>%(timestamp)d</timestamp>'
-                '<host>%(host)s</host>'
-                '<service>%(service)s</service>'
-                '<code>0</code>'
-                '<message>OK: running</message>'
-            '</state>' % {
-                "namespace": NS_STATE,
+                '<cmdname>PROCESS_SERVICE_CHECK_RESULT</cmdname>'
+                '<value>%(host)s;%(service)s;0;OK: running</value>'
+            '</command>' % {
+                "namespace": NS_COMMAND,
                 "timestamp": timestamp,
                 "host": self.hostname,
                 "service": self.servicename,
