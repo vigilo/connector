@@ -22,7 +22,7 @@ class TestDbRetry(unittest.TestCase):
     Teste la classe DbRetry.
     """
 
-    @deferred(timeout=5)
+    @deferred(timeout=30)
     def setUp(self):
         db_h, self.db_path = tempfile.mkstemp(suffix=".db")
         os.close(db_h)
@@ -37,7 +37,7 @@ class TestDbRetry(unittest.TestCase):
         os.remove(self.db_path)
 
 
-    @deferred(timeout=5)
+    @deferred(timeout=30)
     def test_retrieval(self):
         """
         Teste l'enregistrement et la récupération d'un message avec DbRetry.
@@ -75,7 +75,7 @@ class TestDbRetry(unittest.TestCase):
 
         return main_d
 
-    @deferred(timeout=5)
+    @deferred(timeout=30)
     @defer.inlineCallbacks
     def test_put_buffer(self):
         """
@@ -90,7 +90,7 @@ class TestDbRetry(unittest.TestCase):
         backup_size = yield self.db.qsize()
         self.assertEqual(backup_size, self.db._buffer_in_max + 1)
 
-    @deferred(timeout=5)
+    @deferred(timeout=30)
     @defer.inlineCallbacks
     def test_get_buffer(self):
         """
@@ -106,7 +106,7 @@ class TestDbRetry(unittest.TestCase):
         backup_size = yield self.db.qsize()
         self.assertEqual(backup_size, len(self.db.buffer_out))
 
-    @deferred(timeout=5)
+    @deferred(timeout=30)
     @defer.inlineCallbacks
     def test_get_buffer(self):
         """

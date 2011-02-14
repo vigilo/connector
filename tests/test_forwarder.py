@@ -24,7 +24,7 @@ from helpers import XmlStreamStub, wait
 class TestForwarder(unittest.TestCase):
     """Teste la sauvegarde locale de messages en cas d'erreur."""
 
-    @deferred(timeout=5)
+    @deferred(timeout=30)
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp(prefix="test-connector-")
         self.base = os.path.join(self.tmpdir, "backup.sqlite")
@@ -49,7 +49,7 @@ class TestForwarder(unittest.TestCase):
         after = yield self.publisher.retry.qsize()
         self.assertEqual(after, before + 1)
 
-    @deferred(timeout=5)
+    @deferred(timeout=30)
     @defer.inlineCallbacks
     def test_unstore_order(self):
         msg1 = domish.Element((NS_PERF, 'perf'))
