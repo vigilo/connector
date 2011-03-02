@@ -111,7 +111,6 @@ class TestForwarderSubclasses(unittest.TestCase):
             except queue.Empty:
                 self.fail("Le message n'a pas été reçu à temps")
             return msg
-            d.callback(msg)
         def check_msg(msg):
             try:
                 dom.event.items.item.event
