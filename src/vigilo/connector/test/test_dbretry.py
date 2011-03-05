@@ -108,7 +108,7 @@ class TestDbRetry(unittest.TestCase):
 
     @deferred(timeout=30)
     @defer.inlineCallbacks
-    def test_get_buffer(self):
+    def test_qsize(self):
         """
         Teste le buffer de sortie
         """
