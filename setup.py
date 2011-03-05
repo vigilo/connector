@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
 import os, sys
-from setuptools import setup
+from setuptools import setup, find_packages
 
 tests_require = [
     'coverage',
@@ -47,10 +47,7 @@ setup(name='vigilo-connector',
         namespace_packages = [
             'vigilo',
             ],
-        packages=[
-            'vigilo',
-            'vigilo.connector',
-            ],
+        packages=find_packages("src"),
         message_extractors={
             'src': [
                 ('**.py', 'python', None),
