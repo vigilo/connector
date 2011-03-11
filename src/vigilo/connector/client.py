@@ -21,6 +21,8 @@ class VigiloXMPPClient(XMPPClient):
         XMPPClient.__init__(self, jid, password, host, port)
         self.require_tls = require_tls
         self.factory.maxDelay = max_delay
+        if isinstance(self.host, list):
+            factory = VigiloClientFactory(jid, password)
 
     def _connected(self, xs):
         """
@@ -83,6 +85,21 @@ class VigiloXMPPClient(XMPPClient):
                 stops.append(d)
         return defer.DeferredList(stops)
 
+    def _getConnection(self):
+        if self.host:
+            if isinstance(self.host, list):
+                c = MultipleServerConnector(self.host, self.port, self.factory,
+                                            reactor=reactor)
+                c.connect()
+                return c
+            else:
+                return reactor.connectTCP(self.host, self.port, self.factory)
+        else:
+            c = XMPPClientConnector(reactor, self.domain, self.factory)
+            c.connect()
+            return c
+
+
 def client_factory(settings):
     from vigilo.pubsub.checknode import VerificationNode
 
@@ -94,10 +111,14 @@ def client_factory(settings):
     # Temps max entre 2 tentatives de connexion (par défaut 1 min)
     max_delay = int(settings["bus"].get("max_reconnect_delay", 60))
 
+    host = settings['bus']['host'].strip()
+    if " " in host:
+        host = [ h.strip() for h in host.split(" ") ]
+
     xmpp_client = VigiloXMPPClient(
             JID(settings['bus']['jid']),
             settings['bus']['password'],
-            settings['bus']['host'],
+            host,
             require_tls=require_tls,
             max_delay=max_delay)
     xmpp_client.setName('xmpp_client')
@@ -125,4 +146,64 @@ def client_factory(settings):
     node_verifier.setHandlerParent(xmpp_client)
     return xmpp_client
 
+
+from twisted.internet import tcp
+class MultipleServerConnector(tcp.Connector):
+    def __init__(self, hosts, port, factory, timeout=30, attempts=3, reactor=None):
+        tcp.Connector.__init__(self, None, port, factory, timeout, None, reactor=reactor)
+        self.hosts = hosts
+        self.attempts = attempts
+        self._attemptsLeft = attempts
+        self._usableHosts = None
+
+    def pickServer(self):
+        if not self._usableHosts:
+            self._usableHosts = self.hosts[:]
+        self.host = self._usableHosts[0]
+        log.msg("Connecting to %s" % self.host)
+
+    def connectionFailed(self, reason):
+        assert self._attemptsLeft is not None
+        self._attemptsLeft -= 1
+        if self._attemptsLeft == 0:
+            self._usableHosts.remove(self.host)
+            self.resetAttempts()
+            if hasattr(self.factory, "resetDelay"):
+                self.factory.resetDelay()
+        return tcp.Connector.connectionFailed(self, reason)
+
+    def resetAttempts(self):
+        self._attemptsLeft = self.attempts
+
+    def _makeTransport(self):
+        self.pickServer()
+        return tcp.Connector._makeTransport(self)
+
+#from twisted.internet import protocol
+#class MultipleServersClientFactory(protocol.ReconnectingClientFactory):
+#    def resetDelay(self):
+#        if self.connector is not None:
+#            self.connector.resetAttempts()
+#        return protocol.ReconnectingClientFactory.resetDelay(self)
+#
+#from twisted.words.xish.xmlstream import XmlStream, XmlStreamFactoryMixin
+#class MultipleServersXmlStreamFactory(XmlStreamFactoryMixin, MultipleServersClientFactory):
+#    protocol = XmlStream
+#
+#    def buildProtocol(self, addr):
+#        self.resetDelay()
+#        return XmlStreamFactoryMixin.buildProtocol(self, addr)
+
+from twisted.words.xish.xmlstream import XmlStreamFactory
+class MultipleServersXmlStreamFactory(XmlStreamFactory):
+    def buildProtocol(self, addr):
+        if (self.connector is not None
+                and hasattr(self.connector, "resetAttempts")):
+            self.connector.resetAttempts()
+        return XmlStreamFactory.buildProtocol(self, addr)
+
+from wokkel.client import HybridAuthenticator
+def VigiloClientFactory(jid, password):
+    a = HybridAuthenticator(jid, password)
+    return MultipleServersXmlStreamFactory(a)
 
