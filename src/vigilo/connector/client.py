@@ -6,12 +6,13 @@ from twisted.words.protocols.jabber import xmlstream
 from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism, \
                                                 SASLAuthError
 from twisted.words.protocols.jabber.jid import JID
-from wokkel.client import XMPPClient
+from wokkel.client import XMPPClient, XMPPClientConnector
 
 from vigilo.connector.compression import CompressInitiatingInitializer
 
 from vigilo.common.gettext import translate
 _ = translate(__name__)
+
 
 class VigiloXMPPClient(XMPPClient):
     """Client XMPP Vigilo"""
