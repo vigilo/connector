@@ -61,7 +61,7 @@ class NodeToSocketForwarder(PubSubListener, protocol.Protocol):
         stops blocking and a socket has been received.  If you need to
         send any greeting or initial message, do it here.
         """
-        # reset the reconnecting delay after a succesfull connection
+        # reset the reconnecting delay after a successful connection
         self.__factory.resetDelay()
 
     def buildProtocol(self, addr):

@@ -150,8 +150,10 @@ def client_factory(settings):
 
 from twisted.internet import tcp
 class MultipleServerConnector(tcp.Connector):
-    def __init__(self, hosts, port, factory, timeout=30, attempts=3, reactor=None):
-        tcp.Connector.__init__(self, None, port, factory, timeout, None, reactor=reactor)
+    def __init__(self, hosts, port, factory, timeout=30, attempts=3,
+                 reactor=None):
+        tcp.Connector.__init__(self, None, port, factory, timeout, None,
+                               reactor=reactor)
         self.hosts = hosts
         self.attempts = attempts
         self._attemptsLeft = attempts
@@ -188,7 +190,8 @@ class MultipleServerConnector(tcp.Connector):
 #        return protocol.ReconnectingClientFactory.resetDelay(self)
 #
 #from twisted.words.xish.xmlstream import XmlStream, XmlStreamFactoryMixin
-#class MultipleServersXmlStreamFactory(XmlStreamFactoryMixin, MultipleServersClientFactory):
+#class MultipleServersXmlStreamFactory(XmlStreamFactoryMixin,
+#                                      MultipleServersClientFactory):
 #    protocol = XmlStream
 #
 #    def buildProtocol(self, addr):
@@ -197,7 +200,7 @@ class MultipleServerConnector(tcp.Connector):
 
 from twisted.words.xish.xmlstream import XmlStreamFactory
 class MultipleServersXmlStreamFactory(XmlStreamFactory):
-    def buildProtocol(self, addr):
+    def buildProtocol(self, addr): # pylint: disable-msg=E0202
         if (self.connector is not None
                 and hasattr(self.connector, "resetAttempts")):
             self.connector.resetAttempts()
