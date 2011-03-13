@@ -166,7 +166,6 @@ class PubSubForwarder(PubSubClient):
         self.queue.append(msg)
         reactor.callLater(0, self.processQueue)
 
-    @defer.inlineCallbacks
     def processQueue(self):
         """
         Envoie les messages en attente, en commançant par le backup s'il en
@@ -177,54 +176,45 @@ class PubSubForwarder(PubSubClient):
         """
         if self._processing_queue:
             return
-        self._processing_queue = True
         # Gestion du cas déconnecté
         if not self.isConnected():
-            if self.retry is not None:
-                # on sauvegarde les messages
-                while len(self.queue) > 0:
-                    msg = self.queue.popleft()
-                    if not isinstance(msg, basestring):
-                        msg = msg.toXml().encode("utf-8")
-                    try:
-                        yield self.retry.put(msg)
-                    except Exception, e:
-                        LOGGER.error(_("Error trying to save a message to "
-                                       "the backup database: %s"), str(e))
+            return self._save_to_db()
+        # On dépile
+        self._processing_queue = True
+        d = self._processQueue()
+        next_call_delay = 0
+        def eb(f):
+            # vérouillée, il faut attendre un peu
+            f.trap(sqlite3.OperationalError)
+            next_call_delay = 0.5
+        d.addErrback(eb)
+        def cb_final(is_work_left):
             self._processing_queue = False
-            return
-        # Vérification qu'il y a bien quelque chose à faire
-        if self.retry is not None:
-            try:
-                backup_size = yield self.retry.qsize()
-            except sqlite3.OperationalError:
-                self._processing_queue = False
-                reactor.callLater(0.5, self.processQueue)
-                return
-        else:
-            backup_size = 0
-        if len(self.queue) == 0 and backup_size == 0:
-            self._processing_queue = False
-            return # rien à faire
-        # Boucle principale de dépilement
-        while self.isConnected(): # arrêt si on perd la connexion
-            # on commence par essayer le backup
-            if self.retry is not None:
-                try:
-                    msg = yield self.retry.pop()
-                except sqlite3.OperationalError:
-                    self._processing_queue = False
-                    reactor.callLater(0.5, self.processQueue)
-                    return
-            else:
-                msg = None
+            if is_work_left:
+                reactor.callLater(next_call_delay, self.processQueue)
+        d.addBoth(cb_final)
+        return d
+
+    @defer.inlineCallbacks
+    def _processQueue(self):
+        """
+        Boucle principale de dépilement. On s'arrête si on perd la connexion.
+        N'envoie pas trop de messages à la fois pour ne pas bloquer le reactor.
+        @return: un booléen qui indique s'il reste du travail (et donc s'il
+            faut relancer la fonction)
+        @rtype:  C{bool}
+        """
+        work_left = False
+        # Pas trop de messages à la fois pour ne pas bloquer le reactor.
+        processed_max = 4096
+        processed = 0
+        while self.isConnected() and processed < processed_max:
+            msg = yield self._get_next_msg()
             if msg is None:
-                # rien dans le backup, on essaye la file principale
-                try:
-                    msg = self.queue.popleft()
-                except IndexError:
-                    break # rien à faire
+                break # rien à faire
+            work_left = True
             # envoi
+            processed += 1
             self._messages_forwarded += 1
             result = self.processMessage(msg)
             if result is None:
@@ -239,11 +229,50 @@ class PubSubForwarder(PubSubClient):
                                       'from the bus'),
                                     len(self._pending_replies))
                     break # on fait une pause pour écouter les réponses
-        if self._pending_replies:
+        if self._pending_replies and processed < processed_max:
+            # on s'est arrêté pour écouter les réponses
             yield self.waitForReplies()
-        self._processing_queue = False
-        # on relance : si la file est vide, on quittera au début
-        reactor.callLater(0, self.processQueue)
+        if work_left:
+            defer.returnValue(True)
+        else:
+            defer.returnValue(False)
+
+    def _save_to_db(self):
+        """Sauvegarde tous les messages de la file dans la base de backup"""
+        if self.retry is None:
+            return
+        def eb(f):
+            LOGGER.error(_("Error trying to save a message to the backup "
+                           "database: %s"), f.getErrorMessage())
+        saved = []
+        while len(self.queue) > 0:
+            msg = self.queue.popleft()
+            if not isinstance(msg, basestring):
+                msg = msg.toXml().encode("utf-8")
+            d = self.retry.put(msg)
+            d.addErrback(eb)
+            saved.append(d)
+        return defer.DeferredList(saved)
+
+    def _get_next_msg(self):
+        """
+        Récupère le prochain message à traiter, en commençant par essayer dans
+        la base de backup
+        """
+        if self.retry is not None:
+            d = self.retry.pop()
+        else:
+            d = defer.succeed(None)
+        def get_from_queue(msg):
+            if msg is not None:
+                return msg # le backup est prioritaire
+            # rien dans le backup, on essaye la file principale
+            try:
+                return self.queue.popleft()
+            except IndexError:
+                return None # rien à faire
+        d.addCallback(get_from_queue)
+        return d
 
     def processMessage(self, msg):
         """

@@ -62,6 +62,8 @@ class TestForwarder(unittest.TestCase):
         # On se connecte
         self.publisher.xmlstream = stub.xmlstream
         self.publisher.connectionInitialized()
+        # On attend un peu
+        yield wait(0.5)
         # On en envoie un deuxième
         msg2 = domish.Element((NS_PERF, 'perf'))
         msg2.addElement('test', content="2")
@@ -70,15 +72,46 @@ class TestForwarder(unittest.TestCase):
         # On attend un peu
         yield wait(0.5)
         # On vérifie que les deux messages ont bien été envoyés dans le bon ordre
-        for msg in [msg1, msg2]:
-            msg_out = stub.output.pop()
+        self.assertEqual(len(stub.output), 2)
+        for index, msg in enumerate([msg1, msg2]):
+            msg_out = stub.output[index]
             try:
                 msg_out.pubsub.publish.item.perf
             except AttributeError:
                 self.fail("Le message n'a pas été transmis correctement")
             self.assertEqual(msg_out.pubsub.publish.item.perf.toXml(), msg.toXml())
 
+    @deferred(timeout=30)
+    @defer.inlineCallbacks
+    def test_begin_with_backup(self):
+        """
+        Les messages sauvegardés doivent être prioritaires sur les messages
+        temps-réel
+        """
+        msg1 = domish.Element((NS_PERF, 'perf'))
+        msg1.addElement('test', content="1")
+        msg2 = domish.Element((NS_PERF, 'perf'))
+        msg2.addElement('test', content="2")
+        yield self.publisher.retry.put(msg1)
+        self.publisher.queue.append(msg2)
+        # On attend un peu
+        #yield wait(0.5)
+        for msg in [msg1, msg2]:
+            next_msg = yield self.publisher._get_next_msg()
+            self.assertEqual(next_msg.toXml(), msg.toXml())
 
+    @deferred(timeout=30)
+    @defer.inlineCallbacks
+    def test_save_to_db(self):
+        count = 42
+        for i in range(count):
+            msg = domish.Element((NS_PERF, 'perf'))
+            msg.addElement('test', content="dummy")
+            self.publisher.queue.append(msg)
+        yield self.publisher._save_to_db()
+        self.assertEqual(len(self.publisher.queue), 0)
+        db_size = yield self.publisher.retry.qsize()
+        self.assertEqual(db_size, count)
 
 
 if __name__ == "__main__":

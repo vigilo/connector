@@ -15,6 +15,7 @@ from nose.twistedtools import reactor, deferred
 
 from twisted.internet import defer
 from vigilo.connector.store import DbRetry
+from vigilo.connector.test.helpers import ConnectionPoolStub, wait
 
 
 class TestDbRetry(unittest.TestCase):
@@ -122,6 +123,29 @@ class TestDbRetry(unittest.TestCase):
         self.assertEqual(len(self.db.buffer_out), 0)
         backup_size = yield self.db.qsize()
         self.assertEqual(backup_size, msg_count * 2)
+
+    @deferred(timeout=30)
+    @defer.inlineCallbacks
+    def test_vacuum(self):
+        """
+        Teste le nettoyage de la base
+        """
+        db = DbRetry(self.db_path, 'tmp_table')
+        stub = ConnectionPoolStub(db._db)
+        db._db = stub
+
+        xml = '<abc foo="bar">def</abc>'
+        yield db.put(xml)
+        yield db.flush()
+
+        # On récupère 2 fois un élément: une fois pour vider la base, et la
+        # seconde fois déclenche un VACUUM
+        yield db.get()
+        yield db.get()
+
+        # On attend un peu, le VACUUM est décalé
+        yield wait(1)
+        self.assertEqual( (("VACUUM", ), {}), stub.requests.pop() )
 
 
 if __name__ == "__main__": 

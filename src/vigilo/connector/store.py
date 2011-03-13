@@ -42,7 +42,8 @@ class DbRetry(object):
         self._buffer_in_max = 1000
         self._buffer_out_min = 1000
         self._load_batch_size = self._buffer_out_min * 10
-        self.__saving_buffer_in = False
+        self._saving_buffer_in = False
+        self._cache_isempty = False
         self.initialized = False
         self._table = table
         # threads: http://twistedmatrix.com/trac/ticket/3629
@@ -57,9 +58,14 @@ class DbRetry(object):
         # qu'il convient de faire.
         d = self._db.runOperation('CREATE TABLE IF NOT EXISTS %s '
                     '(id INTEGER PRIMARY KEY, msg TXT)' % self._table)
+        def set_empty_cache(count_result):
+            self._cache_isempty = (count_result[0][0] == 0)
         def after_init(r):
             self.initialized = True
             return r
+        d.addCallback(lambda x: self._db.runQuery("SELECT count(*) FROM %s"
+                                                  % self._table))
+        d.addCallback(set_empty_cache)
         d.addCallback(after_init)
         return d
 
@@ -72,8 +78,14 @@ class DbRetry(object):
                 while len(self.buffer_out) > 0:
                     yield self.buffer_out.popleft()
             if self.buffer_out:
-                txn.executemany("INSERT INTO %s VALUES (?, ?)" % self._table,
-                                get_from_buffer_out())
+                try:
+                    txn.executemany("INSERT INTO %s VALUES (?, ?)" % self._table,
+                                    get_from_buffer_out())
+                except sqlite3.IntegrityError, e:
+                    LOGGER.debug("IntegrityError while flushing: %s", e)
+                except sqlite3.OperationalError, e:
+                    LOGGER.debug("OperationalError while flushing: %s", e)
+                self._cache_isempty = False
             def get_from_buffer_in():
                 while len(self.buffer_in) > 0:
                     msg = self.buffer_in.popleft()
@@ -83,6 +95,7 @@ class DbRetry(object):
             if self.buffer_in:
                 txn.executemany("INSERT INTO %s VALUES (null, ?)" % self._table,
                                 get_from_buffer_in())
+                self._cache_isempty = False
         LOGGER.debug("Flushing the buffers into the base")
         d = self._db.runInteraction(_flush)
         def eb(f):
@@ -92,11 +105,15 @@ class DbRetry(object):
         return d
 
     def qsize(self):
+        def set_cache(dbresult): # simple sécurité
+            self._cache_isempty = (dbresult[0][0] == 0)
+            return dbresult
         def add_buffers(dbresult):
             return dbresult[0][0] + \
                    len(self.buffer_out) + \
                    len(self.buffer_in)
         d = self._db.runQuery("SELECT count(*) FROM %s" % self._table)
+        d.addCallback(set_cache)
         d.addCallback(add_buffers)
         return d
 
@@ -121,10 +138,12 @@ class DbRetry(object):
                 return None # pas de message dans le buffer
             else:
                 return msg
-        if len(self.buffer_out) <= self._buffer_out_min:
+        if (len(self.buffer_out) <= self._buffer_out_min
+                and not self._cache_isempty):
             d = self._db.runInteraction(self._fill_buffer_out)
         else:
-            d = defer.succeed(None) # pas besoin de remplir le buffer
+            # pas besoin de remplir le buffer
+            d = defer.succeed(None)
         d.addCallback(get_from_buffer)
         return d
 
@@ -150,6 +169,11 @@ class DbRetry(object):
                 while len(self.buffer_in) > 0:
                     msg = self.buffer_in.popleft()
                     self.buffer_out.append((None, msg))
+            if not self._cache_isempty:
+                # on vient de vider la base, on en profite pour nettoyer
+                reactor.callLater(0.5, self._vacuum)
+            LOGGER.debug("Backup database is now empty")
+            self._cache_isempty = True
             return
         min_id = msgs[0][0]
         max_id = msgs[-1][0]
@@ -158,10 +182,24 @@ class DbRetry(object):
                     (min_id, max_id))
         LOGGER.debug("Filled output buffer with %d messages from database",
                      len(msgs))
-        try:
-            txn.execute("VACUUM")
-        except sqlite3.OperationalError, e:
-            LOGGER.info(_("Could VACUUM the database: %s"), e)
+        return
+
+    def _vacuum(self):
+        LOGGER.debug("Starting VACUUM")
+        d = self._db.runOperation("VACUUM")
+        def eb(f):
+            f.trap(sqlite3.OperationalError, sqlite3.IntegrityError)
+            # on ignore l'erreur, c'est pas grave, on fera un vacuum la
+            # prochaine fois
+            LOGGER.info(_("Could not VACUUM the database: %s"),
+                        f.getErrorMessage())
+            # On met la cache à False pour provoquer un vacuum
+            self._cache_isempty = False
+        d.addErrback(eb)
+        def log(r):
+            LOGGER.debug("VACUUM is done")
+        d.addBoth(log)
+        return d
 
     # -- Insertion dans la base
 
@@ -192,12 +230,12 @@ class DbRetry(object):
         @note: Executé dans un thread par runInteraction, donc on a le droit
             de bloquer
         """
-        if self.__saving_buffer_in:
+        if self._saving_buffer_in:
             return
         total = len(self.buffer_in)
         if total == 0:
             return
-        self.__saving_buffer_in = True
+        self._saving_buffer_in = True
         def get_from_buffer_in():
             while len(self.buffer_in) > 0:
                 msg = self.buffer_in.popleft()
@@ -211,5 +249,6 @@ class DbRetry(object):
             LOGGER.warning(_("Could not fill the output buffer: %s"), e)
         else:
             LOGGER.debug("Saved %d messages from the input buffer", total)
-        self.__saving_buffer_in = False
+            self._cache_isempty = False
+        self._saving_buffer_in = False
 
