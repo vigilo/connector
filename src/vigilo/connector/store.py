@@ -138,9 +138,14 @@ class DbRetry(object):
                 return None # pas de message dans le buffer
             else:
                 return msg
-        if (len(self.buffer_out) <= self._buffer_out_min
-                and not self._cache_isempty):
-            d = self._db.runInteraction(self._fill_buffer_out)
+        if len(self.buffer_out) <= self._buffer_out_min:
+            if not self._cache_isempty:
+                # on prend dans la base
+                d = self._db.runInteraction(self._fill_buffer_out)
+            else:
+                # la base est vide, on prend dans le buffer d'entrée
+                self._get_from_buffer_in()
+                d = defer.succeed(None)
         else:
             # pas besoin de remplir le buffer
             d = defer.succeed(None)
@@ -162,13 +167,8 @@ class DbRetry(object):
             return
         msgs = txn.fetchall()
         if not msgs:
-            # base vide, on utilise le contenu de la file d'entrée temporaire
-            if len(self.buffer_in):
-                LOGGER.debug("Filling output buffer with %d messages from "
-                             "input buffer", len(self.buffer_in))
-                while len(self.buffer_in) > 0:
-                    msg = self.buffer_in.popleft()
-                    self.buffer_out.append((None, msg))
+            # base vide, on utilise le contenu du buffer d'entrée
+            self._get_from_buffer_in()
             if not self._cache_isempty:
                 # on vient de vider la base, on en profite pour nettoyer
                 reactor.callLater(0.5, self._vacuum)
@@ -182,7 +182,19 @@ class DbRetry(object):
                     (min_id, max_id))
         LOGGER.debug("Filled output buffer with %d messages from database",
                      len(msgs))
-        return
+
+    def _get_from_buffer_in(self):
+        """
+        Quand la base est vide, on utilise le contenu de la file d'entrée
+        temporaire
+        """
+        if not len(self.buffer_in):
+            return
+        LOGGER.debug("Filling output buffer with %d messages from "
+                     "input buffer", len(self.buffer_in))
+        while len(self.buffer_in) > 0:
+            msg = self.buffer_in.popleft()
+            self.buffer_out.append((None, msg))
 
     def _vacuum(self):
         LOGGER.debug("Starting VACUUM")
