@@ -145,8 +145,9 @@ class TestDbRetry(unittest.TestCase):
 
         # On attend un peu, le VACUUM est décalé
         yield wait(1)
+        print stub.requests
         self.assertEqual( (("VACUUM", ), {}), stub.requests.pop() )
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     unittest.main()

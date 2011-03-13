@@ -4,6 +4,8 @@ from collections import deque
 
 from twisted.internet import reactor, defer
 from wokkel.test.helpers import XmlStreamStub
+from nose.plugins.skip import SkipTest
+
 
 # http://stackoverflow.com/questions/776631/using-twisteds-twisted-web-classes-how-do-i-flush-my-outgoing-buffers
 def wait(seconds, result=None):
@@ -34,6 +36,8 @@ class ConnectionPoolStub(object):
     def __init__(self, parent):
         self.requests = deque()
         self.parent = parent
+        if not hasattr(self.parent, "transactionFactory"):
+            raise SkipTest # twisted < 8.2
         self.parent.transactionFactory = self.transactionFactory
 
     def transactionFactory(self, pool, connection):
