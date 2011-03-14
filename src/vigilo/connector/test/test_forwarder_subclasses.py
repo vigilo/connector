@@ -24,8 +24,10 @@ from helpers import XmlStreamStub
 
 from vigilo.common.conf import settings
 settings.load_module(__name__)
+from vigilo.pubsub.xml import NS_PERF
 from vigilo.pubsub.checknode import VerificationNode
 from vigilo.common.logging import get_logger
+from vigilo.connector.forwarder import PubSubListener
 from vigilo.connector.nodetoqueuefw import NodeToQueueForwarder
 from vigilo.connector.queuetonodefw import QueueToNodeForwarder
 from vigilo.connector.nodetosocketfw import NodeToSocketForwarder
@@ -211,4 +213,108 @@ class TestForwarderSubclasses(unittest.TestCase):
         reactor.callLater(0.5, get_output) # On laisse un peu de temps pour traiter
         d.addCallback(check_msg)
         return d
+
+class PubSubListenerTest(unittest.TestCase):
+
+    def setUp(self):
+        """Initialisation du test."""
+        # Mocks the behaviour of XMPPClient. No TCP connections made.
+        self.stub = XmlStreamStub()
+        self.received = []
+        self.psl = PubSubListener()
+        self.psl.isConnected = lambda: True
+        self.psl.forwardMessage = self.received.append
+
+    def test_recv_pubsub(self):
+        """Ecoute du bus: pubsub"""
+        self.psl.xmlstream = self.stub.xmlstream
+        self.psl.connectionInitialized()
+
+        # On envoie un évènement sur le pseudo-bus
+        cookie = str(random.random())
+        dom = parseXml("""<message from='pubsub.localhost' to='connectorx@localhost'>
+            <event xmlns='http://jabber.org/protocol/pubsub#event'>
+            <items node='/home/localhost/connectorx/bus'><item>
+                <event xmlns='foo' cookie='%s'/>
+            </item></items>
+            </event></message>""" % cookie)
+        self.stub.send(dom)
+
+        print dom.toXml()
+        self.assertEquals(len(self.received), 1)
+        self.assertEquals(self.received[0].toXml(),
+                          dom.event.items.item.event.toXml())
+
+    def test_recv_chat(self):
+        """Ecoute du bus: chat"""
+        self.psl.xmlstream = self.stub.xmlstream
+        self.psl.connectionInitialized()
+
+        # On envoie un évènement sur le pseudo-bus
+        cookie = str(random.random())
+        message = parseXml("""
+            <message from="dummy1" to="dummy2" type="chat">
+                <body>
+                    <event xmlns='foo' cookie='%s'/>
+                </body>
+            </message>""" % cookie)
+        self.stub.send(message)
+
+        self.assertEquals(len(self.received), 1)
+        self.assertEquals(self.received[0].toXml(),
+                          message.body.event.toXml())
+
+    def test_recv_pubsub_aggr(self):
+        """Ecoute du bus: pubsub avec aggregation"""
+        self.psl.xmlstream = self.stub.xmlstream
+        self.psl.connectionInitialized()
+
+        # On envoie un évènement sur le pseudo-bus
+        count = 42
+        aggr_msg = domish.Element((NS_PERF, "perfs"))
+        perf_msg = domish.Element((None, "perf"))
+        perf_msg.content = "dummy"
+        for i in range(count):
+            aggr_msg.addChild(perf_msg)
+        msg = parseXml("""<message from='dummy1' to='dummy2'>
+            <event xmlns='http://jabber.org/protocol/pubsub#event'>
+            <items node='/home/localhost/connectorx/bus'><item>
+                %s
+            </item></items>
+            </event></message>""" % aggr_msg.toXml())
+        self.stub.send(msg)
+        self.assertEquals(len(self.received), count)
+
+    def test_recv_chat_aggr(self):
+        """Ecoute du bus: chat avec aggregation"""
+        self.psl.xmlstream = self.stub.xmlstream
+        self.psl.connectionInitialized()
+
+        # On envoie un évènement sur le pseudo-bus
+        count = 42
+        aggr_msg = domish.Element((None, "perfs"))
+        perf_msg = domish.Element((None, "perf"))
+        perf_msg.content = "dummy"
+        for i in range(count):
+            aggr_msg.addChild(perf_msg)
+        msg = domish.Element((None, "message"))
+        msg["to"] = "dummy1"
+        msg["from"] = "dummy2"
+        msg["type"] = 'chat'
+        msg.addElement("body", content=aggr_msg)
+        self.stub.send(msg)
+        self.assertEquals(len(self.received), count)
+
+    def test_recv_retract(self):
+        """Réception de messages retract"""
+        self.psl.xmlstream = self.stub.xmlstream
+        self.psl.connectionInitialized()
+        # On envoie un évènement sur le pseudo-bus
+        msg = parseXml("""<message from='pubsub.localhost' to='connectorx@localhost'>
+            <event xmlns='http://jabber.org/protocol/pubsub#event'>
+            <items node='/home/localhost/connectorx/bus'><retract /></items>
+            </event></message>""")
+        self.stub.send(msg)
+        self.assertEquals(len(self.received), 0)
+
 
