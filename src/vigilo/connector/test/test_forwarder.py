@@ -113,6 +113,78 @@ class TestForwarder(unittest.TestCase):
         db_size = yield self.publisher.retry.qsize()
         self.assertEqual(db_size, count)
 
+    @deferred(timeout=30)
+    @defer.inlineCallbacks
+    def test_stats_1(self):
+        msg = domish.Element((NS_PERF, 'perf'))
+        msg.addElement('test', content="dummy")
+        # On se connecte
+        stub = XmlStreamStub()
+        self.publisher.xmlstream = stub.xmlstream
+        self.publisher.connectionInitialized()
+        # On envoie des messages
+        print "envoi 1"
+        for i in range(10):
+            self.publisher.forwardMessage(msg)
+        # On attend un peu
+        yield wait(0.2)
+        # On simule une réponse du bus
+        for d in self.publisher._pending_replies:
+            d.callback(None)
+        # On attend un peu
+        yield wait(0.2)
+        # On se déconnecte
+        self.publisher.xmlstream = None
+        #self.publisher._initialized = False
+        self.publisher.connectionLost(None)
+        # On envoie des messages (-> backup)
+        print "envoi 2"
+        for i in range(20):
+            self.publisher.forwardMessage(msg)
+        # On attend un peu
+        yield wait(0.5)
+        # Les messages sont maintenant soit envoyés soit en base de backup
+        self.assertEqual(len(stub.output), 10)
+        backup_size = yield self.publisher.retry.qsize()
+        self.assertEqual(backup_size, 20)
+        # on vide les buffers (pour fiabiliser le test)
+        yield self.publisher.retry.flush()
+        stats = yield self.publisher.getStats()
+        print stats
+        self.assertEqual(stats, {
+            "queue": 0,
+            "forwarded": 30,
+            "sent": 10,
+            "backup": 20,
+            "backup_in_buf": 0,
+            "backup_out_buf": 0,
+            })
+
+    @deferred(timeout=30)
+    @defer.inlineCallbacks
+    def test_accumulate_perfs(self):
+        count = 42
+        self.publisher.batch_send_perf = count
+        msg = domish.Element((NS_PERF, 'perf'))
+        msg.addElement('test', content="dummy")
+        # On se connecte
+        stub = XmlStreamStub()
+        self.publisher.xmlstream = stub.xmlstream
+        self.publisher.connectionInitialized()
+        # on traite n-1 message, ce qui ne doit rien envoyer sur le bus
+        for i in range(count - 1):
+            yield self.publisher.processMessage(msg)
+        self.assertEqual(stub.output, [])
+        # on en envoie un de plus, ce qui doit envoyer un message accumulé
+        self.publisher.processMessage(msg)
+        self.assertEqual(len(stub.output), 1)
+        sent = stub.output[0].pubsub.publish.item
+        self.assertEqual(len(list(sent.elements())), 1)
+        acc_msg = list(sent.elements())[0]
+        self.assertEqual(acc_msg.name, "perfs")
+        self.assertEqual(len(list(acc_msg.elements())), count)
+
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -246,6 +246,7 @@ class PubSubForwarder(PubSubClient):
                            "database: %s"), f.getErrorMessage())
         saved = []
         while len(self.queue) > 0:
+            self._messages_forwarded += 1
             msg = self.queue.popleft()
             if not isinstance(msg, basestring):
                 msg = msg.toXml().encode("utf-8")
