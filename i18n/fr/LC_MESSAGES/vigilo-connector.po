@@ -84,7 +84,7 @@ msgstr ""
 #: src/vigilo/connector/forwarder.py:395
 #, python-format
 msgid "No destination node configured for messages of type '%s'. Skipping."
-msgstr "Aucun nœud cible configuré pour les message de type '%s'. Message ignoré."
+msgstr "Aucun nœud cible configuré pour les messages de type '%s'. Message ignoré."
 
 #: src/vigilo/connector/main.py:39
 #, python-format
