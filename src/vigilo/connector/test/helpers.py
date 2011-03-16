@@ -3,7 +3,7 @@
 from collections import deque
 
 from twisted.internet import reactor, defer
-from wokkel.test.helpers import XmlStreamStub
+from wokkel.test.helpers import XmlStreamStub as WXSS
 from nose.plugins.skip import SkipTest
 
 
@@ -13,6 +13,30 @@ def wait(seconds, result=None):
     d = defer.Deferred()
     reactor.callLater(seconds, d.callback, result)
     return d
+
+
+from twisted.words.xish import domish
+class XmlStreamStub(WXSS):
+
+    def send_replies(self):
+        for sent in self.output:
+            reply = self._build_reply(sent)
+            self.send(reply)
+
+    def _build_reply(self, message):
+        reply = domish.Element((None, "iq"))
+        reply["type"] = "result"
+        reply["from"] = message["to"]
+        reply["id"] = message["id"]
+        reply_pubsub = domish.Element(("http://jabber.org/protocol/pubsub", "pubsub"))
+        reply.addChild(reply_pubsub)
+        reply_publish = domish.Element((None, "publish"))
+        reply_pubsub.addChild(reply_publish)
+        reply_publish["node"] = message.pubsub.publish["node"]
+        reply_item = domish.Element((None, "item"))
+        reply_publish.addChild(reply_item)
+        reply_item["id"] = "ABCDEF0123456789" # TODO
+        return reply
 
 
 from twisted.enterprise.adbapi import Transaction
