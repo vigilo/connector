@@ -20,7 +20,7 @@ from twisted.words.xish import domish
 from twisted.words.protocols.jabber.jid import JID
 from wokkel import client, subprotocols
 from wokkel.generic import parseXml
-from helpers import XmlStreamStub
+from helpers import XmlStreamStub, HandlerStub
 
 from vigilo.common.conf import settings
 settings.load_module(__name__)
@@ -33,18 +33,7 @@ from vigilo.connector.queuetonodefw import QueueToNodeForwarder
 from vigilo.connector.nodetosocketfw import NodeToSocketForwarder
 from vigilo.connector.sockettonodefw import SocketToNodeForwarder
 
-
 LOGGER = get_logger(__name__)
-
-class HandlerStub(object):
-    def __init__(self, xmlstream):
-        self.xmlstream = xmlstream
-    def addHandler(self, dummy):
-        pass
-    def removeHandler(self, dummy):
-        pass
-    def send(self, obj):
-        self.xmlstream.send(obj)
 
 class TestForwarderSubclasses(unittest.TestCase):
     """Teste les échangeurs (forwarders) de messages."""

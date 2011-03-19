@@ -3,6 +3,7 @@
 from collections import deque
 
 from twisted.internet import reactor, defer
+from twisted.words.protocols.jabber.jid import JID
 from wokkel.test.helpers import XmlStreamStub as WXSS
 from nose.plugins.skip import SkipTest
 
@@ -69,3 +70,16 @@ class ConnectionPoolStub(object):
 
     def __getattr__(self, name):
         return getattr(self.parent, name)
+
+
+class HandlerStub(object):
+    jid = JID("jid@example.com")
+    def __init__(self, xmlstream):
+        self.xmlstream = xmlstream
+    def addHandler(self, dummy):
+        pass
+    def removeHandler(self, dummy):
+        pass
+    def send(self, obj):
+        self.xmlstream.send(obj)
+
