@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
+# pylint: disable-msg=C0301,R0904
+
 from __future__ import absolute_import
 
 import unittest
 
 from vigilo.connector.converttoxml import text2xml
-from vigilo.pubsub.xml import NS_AGGR, NS_EVENT, NS_PERF, NS_DOWNTIME, NS_STATE
+from vigilo.pubsub.xml import NS_EVENT, NS_PERF, NS_DOWNTIME, NS_STATE
 
 
 class TestSequenceFunctions(unittest.TestCase):

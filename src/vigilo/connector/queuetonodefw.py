@@ -4,7 +4,7 @@
 Ce module est un demi-connecteur qui assure la redirection des messages
 issus d'une file d'attente (C{Queue.Queue} ou compatible) vers le bus XMPP.
 """
-from twisted.internet import reactor, defer
+from twisted.internet import reactor
 from wokkel.generic import parseXml
 
 import errno

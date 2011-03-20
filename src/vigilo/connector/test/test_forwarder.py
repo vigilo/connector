@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable-msg=C0111,W0613,R0904
 """
 Teste la sauvegarde d'un message dans la database si on est pas connectés
 """
@@ -71,7 +72,8 @@ class TestForwarder(unittest.TestCase):
         self.publisher.processMessage(msg2)
         # On attend un peu
         yield wait(0.5)
-        # On vérifie que les deux messages ont bien été envoyés dans le bon ordre
+        # On vérifie que les deux messages ont bien été envoyés dans le bon
+        # ordre
         self.assertEqual(len(stub.output), 2)
         for index, msg in enumerate([msg1, msg2]):
             msg_out = stub.output[index]
@@ -79,7 +81,8 @@ class TestForwarder(unittest.TestCase):
                 msg_out.pubsub.publish.item.perf
             except AttributeError:
                 self.fail("Le message n'a pas été transmis correctement")
-            self.assertEqual(msg_out.pubsub.publish.item.perf.toXml(), msg.toXml())
+            self.assertEqual(msg_out.pubsub.publish.item.perf.toXml(),
+                             msg.toXml())
 
     @deferred(timeout=30)
     @defer.inlineCallbacks

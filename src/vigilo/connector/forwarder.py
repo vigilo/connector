@@ -16,7 +16,6 @@ from twisted.words.protocols.jabber.jid import JID
 from twisted.words.protocols.jabber import error
 from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
-from wokkel import xmppim
 
 from vigilo.common.conf import settings
 from vigilo.pubsub.xml import NS_PERF

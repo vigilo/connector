@@ -79,8 +79,8 @@ class DbRetry(object):
                     yield self.buffer_out.popleft()
             if self.buffer_out:
                 try:
-                    txn.executemany("INSERT INTO %s VALUES (?, ?)" % self._table,
-                                    get_from_buffer_out())
+                    txn.executemany("INSERT INTO %s VALUES (?, ?)"
+                                    % self._table, get_from_buffer_out())
                 except sqlite3.IntegrityError, e:
                     LOGGER.debug("IntegrityError while flushing: %s", e)
                 except sqlite3.OperationalError, e:

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
+# pylint: disable-msg=W0212,R0903,R0904,C0111,W0613
 
-import os, os.path
-import tempfile
-import shutil
 import unittest
 
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
@@ -10,8 +8,6 @@ import unittest
 #from twisted.trial import unittest
 from nose.twistedtools import reactor, deferred
 
-from twisted.internet import defer
-from twisted.words.xish import domish
 from twisted.words.protocols.jabber.jid import JID
 
 from vigilo.common.conf import settings

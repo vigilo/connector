@@ -86,7 +86,8 @@ class PresenceManager(xmppim.PresenceClientProtocol):
         # On enlève notre propre priorité (ben ouais faut bien changer)
         if self.priority in available_priorities:
             available_priorities.remove(self.priority)
-        assert len(available_priorities) > 0, "No available priority ! This should not happen"
+        assert len(available_priorities) > 0, \
+                    "No available priority ! This should not happen"
         return available_priorities[0] # On prend la première dispo
 
     def sendPresence(self, priority=None):
@@ -103,7 +104,8 @@ class PresenceManager(xmppim.PresenceClientProtocol):
         LOGGER.debug("Sending presence with priority %d", priority)
         if self.xmlstream is not None:
             self.available(priority=priority)
-        # On met à jour l'intervalle au cas où le nombre de frères aurait changé
+        # On met à jour l'intervalle au cas où le nombre de frères aurait
+        # changé
         self._task.interval = self.getFrequency()
 
     def isOverloaded(self):

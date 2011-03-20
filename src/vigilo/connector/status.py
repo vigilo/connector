@@ -12,8 +12,6 @@ import time
 import socket
 
 from twisted.internet import reactor, task
-from wokkel.pubsub import PubSubClient, Item
-from wokkel.generic import parseXml
 
 from vigilo.pubsub.xml import NS_PERF, NS_COMMAND
 from vigilo.connector.forwarder import PubSubSender

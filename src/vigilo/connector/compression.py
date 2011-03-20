@@ -11,7 +11,6 @@ import zlib
 from twisted.internet import defer
 from twisted.protocols.policies import ProtocolWrapper
 from twisted.words.xish import domish
-from twisted.python import log
 from twisted.words.protocols.jabber import xmlstream
 
 

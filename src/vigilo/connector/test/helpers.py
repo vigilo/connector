@@ -29,7 +29,8 @@ class XmlStreamStub(WXSS):
         reply["type"] = "result"
         reply["from"] = message["to"]
         reply["id"] = message["id"]
-        reply_pubsub = domish.Element(("http://jabber.org/protocol/pubsub", "pubsub"))
+        reply_pubsub = domish.Element(
+                ("http://jabber.org/protocol/pubsub", "pubsub"))
         reply.addChild(reply_pubsub)
         reply_publish = domish.Element((None, "publish"))
         reply_pubsub.addChild(reply_publish)

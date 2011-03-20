@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable-msg=R0904,C0111,W0613,W0212,W0612
 """
 Teste la sauvegarde et la récupération d'un message en utilisant
 une base de données SQLite locale via la classe DbRetry.

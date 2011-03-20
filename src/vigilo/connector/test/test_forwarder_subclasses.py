@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
+# pylint: disable-msg=R0904,C0111
 """Tests sur la communication avec le bus XMPP."""
 
 import os
@@ -14,18 +15,15 @@ import unittest
 #from twisted.trial import unittest
 from nose.twistedtools import reactor, deferred
 
-from twisted.internet.defer import Deferred, inlineCallbacks
+from twisted.internet.defer import Deferred
 from twisted.internet.threads import deferToThread
 from twisted.words.xish import domish
-from twisted.words.protocols.jabber.jid import JID
-from wokkel import client, subprotocols
 from wokkel.generic import parseXml
 from helpers import XmlStreamStub, HandlerStub
 
 from vigilo.common.conf import settings
 settings.load_module(__name__)
 from vigilo.pubsub.xml import NS_PERF
-from vigilo.pubsub.checknode import VerificationNode
 from vigilo.common.logging import get_logger
 from vigilo.connector.forwarder import PubSubListener
 from vigilo.connector.nodetoqueuefw import NodeToQueueForwarder
@@ -73,7 +71,8 @@ class TestForwarderSubclasses(unittest.TestCase):
         def check_msg(msg):
             print msg.toXml().encode("utf-8")
             self.assertEquals(msg.toXml(), dom.toXml())
-        reactor.callLater(0.5, get_output) # On laisse un peu de temps pour traiter
+        # On laisse un peu de temps pour traiter
+        reactor.callLater(0.5, get_output)
         d.addCallback(check_msg)
         return d
 
@@ -89,7 +88,8 @@ class TestForwarderSubclasses(unittest.TestCase):
 
         # On envoie un évènement sur le pseudo-bus
         cookie = str(random.random())
-        dom = parseXml("""<message from='pubsub.localhost' to='connectorx@localhost'>
+        dom = parseXml("""
+            <message from='pubsub.localhost' to='connectorx@localhost'>
             <event xmlns='http://jabber.org/protocol/pubsub#event'>
             <items node='/home/localhost/connectorx/bus'><item>
                 <event xmlns='foo' cookie='%s'/>
@@ -107,8 +107,9 @@ class TestForwarderSubclasses(unittest.TestCase):
                 dom.event.items.item.event
             except AttributeError:
                 self.fail("Le message n'est pas conforme")
-            self.assertEquals(msg.toXml(), dom.event.items.item.event.toXml(),
-                              "Le message reçu n'est pas identique au message envoyé")
+            self.assertEquals(msg.toXml(),
+                    dom.event.items.item.event.toXml(),
+                    "Le message reçu n'est pas identique au message envoyé")
         d = deferToThread(get_output)
         d.addCallback(check_msg)
         return d
@@ -125,8 +126,8 @@ class TestForwarderSubclasses(unittest.TestCase):
                 self.factory.received(line)
         class TriggeringFactory(Factory):
             protocol = TriggeringLineReceiver
-            def __init__(self, deferred):
-                self.deferred = deferred
+            def __init__(self, d):
+                self.deferred = d
             def received(self, line):
                 self.deferred.callback(line)
 
@@ -141,7 +142,8 @@ class TestForwarderSubclasses(unittest.TestCase):
 
         # On envoie un évènement sur le pseudo-bus
         cookie = str(random.random())
-        dom = parseXml("""<message from='pubsub.localhost' to='connectorx@localhost'>
+        dom = parseXml("""
+            <message from='pubsub.localhost' to='connectorx@localhost'>
             <event xmlns='http://jabber.org/protocol/pubsub#event'>
             <items node='/home/localhost/connectorx/bus'><item>
                 <event xmlns='foo' cookie='%s'/>
@@ -150,8 +152,9 @@ class TestForwarderSubclasses(unittest.TestCase):
         self.stub.send(dom)
 
         def check_msg(msg):
-            self.assertEquals(msg, dom.event.items.item.event.toXml(),
-                              "Le message reçu n'est pas identique au message envoyé")
+            self.assertEquals(msg,
+                    dom.event.items.item.event.toXml(),
+                    "Le message reçu n'est pas identique au message envoyé")
         d.addCallback(check_msg)
         return d
 
@@ -199,7 +202,8 @@ class TestForwarderSubclasses(unittest.TestCase):
         def check_msg(msg):
             print msg.toXml().encode("utf-8")
             self.assertEquals(msg.toXml(), msg_sent_xml.toXml())
-        reactor.callLater(0.5, get_output) # On laisse un peu de temps pour traiter
+        # On laisse un peu de temps pour traiter
+        reactor.callLater(0.5, get_output)
         d.addCallback(check_msg)
         return d
 
@@ -221,7 +225,8 @@ class PubSubListenerTest(unittest.TestCase):
 
         # On envoie un évènement sur le pseudo-bus
         cookie = str(random.random())
-        dom = parseXml("""<message from='pubsub.localhost' to='connectorx@localhost'>
+        dom = parseXml("""
+            <message from='pubsub.localhost' to='connectorx@localhost'>
             <event xmlns='http://jabber.org/protocol/pubsub#event'>
             <items node='/home/localhost/connectorx/bus'><item>
                 <event xmlns='foo' cookie='%s'/>
@@ -299,7 +304,8 @@ class PubSubListenerTest(unittest.TestCase):
         self.psl.xmlstream = self.stub.xmlstream
         self.psl.connectionInitialized()
         # On envoie un évènement sur le pseudo-bus
-        msg = parseXml("""<message from='pubsub.localhost' to='connectorx@localhost'>
+        msg = parseXml("""
+            <message from='pubsub.localhost' to='connectorx@localhost'>
             <event xmlns='http://jabber.org/protocol/pubsub#event'>
             <items node='/home/localhost/connectorx/bus'><retract /></items>
             </event></message>""")

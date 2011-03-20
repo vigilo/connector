@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
+# pylint: disable-msg=C0111,W0613
 
-import os, os.path
-import tempfile
-import shutil
 import unittest
 
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
@@ -11,10 +9,9 @@ import unittest
 from nose.twistedtools import reactor, deferred
 
 from twisted.internet import defer
-from twisted.words.xish import domish
 
 from vigilo.connector.status import StatusPublisher
-from vigilo.pubsub.xml import NS_PERF, NS_COMMAND
+from vigilo.pubsub.xml import NS_PERF
 
 from helpers import XmlStreamStub, wait
 
