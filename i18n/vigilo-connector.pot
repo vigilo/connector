@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vigilo-connector 2.0.0\n"
 "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
-"POT-Creation-Date: 2011-02-09 15:52+0100\n"
+"POT-Creation-Date: 2011-03-22 10:50+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,16 +18,16 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/client.py:64
+#: src/vigilo/connector/client.py:67
 #, python-format
 msgid "Authentication failure: %s"
 msgstr ""
 
-#: src/vigilo/connector/client.py:69 src/vigilo/connector/client.py:70
+#: src/vigilo/connector/client.py:72 src/vigilo/connector/client.py:73
 msgid "Server does not support TLS encryption."
 msgstr ""
 
-#: src/vigilo/connector/client.py:117
+#: src/vigilo/connector/client.py:139
 msgid ""
 "The \"watched_topics\" option has now been renamed into \"subscriptions\". "
 "Please update your configuration file."
@@ -44,43 +44,43 @@ msgstr ""
 msgid "Got malformed message: %s"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:34
+#: src/vigilo/connector/forwarder.py:32
 msgid "no connection"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:38
+#: src/vigilo/connector/forwarder.py:36
 msgid "no connection to the XMPP server"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:99
+#: src/vigilo/connector/forwarder.py:97
 msgid "Connected to the XMPP bus"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:118
+#: src/vigilo/connector/forwarder.py:116
 #, python-format
 msgid "Lost connection to the XMPP bus (reason: %s)"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:150
+#: src/vigilo/connector/forwarder.py:148
 #, python-format
 msgid "Unable to forward the message (%(reason)s)"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:156
+#: src/vigilo/connector/forwarder.py:154
 msgid ". it has been stored for later retransmission"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:193
-#, python-format
-msgid "Error trying to save a message to the backup database: %s"
-msgstr ""
-
-#: src/vigilo/connector/forwarder.py:239
+#: src/vigilo/connector/forwarder.py:227
 #, python-format
 msgid "Batch sent, waiting for %d replies from the bus"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:395
+#: src/vigilo/connector/forwarder.py:244
+#, python-format
+msgid "Error trying to save a message to the backup database: %s"
+msgstr ""
+
+#: src/vigilo/connector/forwarder.py:423
 #, python-format
 msgid "No destination node configured for messages of type '%s'. Skipping."
 msgstr ""
@@ -130,11 +130,11 @@ msgstr ""
 msgid "The configuration file does not exist"
 msgstr ""
 
-#: src/vigilo/connector/presence.py:76
+#: src/vigilo/connector/presence.py:95
 msgid "Queue size too high! Switching presence to unavailable."
 msgstr ""
 
-#: src/vigilo/connector/presence.py:114
+#: src/vigilo/connector/presence.py:136
 #, python-format
 msgid ""
 "Another instance of %(user)s@%(host)s has priority %(priority)d ! (me: "
@@ -153,18 +153,18 @@ msgstr ""
 msgid "Stopping QueueToNodeForwarder."
 msgstr ""
 
-#: src/vigilo/connector/status.py:128
+#: src/vigilo/connector/status.py:124
 #, python-format
 msgid "Stats for %(service)s: %(name)s = %(value)s"
 msgstr ""
 
-#: src/vigilo/connector/store.py:142 src/vigilo/connector/store.py:211
+#: src/vigilo/connector/store.py:166 src/vigilo/connector/store.py:261
 #, python-format
 msgid "Could not fill the output buffer: %s"
 msgstr ""
 
-#: src/vigilo/connector/store.py:164
+#: src/vigilo/connector/store.py:206
 #, python-format
-msgid "Could VACUUM the database: %s"
+msgid "Could not VACUUM the database: %s"
 msgstr ""
 
