@@ -130,12 +130,12 @@ class TestForwarder(unittest.TestCase):
         for i in range(10):
             self.publisher.forwardMessage(msg)
         # On attend un peu
-        yield wait(0.2)
+        yield wait(0.5)
         # On simule une réponse du bus
         for d in self.publisher._pending_replies:
             d.callback(None)
         # On attend un peu
-        yield wait(0.2)
+        yield wait(0.5)
         # On se déconnecte
         self.publisher.xmlstream = None
         #self.publisher._initialized = False
@@ -145,7 +145,7 @@ class TestForwarder(unittest.TestCase):
         for i in range(20):
             self.publisher.forwardMessage(msg)
         # On attend un peu
-        yield wait(0.5)
+        yield wait(1)
         # Les messages sont maintenant soit envoyés soit en base de backup
         self.assertEqual(len(stub.output), 10)
         backup_size = yield self.publisher.retry.qsize()
