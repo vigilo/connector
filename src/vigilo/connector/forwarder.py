@@ -97,7 +97,7 @@ class PubSubForwarder(PubSubClient):
             self.queue = deque()
 
     def _max_queue_size(self):
-        max_queue_size = settings["connector"].get("max_queue_size", 0)
+        max_queue_size = settings.get("connector", {}).get("max_queue_size", 0)
         try:
             max_queue_size = int(max_queue_size)
         except ValueError:
