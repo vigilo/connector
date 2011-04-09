@@ -1,17 +1,15 @@
-%define module  connector
-%define name    vigilo-%{module}
-%define version 2.0.0
-%define release 1%{?svn}%{?dist}
+%define module  @SHORT_NAME@
 
-Name:       %{name}
-Summary:    Vigilo XMPP connector library
-Version:    %{version}
-Release:    %{release}
+Name:       vigilo-%{module}
+Summary:    @SUMMARY@
+Version:    @VERSION@
+Release:    1%{?svn}%{?dist}
 Source0:    %{name}-%{version}.tar.gz
-URL:        http://www.projet-vigilo.org
+URL:        @URL@
 Group:      System/Servers
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-build
 License:    GPLv2
+Buildarch:  noarch
 
 BuildRequires:   python-setuptools
 BuildRequires:   python-babel
@@ -28,13 +26,9 @@ Requires:   python-zope-interface
 Requires:   python-configobj
 Requires:   python-babel
 
-Requires(pre): rpm-helper
-
-Buildarch:  noarch
-
 
 %description
-This library gives an API to create an XMPP connector for Vigilo.
+@DESCRIPTION@
 This library is part of the Vigilo Project <http://vigilo-project.org>
 
 %prep

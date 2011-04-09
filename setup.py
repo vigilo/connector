@@ -29,12 +29,10 @@ setup(name='vigilo-connector',
         author='Vigilo Team',
         author_email='contact@projet-vigilo.org',
         url='http://www.projet-vigilo.org/',
-        description='vigilo connector component',
+        description="Vigilo XMPP connector library",
         license='http://www.gnu.org/licenses/gpl-2.0.html',
-        long_description='The vigilo connector component is a connector between:\n'
-        +'   - XMPP/PubSub BUS of message\n'
-        +'   - UNIX sockets\n'
-        +'(there are two sockets, for incoming and outgoing messages)\n',
+        long_description="This library gives an API to create an XMPP "
+                         "connector for Vigilo.",
         install_requires=[
             # dashes become underscores
             # order is important (wokkel before Twisted)
