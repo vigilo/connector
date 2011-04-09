@@ -25,6 +25,11 @@ class ForwarderStub(object):
 class PresenceManagerTest(unittest.TestCase):
     """Teste la gestion de la présence"""
 
+    def tearDown(self):
+        # On a touché aux settings
+        settings.reset()
+        settings.load_module(__name__)
+
     def test_choose_prio_static(self):
         """Choix d'une priorité statique"""
         pm = PresenceManager()

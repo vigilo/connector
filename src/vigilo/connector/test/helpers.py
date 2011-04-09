@@ -19,6 +19,17 @@ def wait(seconds, result=None):
 from twisted.words.xish import domish
 class XmlStreamStub(WXSS):
 
+    def __init__(self, autoreply=False):
+        WXSS.__init__(self)
+        self.xmlstream.send = self.receive
+        self.autoreply = autoreply
+
+    def receive(self, msg):
+        self.output.append(msg)
+        if self.autoreply:
+            reply = self._build_reply(msg)
+            self.send(reply)
+
     def send_replies(self):
         for sent in self.output:
             reply = self._build_reply(sent)
