@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 import sqlite3
 from collections import deque
+from platform import python_version_tuple
 
 from twisted.internet import reactor, defer, task
 from twisted.python.failure import Failure
@@ -72,7 +73,7 @@ class PubSubForwarder(PubSubClient):
         self._service = JID(settings['bus']['service'])
         # copy: on modifie la hashmap dans status.py
         self._nodetopublish = settings.get('publications', {}).copy()
-        self.queue = deque()
+        self._build_queue()
         self._initialized = False
         # Base de backup
         if dbfilename is None or dbtable is None:
@@ -86,6 +87,32 @@ class PubSubForwarder(PubSubClient):
         self._pending_replies = []
         self._processing_queue = False
         self._messages_forwarded = 0
+
+    def _build_queue(self):
+        max_queue_size = self._max_queue_size()
+        if max_queue_size is not None:
+            self.queue = deque(maxlen=max_queue_size)
+        else:
+            # sur python < 2.6, il n'y a pas de maxlen
+            self.queue = deque()
+
+    def _max_queue_size(self):
+        max_queue_size = settings["connector"].get("max_queue_size", 0)
+        try:
+            max_queue_size = int(max_queue_size)
+        except ValueError:
+            LOGGER.warning(_("Can't understand the max_queue_size option, it "
+                             "should be an integer (or 0 for no limit). "
+                             "Current value: %s"), max_queue_size)
+            return None
+        if max_queue_size <= 0:
+            max_queue_size = None
+        if (max_queue_size is not None and
+                    tuple(python_version_tuple()) < ('2', '6')):
+            LOGGER.warning(_("The max_queue_size option is only available "
+                             "on Python >= 2.6. Ignoring."))
+            max_queue_size = None
+        return max_queue_size
 
     def connectionInitialized(self):
         """
@@ -445,6 +472,18 @@ class PubSubListener(PubSubForwarder):
         super(PubSubListener, self).connectionInitialized()
         # Réceptionner les messages directs ("one-to-one")
         self.xmlstream.addObserver("/message[@type='chat']", self.chatReceived)
+
+    def _max_queue_size(self):
+        """
+        On ajoute 10% à la valeur par défaut, parce que c'est le gestionnaire
+        de présence qui doit s'occuper de ça en priorité : il nous rendra
+        indisponible sur le bus si la limite est atteinte, donc on met un peu
+        de marge pour éviter de perdre des messages pour rien.
+        """
+        max_queue_size = super(PubSubListener, self)._max_queue_size()
+        if max_queue_size is not None:
+            max_queue_size += 0.1 * max_queue_size
+        return max_queue_size
 
     def chatReceived(self, msg):
         """
