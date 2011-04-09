@@ -200,7 +200,18 @@ class MultipleServerConnector(tcp.Connector):
 
 from twisted.words.xish.xmlstream import XmlStreamFactory
 class MultipleServersXmlStreamFactory(XmlStreamFactory):
+    """
+    Sous-classée pour ré-initialiser les tentatives de connexions du connector
+    lorsqu'une tentative réussit.
+    """
+
     def buildProtocol(self, addr): # pylint: disable-msg=E0202
+        """
+        Ré-initialise les tentatives de connexions d'un
+        L{MultipleServerConnector} lorsque l'une d'entre elles réussit.
+        @param addr: an object implementing
+            C{twisted.internet.interfaces.IAddress}
+        """
         if (self.connector is not None
                 and hasattr(self.connector, "resetAttempts")):
             self.connector.resetAttempts()
@@ -208,6 +219,7 @@ class MultipleServersXmlStreamFactory(XmlStreamFactory):
 
 from wokkel.client import HybridAuthenticator
 def VigiloClientFactory(jid, password):
+    """Factory pour utiliser L{MultipleServersXmlStreamFactory}"""
     a = HybridAuthenticator(jid, password)
     return MultipleServersXmlStreamFactory(a)
 
