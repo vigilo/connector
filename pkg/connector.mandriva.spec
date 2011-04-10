@@ -55,7 +55,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files -f %{name}.lang
 %defattr(644,root,root,755)
-%doc COPYING
+%doc COPYING README.txt
 %{python_sitelib}/*
 
 
