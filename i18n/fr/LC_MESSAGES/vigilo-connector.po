@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2011-03-22 10:50+0100\n"
+"PO-Revision-Date: 2011-04-11 10:27+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -32,8 +32,8 @@ msgid ""
 "The \"watched_topics\" option has now been renamed into "
 "\"subscriptions\". Please update your configuration file."
 msgstr ""
-"L'option \"watched_topics\" a été renommée en \"subscriptions\". "
-"Veuillez mettre à jour votre fichier de configuration."
+"L'option \"watched_topics\" a été renommée en \"subscriptions\". Veuillez"
+" mettre à jour votre fichier de configuration."
 
 #: src/vigilo/connector/converttoxml.py:54
 #: src/vigilo/connector/converttoxml.py:61
@@ -47,43 +47,58 @@ msgstr "Type de message inconnu ou message mal-formé: '%s'"
 msgid "Got malformed message: %s"
 msgstr "Réception d'un message mal-formé: %s"
 
-#: src/vigilo/connector/forwarder.py:32
+#: src/vigilo/connector/forwarder.py:33
 msgid "no connection"
 msgstr "pas de connexion"
 
-#: src/vigilo/connector/forwarder.py:36
+#: src/vigilo/connector/forwarder.py:37
 msgid "no connection to the XMPP server"
 msgstr "pas de connexion au serveur XMPP"
 
-#: src/vigilo/connector/forwarder.py:97
+#: src/vigilo/connector/forwarder.py:104
+#, python-format
+msgid ""
+"Can't understand the max_queue_size option, it should be an integer (or 0"
+" for no limit). Current value: %s"
+msgstr ""
+"Impossible de lire l'option max_queue_size. Un nombre entier (ou 0 pour "
+"supprimer la limite) doit être renseigné. Valeur actuelle : %s"
+
+#: src/vigilo/connector/forwarder.py:112
+msgid "The max_queue_size option is only available on Python >= 2.6. Ignoring."
+msgstr "L'option max_queue_size n'est disponible que pour Python >= 2.6. Ignorée."
+
+#: src/vigilo/connector/forwarder.py:124
 msgid "Connected to the XMPP bus"
 msgstr "Connecté au bus XMPP"
 
-#: src/vigilo/connector/forwarder.py:116
+#: src/vigilo/connector/forwarder.py:143
 #, python-format
 msgid "Lost connection to the XMPP bus (reason: %s)"
 msgstr "Connexion perdue au bus XMPP (raison : %s)"
 
-#: src/vigilo/connector/forwarder.py:148
+#: src/vigilo/connector/forwarder.py:175
 #, python-format
 msgid "Unable to forward the message (%(reason)s)"
 msgstr "Impossible de transmettre le message (%(reason)s)"
 
-#: src/vigilo/connector/forwarder.py:154
+#: src/vigilo/connector/forwarder.py:181
 msgid ". it has been stored for later retransmission"
 msgstr ". Il a été sauvé pour une transmission ultérieure"
 
-#: src/vigilo/connector/forwarder.py:227
+#: src/vigilo/connector/forwarder.py:254
 #, python-format
 msgid "Batch sent, waiting for %d replies from the bus"
 msgstr "Groupe de message envoyé, en attente de %d confirmations du bus"
 
-#: src/vigilo/connector/forwarder.py:244
+#: src/vigilo/connector/forwarder.py:271
 #, python-format
 msgid "Error trying to save a message to the backup database: %s"
-msgstr "Erreur lors de l'enregistrement du message en base de données de sauvegarde : %s"
+msgstr ""
+"Erreur lors de l'enregistrement du message en base de données de "
+"sauvegarde : %s"
 
-#: src/vigilo/connector/forwarder.py:423
+#: src/vigilo/connector/forwarder.py:450
 #, python-format
 msgid "No destination node configured for messages of type '%s'. Skipping."
 msgstr "Aucun nœud cible configuré pour les messages de type '%s'. Message ignoré."
@@ -145,8 +160,8 @@ msgid ""
 "Another instance of %(user)s@%(host)s has priority %(priority)d ! (me: "
 "%(me)s, other: %(other)s)"
 msgstr ""
-"Une autre instance de %(user)s@%(host)s a la priorité %(priority)d ! "
-"(moi : %(me)s, autre : %(other)s)"
+"Une autre instance de %(user)s@%(host)s a la priorité %(priority)d ! (moi"
+" : %(me)s, autre : %(other)s)"
 
 #: src/vigilo/connector/queuetonodefw.py:83
 msgid "Received request to shutdown"

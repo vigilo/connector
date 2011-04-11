@@ -443,7 +443,7 @@ class PubSubSender(PubSubForwarder):
     def publishXml(self, xml):
         """
         function to publish a XML msg to node
-        @param xml: le message a envoyé sous forme XML
+        @param xml: le message à envoyer sous forme XML
         @type xml: twisted.words.xish.domish.Element
         """
         if xml.name not in self._nodetopublish:
@@ -521,4 +521,3 @@ class PubSubListener(PubSubForwarder):
                         self.forwardMessage(msg)
                 else:
                     self.forwardMessage(data)
-
