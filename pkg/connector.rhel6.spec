@@ -28,14 +28,13 @@ This library is part of the Vigilo Project <http://vigilo-project.org>
 %setup -q
 
 %build
-make PYTHON=%{__python}
 
 %install
 rm -rf $RPM_BUILD_ROOT
-make install \
-    DESTDIR=$RPM_BUILD_ROOT \
-    PREFIX=%{_prefix} \
-    PYTHON=%{__python}
+make install_pkg \
+	DESTDIR=$RPM_BUILD_ROOT \
+	PREFIX=%{_prefix} \
+	PYTHON=%{__python}
 
 # Splitted Twisted
 sed -i -e 's/^Twisted$/Twisted_Words/' $RPM_BUILD_ROOT%{_prefix}/lib*/python*/site-packages/vigilo*.egg-info/requires.txt
