@@ -1,13 +1,28 @@
 Connector
 =========
 
-Connector est une bibliothèque regroupant les composants d'accès et de
-communication avec le bus de messages XMPP.
+Connector est une bibliothèque de Vigilo_ regroupant les composants d'accès et
+de communication avec le bus de messages XMPP.
 
 Pour les détails du fonctionnement de la bibliothèque Connector, se reporter à
 la `documentation officielle`_.
 
-Connector est un composant de Vigilo_.
+
+Dépendances
+-----------
+Vigilo nécessite une version de Python supérieure ou égale à 2.5. Le chemin de
+l'exécutable python peut être passé en paramètre du ``make install`` de la
+façon suivante::
+
+    make install PYTHON=/usr/bin/python2.6
+
+La bibliothèque Connector a besoin des modules python suivants :
+
+- setuptools (ou distribute)
+- vigilo-common
+- vigilo-pubsub
+- Twisted >= 8.1
+- wokkel
 
 
 Installation
