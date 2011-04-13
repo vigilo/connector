@@ -1,1 +1,2 @@
-recursive-include buildenv Makefile.common buildout.*.cfg
+include buildenv/Makefile.common
+include buildenv/buildout.*.cfg
