@@ -1,2 +1,12 @@
 include buildenv/Makefile.common
 include buildenv/buildout.*.cfg
+include buildout.cfg
+include Makefile
+include COPYING.txt
+
+graft doc
+graft pkg
+recursive-include i18n *.pot *.po
+
+include settings_tests.ini
+include settings.ini
