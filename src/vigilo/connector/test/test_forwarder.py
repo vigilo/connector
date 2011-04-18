@@ -188,7 +188,3 @@ class TestForwarder(unittest.TestCase):
         self.assertEqual(len(list(acc_msg.elements())), count)
 
 
-
-if __name__ == "__main__":
-    unittest.main()
-
