@@ -35,7 +35,7 @@ class VigiloXMPPClient(XMPPClient):
         """
         for index, initializer in enumerate(xs.initializers[:]):
             if isinstance(initializer, xmlstream.TLSInitiatingInitializer):
-                if self.require_tls and not self.require_compression:
+                if self.require_tls:# and not self.require_compression:
                     xs.initializers[index].required = True
                 if self.require_compression and not self.require_tls:
                     # on ajoute la compression zlib et on désactive TLS
@@ -49,8 +49,8 @@ class VigiloXMPPClient(XMPPClient):
                     from vigilo.common.gettext import translate
                     _ = translate(__name__)
                     LOGGER.warning(
-                        _("'require_tls' do compression. 'require_compression'"
-                        " option is ignored when both options are True.")
+                        _("Use 'require_tls'. 'require_compression' option"
+                        " is ignored when both 'require_*' options are True.")
                         )
                     xs.initializers[index].required = True
 

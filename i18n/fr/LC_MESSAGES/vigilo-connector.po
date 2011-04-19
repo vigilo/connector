@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2011-04-19 11:11+0200\n"
+"PO-Revision-Date: 2011-04-19 17:31+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -20,10 +20,11 @@ msgstr ""
 
 #: src/vigilo/connector/client.py:52
 msgid ""
-"'require_tls' do compression. 'require_compression' option is ignored "
-"when both options are True."
-msgstr "'require_tls' fait de la compression. L'option 'require_compression' est ignorée"
-" car les deux options sont à True."
+"Use 'require_tls'. 'require_compression' option is ignored when both "
+"'require_*' options are True."
+msgstr ""
+"Utilisation de 'require_tls'. L'option 'require_compression' est "
+"ignorée car les deux options 'require_*' sont à True."
 
 #: src/vigilo/connector/client.py:78
 #, python-format

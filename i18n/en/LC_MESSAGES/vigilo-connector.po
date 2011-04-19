@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: vigilo-connector 2.0.0\n"
 "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
-"POT-Creation-Date: 2011-04-11 10:27+0200\n"
-"PO-Revision-Date: 2011-04-11 10:27+0200\n"
+"POT-Creation-Date: 2011-04-19 17:30+0200\n"
+"PO-Revision-Date: 2011-04-19 17:31+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: en <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -18,16 +18,24 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/client.py:67
+#: src/vigilo/connector/client.py:52
+msgid ""
+"Use 'require_tls'. 'require_compression' option is ignored when both "
+"'require_*' options are True."
+msgstr ""
+"Use 'require_tls'. 'require_compression' option is ignored when both "
+"'require_*' options are True."
+
+#: src/vigilo/connector/client.py:78
 #, python-format
 msgid "Authentication failure: %s"
 msgstr "Authentication failure: %s"
 
-#: src/vigilo/connector/client.py:72 src/vigilo/connector/client.py:73
+#: src/vigilo/connector/client.py:83
 msgid "Server does not support TLS encryption."
 msgstr "Server does not support TLS encryption."
 
-#: src/vigilo/connector/client.py:139
+#: src/vigilo/connector/client.py:154
 msgid ""
 "The \"watched_topics\" option has now been renamed into "
 "\"subscriptions\". Please update your configuration file."
