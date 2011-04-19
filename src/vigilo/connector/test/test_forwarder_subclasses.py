@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
 # pylint: disable-msg=R0904,C0111
+# Copyright (C) 2006-2011 CS-SI
+# License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
+
 """Tests sur la communication avec le bus XMPP."""
 
 import os
