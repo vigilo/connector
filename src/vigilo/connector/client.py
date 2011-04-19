@@ -18,9 +18,10 @@ class VigiloXMPPClient(XMPPClient):
     """Client XMPP Vigilo"""
 
     def __init__(self, jid, password, host=None, port=5222,
-                 require_tls=False, max_delay=60):
+                 require_tls=False, require_compression=False, max_delay=60):
         XMPPClient.__init__(self, jid, password, host, port)
         self.require_tls = require_tls
+        self.require_compression = require_compression
         self.factory.maxDelay = max_delay
         if isinstance(self.host, list):
             factory = VigiloClientFactory(jid, password)
@@ -34,14 +35,25 @@ class VigiloXMPPClient(XMPPClient):
         """
         for index, initializer in enumerate(xs.initializers[:]):
             if isinstance(initializer, xmlstream.TLSInitiatingInitializer):
-                if self.require_tls:
+                if self.require_tls and not self.require_compression:
                     xs.initializers[index].required = True
-                else:
+                if self.require_compression and not self.require_tls:
                     # on ajoute la compression zlib et on désactive TLS
                     # (ils sont incompatibles, voir XEP-0138)
                     xs.initializers[index].wanted = False
                     xs.initializers.insert(index+1,
                             CompressInitiatingInitializer(xs))
+                if self.require_compression and self.require_tls:
+                    from vigilo.common.logging import get_logger
+                    LOGGER = get_logger(__name__)
+                    from vigilo.common.gettext import translate
+                    _ = translate(__name__)
+                    LOGGER.warning(
+                        _("'require_tls' do compression. 'require_compression'"
+                        " option is ignored when both options are True.")
+                        )
+                    xs.initializers[index].required = True
+
         XMPPClient._connected(self, xs)
 
     def _disconnected(self, xs):
@@ -59,9 +71,8 @@ class VigiloXMPPClient(XMPPClient):
         from vigilo.common.logging import get_logger
         LOGGER = get_logger(__name__)
 
-        from vigilo.common.gettext import translate, translate_narrow
+        from vigilo.common.gettext import translate
         _ = translate(__name__)
-        N_ = translate(__name__)
 
         if failure.check(SASLNoAcceptableMechanism, SASLAuthError):
             LOGGER.error(_("Authentication failure: %s"),
@@ -70,7 +81,6 @@ class VigiloXMPPClient(XMPPClient):
             return
         if failure.check(xmlstream.FeatureNotAdvertized):
             LOGGER.error(_("Server does not support TLS encryption."))
-            log.err(failure, N_("Server does not support TLS encryption."))
             reactor.stop()
             return
         XMPPClient.initializationFailed(self, failure)
@@ -108,6 +118,10 @@ def client_factory(settings):
         require_tls = settings['bus'].as_bool('require_tls')
     except KeyError:
         require_tls = False
+    try:
+        require_compression = settings['bus'].as_bool('require_compression')
+    except KeyError:
+        require_compression= False
 
     # Temps max entre 2 tentatives de connexion (par défaut 1 min)
     max_delay = int(settings["bus"].get("max_reconnect_delay", 60))
@@ -121,6 +135,7 @@ def client_factory(settings):
             settings['bus']['password'],
             host,
             require_tls=require_tls,
+            require_compression=require_compression,
             max_delay=max_delay)
     xmpp_client.setName('xmpp_client')
 

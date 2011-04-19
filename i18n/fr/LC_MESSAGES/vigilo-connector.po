@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2011-04-11 10:27+0200\n"
+"PO-Revision-Date: 2011-04-19 11:11+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -18,16 +18,23 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/client.py:67
+#: src/vigilo/connector/client.py:52
+msgid ""
+"'require_tls' do compression. 'require_compression' option is ignored "
+"when both options are True."
+msgstr "'require_tls' fait de la compression. L'option 'require_compression' est ignorée"
+" car les deux options sont à True."
+
+#: src/vigilo/connector/client.py:78
 #, python-format
 msgid "Authentication failure: %s"
 msgstr "Échec de l'authentification : %s"
 
-#: src/vigilo/connector/client.py:72 src/vigilo/connector/client.py:73
+#: src/vigilo/connector/client.py:83
 msgid "Server does not support TLS encryption."
 msgstr "Le serveur ne supporte pas le chiffrement TLS."
 
-#: src/vigilo/connector/client.py:139
+#: src/vigilo/connector/client.py:154
 msgid ""
 "The \"watched_topics\" option has now been renamed into "
 "\"subscriptions\". Please update your configuration file."
@@ -189,3 +196,4 @@ msgstr "Impossible de remplir le tampon en sortie : %s"
 #, python-format
 msgid "Could not VACUUM the database: %s"
 msgstr "Impossible de purger la base de données (VACUUM) : %s"
+
