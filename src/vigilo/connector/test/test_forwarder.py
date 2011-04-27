@@ -150,9 +150,12 @@ class TestForwarder(unittest.TestCase):
         # On attend un peu
         yield wait(1)
         # Les messages sont maintenant soit envoyés soit en base de backup
-        self.assertEqual(len(stub.output), 10)
+        print (self.publisher.retry._cache_isempty,
+               self.publisher.retry.buffer_in,
+               self.publisher.retry.buffer_out)
         backup_size = yield self.publisher.retry.qsize()
         self.assertEqual(backup_size, 20)
+        self.assertEqual(len(stub.output), 10)
         # on vide les buffers (pour fiabiliser le test)
         yield self.publisher.retry.flush()
         stats = yield self.publisher.getStats()
