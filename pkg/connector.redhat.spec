@@ -9,7 +9,7 @@
 Name:       vigilo-%{module}
 Summary:    @SUMMARY@
 Version:    @VERSION@
-Release:    1%{?svn}%{?dist}
+Release:    1%{?dev}%{?dist}
 Source0:    %{name}-%{version}.tar.gz
 URL:        @URL@
 Group:      System/Servers
