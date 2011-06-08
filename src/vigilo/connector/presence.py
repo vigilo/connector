@@ -94,8 +94,8 @@ class PresenceManager(xmppim.PresenceClientProtocol):
 
     def sendPresence(self, priority=None):
         if self.isOverloaded() and self.priority >= 0:
-            LOGGER.info(_("Queue size too high! Switching presence to "
-                          "unavailable."))
+            LOGGER.info(_("Queue size too high (%s) ! Switching presence to "
+                          "unavailable."), len(self.forwarder.queue))
             self.unavailable()
             self.priority = -1
             return
