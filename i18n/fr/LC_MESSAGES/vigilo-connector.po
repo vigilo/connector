@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2011-04-19 17:31+0200\n"
+"PO-Revision-Date: 2011-06-08 17:37+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -18,24 +18,24 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/client.py:52
+#: src/vigilo/connector/client.py:54
 msgid ""
 "Use 'require_tls'. 'require_compression' option is ignored when both "
 "'require_*' options are True."
 msgstr ""
-"Utilisation de 'require_tls'. L'option 'require_compression' est "
-"ignorée car les deux options 'require_*' sont à True."
+"Utilisation de 'require_tls'. L'option 'require_compression' est ignorée "
+"car les deux options 'require_*' sont à True."
 
-#: src/vigilo/connector/client.py:78
+#: src/vigilo/connector/client.py:80
 #, python-format
 msgid "Authentication failure: %s"
 msgstr "Échec de l'authentification : %s"
 
-#: src/vigilo/connector/client.py:83
+#: src/vigilo/connector/client.py:85
 msgid "Server does not support TLS encryption."
 msgstr "Le serveur ne supporte pas le chiffrement TLS."
 
-#: src/vigilo/connector/client.py:154
+#: src/vigilo/connector/client.py:156
 msgid ""
 "The \"watched_topics\" option has now been renamed into "
 "\"subscriptions\". Please update your configuration file."
@@ -43,27 +43,27 @@ msgstr ""
 "L'option \"watched_topics\" a été renommée en \"subscriptions\". Veuillez"
 " mettre à jour votre fichier de configuration."
 
-#: src/vigilo/connector/converttoxml.py:54
-#: src/vigilo/connector/converttoxml.py:61
-#: src/vigilo/connector/converttoxml.py:67
+#: src/vigilo/connector/converttoxml.py:57
+#: src/vigilo/connector/converttoxml.py:64
+#: src/vigilo/connector/converttoxml.py:70
 #, python-format
 msgid "Unknown/malformed message type: '%s'"
 msgstr "Type de message inconnu ou message mal-formé: '%s'"
 
-#: src/vigilo/connector/converttoxml.py:71
+#: src/vigilo/connector/converttoxml.py:74
 #, python-format
 msgid "Got malformed message: %s"
 msgstr "Réception d'un message mal-formé: %s"
 
-#: src/vigilo/connector/forwarder.py:33
+#: src/vigilo/connector/forwarder.py:35
 msgid "no connection"
 msgstr "pas de connexion"
 
-#: src/vigilo/connector/forwarder.py:37
+#: src/vigilo/connector/forwarder.py:39
 msgid "no connection to the XMPP server"
 msgstr "pas de connexion au serveur XMPP"
 
-#: src/vigilo/connector/forwarder.py:104
+#: src/vigilo/connector/forwarder.py:106
 #, python-format
 msgid ""
 "Can't understand the max_queue_size option, it should be an integer (or 0"
@@ -72,77 +72,77 @@ msgstr ""
 "Impossible de lire l'option max_queue_size. Un nombre entier (ou 0 pour "
 "supprimer la limite) doit être renseigné. Valeur actuelle : %s"
 
-#: src/vigilo/connector/forwarder.py:112
+#: src/vigilo/connector/forwarder.py:114
 msgid "The max_queue_size option is only available on Python >= 2.6. Ignoring."
 msgstr "L'option max_queue_size n'est disponible que pour Python >= 2.6. Ignorée."
 
-#: src/vigilo/connector/forwarder.py:124
+#: src/vigilo/connector/forwarder.py:126
 msgid "Connected to the XMPP bus"
 msgstr "Connecté au bus XMPP"
 
-#: src/vigilo/connector/forwarder.py:143
+#: src/vigilo/connector/forwarder.py:145
 #, python-format
 msgid "Lost connection to the XMPP bus (reason: %s)"
 msgstr "Connexion perdue au bus XMPP (raison : %s)"
 
-#: src/vigilo/connector/forwarder.py:175
+#: src/vigilo/connector/forwarder.py:177
 #, python-format
 msgid "Unable to forward the message (%(reason)s)"
 msgstr "Impossible de transmettre le message (%(reason)s)"
 
-#: src/vigilo/connector/forwarder.py:181
+#: src/vigilo/connector/forwarder.py:183
 msgid ". it has been stored for later retransmission"
 msgstr ". Il a été sauvé pour une transmission ultérieure"
 
-#: src/vigilo/connector/forwarder.py:254
+#: src/vigilo/connector/forwarder.py:256
 #, python-format
 msgid "Batch sent, waiting for %d replies from the bus"
 msgstr "Groupe de message envoyé, en attente de %d confirmations du bus"
 
-#: src/vigilo/connector/forwarder.py:271
+#: src/vigilo/connector/forwarder.py:273
 #, python-format
 msgid "Error trying to save a message to the backup database: %s"
 msgstr ""
 "Erreur lors de l'enregistrement du message en base de données de "
 "sauvegarde : %s"
 
-#: src/vigilo/connector/forwarder.py:450
+#: src/vigilo/connector/forwarder.py:452
 #, python-format
 msgid "No destination node configured for messages of type '%s'. Skipping."
 msgstr "Aucun nœud cible configuré pour les messages de type '%s'. Message ignoré."
 
-#: src/vigilo/connector/main.py:39
+#: src/vigilo/connector/main.py:42
 #, python-format
 msgid "Directory not found: '%(dir)s'"
 msgstr "Dossier non trouvé : '%(dir)s'"
 
-#: src/vigilo/connector/main.py:44
+#: src/vigilo/connector/main.py:47
 #, python-format
 msgid "Directory not readable: '%(dir)s'"
 msgstr "Dossier inaccessible en lecture : '%(dir)s'"
 
-#: src/vigilo/connector/main.py:49
+#: src/vigilo/connector/main.py:52
 #, python-format
 msgid "Directory not writable: '%(dir)s'"
 msgstr "Dossier inaccessible en écriture : '%(dir)s'"
 
-#: src/vigilo/connector/main.py:54
+#: src/vigilo/connector/main.py:57
 #, python-format
 msgid "Directory not executable: '%(dir)s'"
 msgstr "Dossier inaccessible en exécution : '%(dir)s'"
 
-#: src/vigilo/connector/nodetoqueuefw.py:59
+#: src/vigilo/connector/nodetoqueuefw.py:62
 msgid "Incoming message is too big to be stored in the queue, dropping it."
 msgstr ""
 "Le message entrant est trop volumineux pour être stocké, message \"\n"
 "\"ignoré."
 
-#: src/vigilo/connector/nodetoqueuefw.py:64
+#: src/vigilo/connector/nodetoqueuefw.py:67
 #, python-format
 msgid "The queue is full, dropping incoming XML message! (%s)"
 msgstr "La file est pleine, le message XML entrant a été ignoré! (%s)"
 
-#: src/vigilo/connector/nodetosocketfw.py:24
+#: src/vigilo/connector/nodetosocketfw.py:26
 msgid "socket not connected"
 msgstr "socket non connecté"
 
@@ -158,11 +158,14 @@ msgstr "Utiliser ce fichier settings.ini"
 msgid "The configuration file does not exist"
 msgstr "Le fichier de configuration n'existe pas"
 
-#: src/vigilo/connector/presence.py:95
-msgid "Queue size too high! Switching presence to unavailable."
-msgstr "La taille de la fille est trop élevée ! Passage à l'état indisponible."
+#: src/vigilo/connector/presence.py:97
+#, fuzzy, python-format
+msgid "Queue size too high (%s) ! Switching presence to unavailable."
+msgstr ""
+"La taille de la fille est trop élevée (%s) ! Passage à l'état "
+"indisponible."
 
-#: src/vigilo/connector/presence.py:136
+#: src/vigilo/connector/presence.py:138
 #, python-format
 msgid ""
 "Another instance of %(user)s@%(host)s has priority %(priority)d ! (me: "
@@ -171,29 +174,29 @@ msgstr ""
 "Une autre instance de %(user)s@%(host)s a la priorité %(priority)d ! (moi"
 " : %(me)s, autre : %(other)s)"
 
-#: src/vigilo/connector/queuetonodefw.py:83
+#: src/vigilo/connector/queuetonodefw.py:86
 msgid "Received request to shutdown"
 msgstr "Réception d'une demande d'arrêt"
 
-#: src/vigilo/connector/queuetonodefw.py:88
+#: src/vigilo/connector/queuetonodefw.py:91
 msgid "Item is None in consumeQueue, this should never happen!"
 msgstr "Objet None reçu dans consumeQueue, ça ne devrait jamais arriver !"
 
-#: src/vigilo/connector/queuetonodefw.py:93
+#: src/vigilo/connector/queuetonodefw.py:96
 msgid "Stopping QueueToNodeForwarder."
 msgstr "Arrêt de QueueToNodeForwarder."
 
-#: src/vigilo/connector/status.py:124
+#: src/vigilo/connector/status.py:126
 #, python-format
 msgid "Stats for %(service)s: %(name)s = %(value)s"
 msgstr "Statistiques pour %(service)s : %(name)s = %(value)s"
 
-#: src/vigilo/connector/store.py:166 src/vigilo/connector/store.py:261
+#: src/vigilo/connector/store.py:169 src/vigilo/connector/store.py:264
 #, python-format
 msgid "Could not fill the output buffer: %s"
 msgstr "Impossible de remplir le tampon en sortie : %s"
 
-#: src/vigilo/connector/store.py:206
+#: src/vigilo/connector/store.py:209
 #, python-format
 msgid "Could not VACUUM the database: %s"
 msgstr "Impossible de purger la base de données (VACUUM) : %s"
