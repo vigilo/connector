@@ -22,7 +22,7 @@ from helpers import XmlStreamStub, wait, HandlerStub
 
 
 class ForwarderStub(object):
-    queue = 0
+    queue = []
 
 class PresenceManagerTest(unittest.TestCase):
     """Teste la gestion de la présence"""
@@ -98,7 +98,7 @@ class PresenceManagerTest(unittest.TestCase):
 
     def test_sendpresence_overloaded(self):
         """Envoi de présence quand le forwarder est surchargé"""
-        pm = PresenceManager()
+        pm = PresenceManager(ForwarderStub())
         pm.isOverloaded = lambda: True
         xs = XmlStreamStub()
         pm.xmlstream = xs.xmlstream
