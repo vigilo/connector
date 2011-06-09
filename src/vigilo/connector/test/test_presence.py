@@ -110,6 +110,18 @@ class PresenceManagerTest(unittest.TestCase):
         self.assertEqual(xs.output[0].toXml(),
                          "<presence type='unavailable'/>")
 
+    def test_sendpresence_already_overloaded(self):
+        """Envoi de présence quand le forwarder était déjà surchargé"""
+        pm = PresenceManager(ForwarderStub())
+        pm.isOverloaded = lambda: True
+        xs = XmlStreamStub()
+        pm.xmlstream = xs.xmlstream
+        pm.setHandlerParent(HandlerStub(xs.xmlstream))
+        pm.priority = -1
+        pm.sendPresence()
+        self.assertEqual(pm.priority, -1)
+        self.assertEqual(len(xs.output), 0)
+
     def test_sendpresence_nochange(self):
         """Envoi de présence sans changement"""
         pm = PresenceManager()
