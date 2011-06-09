@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: vigilo-connector 2.0.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-11-19 12:16+0100\n"
-"PO-Revision-Date: 2011-06-08 17:37+0200\n"
+"PO-Revision-Date: 2011-06-09 15:52+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: de <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -152,12 +152,12 @@ msgstr ""
 msgid "The configuration file does not exist"
 msgstr ""
 
-#: src/vigilo/connector/presence.py:97
+#: src/vigilo/connector/presence.py:98
 #, python-format
 msgid "Queue size too high (%s) ! Switching presence to unavailable."
 msgstr ""
 
-#: src/vigilo/connector/presence.py:138
+#: src/vigilo/connector/presence.py:139
 #, python-format
 msgid ""
 "Another instance of %(user)s@%(host)s has priority %(priority)d ! (me: "
@@ -190,4 +190,7 @@ msgstr ""
 #, python-format
 msgid "Could not VACUUM the database: %s"
 msgstr ""
+
+#~ msgid "Queue size too high (%d) ! Switching presence to unavailable."
+#~ msgstr ""
 

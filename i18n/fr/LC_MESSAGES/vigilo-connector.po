@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2011-06-08 17:37+0200\n"
+"PO-Revision-Date: 2011-06-09 15:52+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -158,14 +158,14 @@ msgstr "Utiliser ce fichier settings.ini"
 msgid "The configuration file does not exist"
 msgstr "Le fichier de configuration n'existe pas"
 
-#: src/vigilo/connector/presence.py:97
-#, fuzzy, python-format
+#: src/vigilo/connector/presence.py:98
+#, python-format
 msgid "Queue size too high (%s) ! Switching presence to unavailable."
 msgstr ""
 "La taille de la fille est trop élevée (%s) ! Passage à l'état "
 "indisponible."
 
-#: src/vigilo/connector/presence.py:138
+#: src/vigilo/connector/presence.py:139
 #, python-format
 msgid ""
 "Another instance of %(user)s@%(host)s has priority %(priority)d ! (me: "
