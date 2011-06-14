@@ -41,6 +41,7 @@ class SocketReceiver(LineReceiver):
             xml = parseXml(line)
 
         if xml is None:
+            LOGGER.warning(_("Unparsable line: %s"), line)
             # Couldn't parse this line
             return
 
