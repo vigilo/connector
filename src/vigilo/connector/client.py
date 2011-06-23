@@ -8,7 +8,8 @@ from twisted.words.protocols.jabber import xmlstream
 from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism, \
                                                 SASLAuthError
 from twisted.words.protocols.jabber.jid import JID
-from wokkel.client import XMPPClient, XMPPClientConnector
+from wokkel import client
+from wokkel.subprotocols import StreamManager
 
 from vigilo.connector.compression import CompressInitiatingInitializer
 
@@ -16,17 +17,71 @@ from vigilo.common.gettext import translate
 _ = translate(__name__)
 
 
-class VigiloXMPPClient(XMPPClient):
+class ModifiedXmlStreamFactory(xmlstream.XmlStreamFactory):
+    """
+    Factory XmlStream modifiée pour empêcher les reconnexions automatiques
+    lorsque la toute première connexion échoue. Après la première connexion,
+    si une déconnexion survient, une tentative de reconnexion automatique
+    a lieu (avec délai exponentiel).
+    
+    Ceci permet de détecter plus rapidement les erreurs de configuration
+    en quittant immédiatement lors du démarrage du connecteur.
+    """
+
+    def buildProtocol(self, addr):
+        """
+        Prépare le protocole.
+        """
+        self.continueTrying = 1
+        return xmlstream.XmlStreamFactory.buildProtocol(self, addr)
+
+    def clientConnectionFailed(self, connector, reason):
+        """
+        Gère les déconnexions. S'il s'agit de la première connexion,
+        le connecteur s'arrête (pas de reconnexion automatique).
+        Dans les autres cas, on tente régulièrement de se reconnecter,
+        avec un délai exponentiel entre chaque tentative.
+        """
+        if not self.continueTrying:
+            log.msg("Could not connect: %s" % reason.value, isError=1,
+                    failure=reason)
+            reactor.stop()
+        else:
+            self.retry()
+
+def HybridClientFactory(jid, password):
+    """
+    Construit la factory capable de gérer les reconnexions automatiques
+    au bus, ainsi que l'authentification.
+    """
+    a = client.HybridAuthenticator(jid, password)
+    return ModifiedXmlStreamFactory(a)
+
+class VigiloXMPPClient(client.XMPPClient):
     """Client XMPP Vigilo"""
 
     def __init__(self, jid, password, host=None, port=5222,
                  require_tls=False, require_compression=False, max_delay=60):
-        XMPPClient.__init__(self, jid, password, host, port)
+        """
+        Initialise le client.
+        """
+        # On court-circuite client.XMPPClient qui utilise une factory
+        # qui n'a pas le comportement attendu.
+        self.jid = jid
+        self.domain = jid.host
+        self.host = host
+        self.port = port
+
+        # On utilise notre factory personnalisée, que l'on configure.
+        factory = HybridClientFactory(jid, password)
+        factory.maxDelay = max_delay
+        factory.continueTrying = 0
+        StreamManager.__init__(self, factory)
+
         self.require_tls = require_tls
         self.require_compression = require_compression
-        self.factory.maxDelay = max_delay
-        if isinstance(self.host, list):
-            factory = VigiloClientFactory(jid, password)
+#        if isinstance(self.host, list):
+#            factory = VigiloClientFactory(jid, password)
 
     def _connected(self, xs):
         """
@@ -56,14 +111,14 @@ class VigiloXMPPClient(XMPPClient):
                         )
                     xs.initializers[index].required = True
 
-        XMPPClient._connected(self, xs)
+        client.XMPPClient._connected(self, xs)
 
     def _disconnected(self, xs):
         """
         Ajout de l'arrêt à la déconnexion
         @TODO: vérifier que ça ne bloque pas la reconnexion automatique.
         """
-        XMPPClient._disconnected(self, xs)
+        client.XMPPClient._disconnected(self, xs)
 
     def initializationFailed(self, failure):
         """
@@ -85,10 +140,10 @@ class VigiloXMPPClient(XMPPClient):
             LOGGER.error(_("Server does not support TLS encryption."))
             reactor.stop()
             return
-        XMPPClient.initializationFailed(self, failure)
+        client.XMPPClient.initializationFailed(self, failure)
 
     def stopService(self):
-        XMPPClient.stopService(self)
+        client.XMPPClient.stopService(self)
         stops = []
         for e in self:
             if not hasattr(e, "stop"):
@@ -108,7 +163,7 @@ class VigiloXMPPClient(XMPPClient):
             else:
                 return reactor.connectTCP(self.host, self.port, self.factory)
         else:
-            c = XMPPClientConnector(reactor, self.domain, self.factory)
+            c = client.XMPPClientConnector(reactor, self.domain, self.factory)
             c.connect()
             return c
 
@@ -123,7 +178,7 @@ def client_factory(settings):
     try:
         require_compression = settings['bus'].as_bool('require_compression')
     except KeyError:
-        require_compression= False
+        require_compression = False
 
     # Temps max entre 2 tentatives de connexion (par défaut 1 min)
     max_delay = int(settings["bus"].get("max_reconnect_delay", 60))
