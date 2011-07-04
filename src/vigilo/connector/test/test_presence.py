@@ -218,5 +218,16 @@ class PresenceManagerTest(unittest.TestCase):
         pm.unavailableReceived(JID("jid2@example.com/testresource"))
         self.assertEqual(pm._priorities, {"testresource": 42})
 
+    def test_available_early(self):
+        """Conflit la présence avant d'avoir lancé la boucle principale"""
+        pm = PresenceManager()
+        xs = XmlStreamStub()
+        pm.xmlstream = xs.xmlstream
+        pm.setHandlerParent(HandlerStub(xs.xmlstream))
+        pm.priority = 1
+        # Si le LoopingCall n'est pas encore lançé, une AssertionError sera
+        # levée et fera échouer ce test
+        pm.availableReceived(JID("jid@example.com/someoneelse"), priority=1)
+
 
 
