@@ -145,10 +145,11 @@ class PresenceManager(xmppim.PresenceClientProtocol):
                             "me": self.parent.jid.resource,
                             "other": entity.resource})
             self.sendPresence()
-            # On décale le changement de présence pour éviter les collisions
-            self._task.stop()
-            reactor.callLater(random.randrange(3, 7), self._task.start,
-                              self.getFrequency(), now=False)
+            if self._task.running:
+                # On décale le changement de présence pour éviter les collisions
+                self._task.stop()
+                reactor.callLater(random.randrange(3, 7), self._task.start,
+                                  self.getFrequency(), now=False)
 
     def unavailableReceived(self, entity, statuses=None):
         if not self.isMyAccount(entity):
