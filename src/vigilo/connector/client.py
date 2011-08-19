@@ -90,26 +90,41 @@ class VigiloXMPPClient(client.XMPPClient):
         par wokkel, pour imposer TLS si l'administrateur le souhaite, et
         insérer la compression zlib.
         """
+        from vigilo.common.logging import get_logger
+        LOGGER = get_logger(__name__)
+        from vigilo.common.gettext import translate
+        _ = translate(__name__)
+
         for index, initializer in enumerate(xs.initializers[:]):
-            if isinstance(initializer, xmlstream.TLSInitiatingInitializer):
-                if self.require_tls:# and not self.require_compression:
-                    xs.initializers[index].required = True
-                if self.require_compression and not self.require_tls:
-                    # on ajoute la compression zlib et on désactive TLS
-                    # (ils sont incompatibles, voir XEP-0138)
-                    xs.initializers[index].wanted = False
-                    xs.initializers.insert(index+1,
-                            CompressInitiatingInitializer(xs))
-                if self.require_compression and self.require_tls:
-                    from vigilo.common.logging import get_logger
-                    LOGGER = get_logger(__name__)
-                    from vigilo.common.gettext import translate
-                    _ = translate(__name__)
+            if not isinstance(initializer, xmlstream.TLSInitiatingInitializer):
+                continue
+
+            if self.require_tls:
+                # Activation du chiffrement par TLS.
+                if self.require_compression:
+                    # zlib et TLS sont incompatibles, voir XEP-0138.
                     LOGGER.warning(
-                        _("Use 'require_tls'. 'require_compression' option"
-                        " is ignored when both 'require_*' options are True.")
+                        _("'require_compression' cannot be True when "
+                        "'require_tls' is also True.")
                         )
-                    xs.initializers[index].required = True
+                xs.initializers[index].required = True
+
+            elif self.require_compression:
+                # On ajoute la compression zlib et on désactive TLS.
+                xs.initializers[index].wanted = False
+                xs.initializers[index].required = False
+                compressor = CompressInitiatingInitializer(xs)
+                compressor.required = True
+                xs.initializers.insert(index + 1, compressor)
+
+            else:
+                # On utilise le chiffrement TLS si disponible,
+                # mais on ne force pas son utilisation.
+                xs.initializers[index].wanted = True
+                xs.initializers[index].required = False
+
+            # Inutile de regarder plus loin.
+            break
 
         client.XMPPClient._connected(self, xs)
 
@@ -137,7 +152,19 @@ class VigiloXMPPClient(client.XMPPClient):
             reactor.stop()
             return
         if failure.check(xmlstream.FeatureNotAdvertized):
-            LOGGER.error(_("Server does not support TLS encryption."))
+            # Le nom de la fonctionnalité non-supportée n'est pas transmis
+            # avec l'erreur. On calcule le différentiel entre ce qu'on a
+            # demandé et ce qu'on a obtenu pour trouver son nom.
+            for initializer in self.xmlstream.initializers:
+                if not isinstance(initializer, \
+                    xmlstream.BaseFeatureInitiatingInitializer):
+                    continue
+
+                if initializer.required and \
+                    initializer.feature not in self.xmlstream.features:
+                    LOGGER.error(_("The server does not support "
+                                    "the '%s' feature"),
+                                    initializer.feature[1])
             reactor.stop()
             return
         client.XMPPClient.initializationFailed(self, failure)

@@ -7,9 +7,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: vigilo-connector 2.0.1\n"
+"Project-Id-Version: vigilo-connector 2.0.5\n"
 "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
-"POT-Creation-Date: 2011-06-09 15:52+0200\n"
+"POT-Creation-Date: 2011-08-19 18:47+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,22 +18,21 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/client.py:54
-msgid ""
-"Use 'require_tls'. 'require_compression' option is ignored when both "
-"'require_*' options are True."
+#: src/vigilo/connector/client.py:107
+msgid "'require_compression' cannot be True when 'require_tls' is also True."
 msgstr ""
 
-#: src/vigilo/connector/client.py:80
+#: src/vigilo/connector/client.py:150
 #, python-format
 msgid "Authentication failure: %s"
 msgstr ""
 
-#: src/vigilo/connector/client.py:85
-msgid "Server does not support TLS encryption."
+#: src/vigilo/connector/client.py:165
+#, python-format
+msgid "The server does not support the '%s' feature"
 msgstr ""
 
-#: src/vigilo/connector/client.py:156
+#: src/vigilo/connector/client.py:238
 msgid ""
 "The \"watched_topics\" option has now been renamed into \"subscriptions\". "
 "Please update your configuration file."
@@ -97,7 +96,7 @@ msgstr ""
 msgid "Error trying to save a message to the backup database: %s"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:452
+#: src/vigilo/connector/forwarder.py:457
 #, python-format
 msgid "No destination node configured for messages of type '%s'. Skipping."
 msgstr ""
@@ -169,6 +168,11 @@ msgstr ""
 
 #: src/vigilo/connector/queuetonodefw.py:96
 msgid "Stopping QueueToNodeForwarder."
+msgstr ""
+
+#: src/vigilo/connector/sockettonodefw.py:44
+#, python-format
+msgid "Unparsable line: %s"
 msgstr ""
 
 #: src/vigilo/connector/status.py:126
