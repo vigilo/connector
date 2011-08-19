@@ -425,22 +425,27 @@ class PubSubSender(PubSubForwarder):
         Envoi d'un message à un utilisateur particulier.
         @note: il n'y a pas de réponse du bus à attendre, donc pas de
             C{Deferred} retourné
-        @param xml: le message a envoyé sous forme XML
+        @param xml: le message a envoyer sous forme XML
         @type xml: twisted.words.xish.domish.Element
         """
-        # il faut l'envoyer vers un destinataire en particulier
+        # Préparation du message
         msg = domish.Element((None, "message"))
         msg["to"] = xml['to']
         msg["from"] = self.parent.jid.userhostJID().full()
         msg["type"] = 'chat'
-        body = xml.firstChildElement()
-        msg.addElement("body", content=body)
-        # if not connected store the message
-        if not self.isConnected():
-            self._send_failed(Failure(XMPPNotConnectedError()),
-                              xml.toXml().encode('utf8'))
-        else:
+        msg.addElement("body", content=xml.firstChildElement())
+        # Tentative d'envoi du message
+        try:
             self.xmlstream.send(msg)
+        except AttributeError:
+            self._send_failed(
+                Failure(XMPPNotConnectedError()),
+                xml.toXml().encode('utf8')
+            )
+        # Suppression de l'objet contenant le
+        # message pour limiter l'occupation mémoire.
+        finally:
+            del msg
 
     def publishXml(self, xml):
         """

@@ -18,9 +18,11 @@ from nose.twistedtools import reactor, deferred
 
 from twisted.internet import defer
 from twisted.words.xish import domish
+from twisted.words.protocols.jabber.jid import JID
 
 from vigilo.connector.forwarder import PubSubSender
-from vigilo.pubsub.xml import NS_PERF
+from vigilo.pubsub.xml import NS_PERF, NS_COMMAND
+from vigilo.connector import MESSAGEONETOONE
 
 from helpers import XmlStreamStub, wait
 
@@ -44,11 +46,23 @@ class TestForwarder(unittest.TestCase):
     @defer.inlineCallbacks
     def test_store_message(self):
         """Stockage local d'un message lorsque le bus est indisponible."""
-        # Preparation du message
+        # Preparation d'un premier message
         msg = domish.Element((NS_PERF, 'perf'))
         msg.addElement('test', content="this is a test")
 
         before = yield self.publisher.retry.qsize()
+        yield self.publisher.processMessage(msg)
+        after = yield self.publisher.retry.qsize()
+        self.assertEqual(after, before + 1)
+
+        # Preparation d'un second message (OneToOne cette fois)
+        msg = domish.Element((NS_COMMAND, MESSAGEONETOONE))
+        msg.addElement('test', content="this is a test")
+        msg['to'] = 'toto'
+        self.publisher.parent = self
+        self.jid = JID('foo@bar')
+
+        before = after
         yield self.publisher.processMessage(msg)
         after = yield self.publisher.retry.qsize()
         self.assertEqual(after, before + 1)
