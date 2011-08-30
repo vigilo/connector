@@ -2,7 +2,7 @@
 # Copyright (C) 2006-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
-from twisted.internet import reactor, defer
+from twisted.internet import reactor, defer, error
 from twisted.python import log
 from twisted.words.protocols.jabber import xmlstream
 from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism, \
@@ -45,7 +45,10 @@ class ModifiedXmlStreamFactory(xmlstream.XmlStreamFactory):
         if not self.continueTrying:
             log.msg("Could not connect: %s" % reason.value, isError=1,
                     failure=reason)
-            reactor.stop()
+            try:
+                reactor.stop()
+            except error.ReactorNotRunning:
+                pass
         else:
             self.retry()
 
@@ -149,8 +152,12 @@ class VigiloXMPPClient(client.XMPPClient):
         if failure.check(SASLNoAcceptableMechanism, SASLAuthError):
             LOGGER.error(_("Authentication failure: %s"),
                          failure.getErrorMessage())
-            reactor.stop()
+            try:
+                reactor.stop()
+            except error.ReactorNotRunning:
+                pass
             return
+
         if failure.check(xmlstream.FeatureNotAdvertized):
             # Le nom de la fonctionnalité non-supportée n'est pas transmis
             # avec l'erreur. On calcule le différentiel entre ce qu'on a
@@ -165,8 +172,12 @@ class VigiloXMPPClient(client.XMPPClient):
                     LOGGER.error(_("The server does not support "
                                     "the '%s' feature"),
                                     initializer.feature[1])
-            reactor.stop()
+            try:
+                reactor.stop()
+            except error.ReactorNotRunning:
+                pass
             return
+
         client.XMPPClient.initializationFailed(self, failure)
 
     def stopService(self):
