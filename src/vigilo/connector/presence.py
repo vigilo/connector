@@ -45,6 +45,7 @@ class PresenceManager(xmppim.PresenceClientProtocol):
 
     def connectionInitialized(self):
         super(PresenceManager, self).connectionInitialized()
+        LOGGER.info(_('Connected to the XMPP bus'))
         def start_sending():
             if not self._task.running:
                 self._task.start(self.getFrequency())

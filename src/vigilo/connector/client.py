@@ -17,48 +17,6 @@ from vigilo.common.gettext import translate
 _ = translate(__name__)
 
 
-class ModifiedXmlStreamFactory(xmlstream.XmlStreamFactory):
-    """
-    Factory XmlStream modifiée pour empêcher les reconnexions automatiques
-    lorsque la toute première connexion échoue. Après la première connexion,
-    si une déconnexion survient, une tentative de reconnexion automatique
-    a lieu (avec délai exponentiel).
-    
-    Ceci permet de détecter plus rapidement les erreurs de configuration
-    en quittant immédiatement lors du démarrage du connecteur.
-    """
-
-    def buildProtocol(self, addr):
-        """
-        Prépare le protocole.
-        """
-        self.continueTrying = 1
-        return xmlstream.XmlStreamFactory.buildProtocol(self, addr)
-
-    def clientConnectionFailed(self, connector, reason):
-        """
-        Gère les déconnexions. S'il s'agit de la première connexion,
-        le connecteur s'arrête (pas de reconnexion automatique).
-        Dans les autres cas, on tente régulièrement de se reconnecter,
-        avec un délai exponentiel entre chaque tentative.
-        """
-        if not self.continueTrying:
-            log.msg("Could not connect: %s" % reason.value, isError=1,
-                    failure=reason)
-            try:
-                reactor.stop()
-            except error.ReactorNotRunning:
-                pass
-        else:
-            self.retry()
-
-def HybridClientFactory(jid, password):
-    """
-    Construit la factory capable de gérer les reconnexions automatiques
-    au bus, ainsi que l'authentification.
-    """
-    a = client.HybridAuthenticator(jid, password)
-    return ModifiedXmlStreamFactory(a)
 
 class VigiloXMPPClient(client.XMPPClient):
     """Client XMPP Vigilo"""
@@ -76,15 +34,13 @@ class VigiloXMPPClient(client.XMPPClient):
         self.port = port
 
         # On utilise notre factory personnalisée, que l'on configure.
-        factory = HybridClientFactory(jid, password)
+        if isinstance(self.host, list):
+            factory = VigiloClientFactory(jid, password)
         factory.maxDelay = max_delay
-        factory.continueTrying = 0
         StreamManager.__init__(self, factory)
 
         self.require_tls = require_tls
         self.require_compression = require_compression
-#        if isinstance(self.host, list):
-#            factory = VigiloClientFactory(jid, password)
 
     def _connected(self, xs):
         """
@@ -172,10 +128,13 @@ class VigiloXMPPClient(client.XMPPClient):
                     LOGGER.error(_("The server does not support "
                                     "the '%s' feature"),
                                     initializer.feature[1])
-            try:
-                reactor.stop()
-            except error.ReactorNotRunning:
-                pass
+            # Ça peut être une erreur temporaire du serveur (ejabberd fait ça
+            # des fois sous forte charge), donc on ré-essaye.
+            self._connection.disconnect()
+            #try:
+            #    reactor.stop()
+            #except error.ReactorNotRunning:
+            #    pass
             return
 
         client.XMPPClient.initializationFailed(self, failure)
@@ -276,9 +235,15 @@ class MultipleServerConnector(tcp.Connector):
         log.msg("Connecting to %s" % self.host)
 
     def connectionFailed(self, reason):
+        from vigilo.common.logging import get_logger
+        LOGGER = get_logger(__name__)
+
         assert self._attemptsLeft is not None
         self._attemptsLeft -= 1
         if self._attemptsLeft == 0:
+            LOGGER.warning(_("Server %(oldserver)s did not answer after "
+                    "%(attempts)d attempts"),
+                    {"oldserver": self.host, "attempts": self.attempts})
             self._usableHosts.remove(self.host)
             self.resetAttempts()
             if hasattr(self.factory, "resetDelay"):
@@ -292,24 +257,8 @@ class MultipleServerConnector(tcp.Connector):
         self.pickServer()
         return tcp.Connector._makeTransport(self)
 
-#from twisted.internet import protocol
-#class MultipleServersClientFactory(protocol.ReconnectingClientFactory):
-#    def resetDelay(self):
-#        if self.connector is not None:
-#            self.connector.resetAttempts()
-#        return protocol.ReconnectingClientFactory.resetDelay(self)
-#
-#from twisted.words.xish.xmlstream import XmlStream, XmlStreamFactoryMixin
-#class MultipleServersXmlStreamFactory(XmlStreamFactoryMixin,
-#                                      MultipleServersClientFactory):
-#    protocol = XmlStream
-#
-#    def buildProtocol(self, addr):
-#        self.resetDelay()
-#        return XmlStreamFactoryMixin.buildProtocol(self, addr)
 
-from twisted.words.xish.xmlstream import XmlStreamFactory
-class MultipleServersXmlStreamFactory(XmlStreamFactory):
+class MultipleServersXmlStreamFactory(xmlstream.XmlStreamFactory):
     """
     Sous-classée pour ré-initialiser les tentatives de connexions du connector
     lorsqu'une tentative réussit.
@@ -325,7 +274,8 @@ class MultipleServersXmlStreamFactory(XmlStreamFactory):
         if (self.connector is not None
                 and hasattr(self.connector, "resetAttempts")):
             self.connector.resetAttempts()
-        return XmlStreamFactory.buildProtocol(self, addr)
+        return xmlstream.XmlStreamFactory.buildProtocol(self, addr)
+
 
 from wokkel.client import HybridAuthenticator
 def VigiloClientFactory(jid, password):

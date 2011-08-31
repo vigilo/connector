@@ -123,7 +123,6 @@ class PubSubForwarder(PubSubClient):
         """
         super(PubSubForwarder, self).connectionInitialized()
         self._initialized = True
-        LOGGER.info(_('Connected to the XMPP bus'))
         if not self._task_process_queue.running:
             if self.retry is None:
                 d = defer.succeed(None)
