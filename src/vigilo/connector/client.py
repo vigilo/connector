@@ -36,6 +36,8 @@ class VigiloXMPPClient(client.XMPPClient):
         # On utilise notre factory personnalisée, que l'on configure.
         if isinstance(self.host, list):
             factory = VigiloClientFactory(jid, password)
+        else:
+            factory = client.HybridClientFactory(jid, password)
         factory.maxDelay = max_delay
         StreamManager.__init__(self, factory)
 
