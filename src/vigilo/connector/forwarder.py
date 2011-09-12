@@ -190,6 +190,8 @@ class PubSubForwarder(PubSubClient):
         simultanés.
         @param msg: le message à envoyer
         """
+        if not isinstance(msg, basestring):
+            msg = msg.toXml().encode("utf-8")
         self.queue.append(msg)
         reactor.callLater(0, self.processQueue)
 
@@ -296,9 +298,12 @@ class PubSubForwarder(PubSubClient):
                 return msg # le backup est prioritaire
             # rien dans le backup, on essaye la file principale
             try:
-                return self.queue.popleft()
+                msg = self.queue.popleft()
             except IndexError:
                 return None # rien à faire
+            if isinstance(msg, basestring):
+                msg = parseXml(msg)
+            return msg
         d.addCallback(get_from_queue)
         return d
 
