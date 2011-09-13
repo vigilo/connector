@@ -58,6 +58,10 @@ class PubSubForwarder(PubSubClient):
     @ivar max_send_simult: le nombre de messages qu'on est autorisé à envoyer
         en simultané avant de devoir s'arrêter pour écouter les réponses du bus
     @type max_send_simult: C{int}
+    @ivar _process_as_string: Détermine le format passé à L{processMessage} :
+        si C{True}, c'est une C{str}, si C{False}  c'est un C{domish.Element}.
+        Par défaut: C{False}.
+    @type _process_as_string: C{bool}
     """
 
     def __init__(self, dbfilename=None, dbtable=None):
@@ -89,6 +93,7 @@ class PubSubForwarder(PubSubClient):
         self._pending_replies = []
         self._processing_queue = False
         self._messages_forwarded = 0
+        self._process_as_string = False
 
     def _build_queue(self):
         max_queue_size = self._max_queue_size()
@@ -301,7 +306,7 @@ class PubSubForwarder(PubSubClient):
                 msg = self.queue.popleft()
             except IndexError:
                 return None # rien à faire
-            if isinstance(msg, basestring):
+            if not self._process_as_string and isinstance(msg, basestring):
                 msg = parseXml(msg)
             return msg
         d.addCallback(get_from_queue)
