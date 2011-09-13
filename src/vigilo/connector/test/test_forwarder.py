@@ -209,7 +209,7 @@ class TestForwarder(unittest.TestCase):
 
     @deferred(timeout=30)
     @defer.inlineCallbacks
-    def test_process_as_string(self):
+    def test_process_as_domish(self):
         # Preparation
         msg = domish.Element((NS_PERF, 'perf'))
         msg.addElement('test', content="this is a test")
@@ -225,7 +225,7 @@ class TestForwarder(unittest.TestCase):
         print processed
         self.assertTrue(isinstance(processed[0], domish.Element))
         # Cette fois-ci, on demande explicitement de conserver une string
-        self.publisher._process_as_string = True
+        self.publisher._process_as_domish = False
         self.publisher.forwardMessage(msg)
         yield wait(0.5)
         self.assertEqual(len(processed), 2)
