@@ -10,6 +10,8 @@ import unittest
 #from twisted.trial import unittest
 from nose.twistedtools import reactor, deferred
 
+from mock import Mock
+
 from twisted.words.protocols.jabber.jid import JID
 
 from vigilo.common.conf import settings
@@ -27,6 +29,12 @@ class ForwarderStub(object):
 class PresenceManagerTest(unittest.TestCase):
     """Teste la gestion de la présence"""
 
+    def setUp(self):
+        self.pm = PresenceManager()
+        self.xs = XmlStreamStub()
+        self.pm.xmlstream = self.xs.xmlstream
+        self.pm.setHandlerParent(HandlerStub(self.xs.xmlstream))
+
     def tearDown(self):
         # On a touché aux settings
         settings.reset()
@@ -34,200 +42,179 @@ class PresenceManagerTest(unittest.TestCase):
 
     def test_choose_prio_static(self):
         """Choix d'une priorité statique"""
-        pm = PresenceManager()
-        pm.static_priority = 42
-        self.assertEqual(pm.choosePriority(), 42)
+        self.pm.static_priority = 42
+        # Envoyé à la connexion: prio 0
+        self.pm.availableReceived(self.pm.parent.jid)
+        self.assertEqual(len(self.xs.output), 1)
+        print self.xs.output[0].toXml()
+        self.assertEqual(str(self.xs.output[0].priority), "42")
 
     def test_choose_prio_alone(self):
         """Choix d'une priorité quand on est seul"""
-        pm = PresenceManager()
-        self.assertEqual(pm.choosePriority(), 1)
+        self.pm.availableReceived(self.pm.parent.jid)
+        self.assertEqual(len(self.xs.output), 1)
+        print self.xs.output[0].toXml()
+        self.assertEqual(str(self.xs.output[0].priority), "1")
 
-    def test_choose_prio_2_1(self):
-        """Choix d'une priorité à deux (1)"""
-        pm = PresenceManager()
-        pm.priority = 1
-        pm._priorities["other"] = 2
-        self.assertEqual(pm.choosePriority(), 3)
+    def test_max_priority(self):
+        self.pm.priority = 1
+        self.pm._priorities["other1"] = 2
+        self.pm._priorities["other2"] = 3
+        self.assertEqual(self.pm.getMaxPriority(), 4)
 
-    def test_choose_prio_2_2(self):
-        """Choix d'une priorité à deux (2)"""
-        pm = PresenceManager()
-        pm.priority = 2
-        pm._priorities["other"] = 1
-        self.assertEqual(pm.choosePriority(), 3)
+    def test_become_master(self):
+        self.pm.priority = 1
+        self.pm._priorities["other"] = 2
+        self.pm.tryToBecomeMaster()
+        self.assertEqual(len(self.xs.output), 1)
+        print self.xs.output[0].toXml()
+        self.assertEqual(str(self.xs.output[0].priority), "3")
 
-    def test_choose_prio_2_3(self):
-        """Choix d'une priorité à deux (3)"""
-        pm = PresenceManager()
-        pm.priority = 3
-        pm._priorities["other"] = 1
-        self.assertEqual(pm.choosePriority(), 2)
+    def test_become_master_already_taken(self):
+        self.pm.priority = 1
+        self.pm._priorities["other"] = 3
+        self.pm.tryToBecomeMaster()
+        self.assertEqual(len(self.xs.output), 0)
+        self.assertTrue(self.pm._changeTimer.active())
 
-    def test_choose_prio_3_1(self):
-        """Choix d'une priorité à trois (1)"""
-        pm = PresenceManager()
-        pm.priority = 1
-        pm._priorities["other1"] = 2
-        pm._priorities["other2"] = 3
-        self.assertEqual(pm.choosePriority(), 4)
+    def test_lower_priority(self):
+        self.pm.priority = 2
+        self.pm._priorities["other"] = 1
+        other = JID("jid@example.com/other")
+        self.pm.availableReceived(other, priority=3)
+        self.assertEqual(len(self.xs.output), 1)
+        print self.xs.output[0].toXml()
+        self.assertEqual(str(self.xs.output[0].priority), "1")
 
-    def test_choose_prio_3_2(self):
-        """Choix d'une priorité à trois (2)"""
-        pm = PresenceManager()
-        pm.priority = 2
-        pm._priorities["other1"] = 1
-        pm._priorities["other2"] = 3
-        self.assertEqual(pm.choosePriority(), 4)
+    def test_lower_priority_already_lowest(self):
+        """On ne peut pas baisser la dispo en-dessous de 1"""
+        self.pm.priority = 1
+        self.pm._priorities["other"] = 1
+        other = JID("jid@example.com/other")
+        self.pm.availableReceived(other, priority=3)
+        self.assertEqual(len(self.xs.output), 0)
 
-    def test_choose_prio_3_3(self):
-        """Choix d'une priorité à trois (3)"""
-        pm = PresenceManager()
-        pm.priority = 3
-        pm._priorities["other1"] = 1
-        pm._priorities["other2"] = 4
-        self.assertEqual(pm.choosePriority(), 2)
+    def test_lower_priority_already_taken(self):
+        """Baisser la prio ne fait rien si elle n'est pas dispo"""
+        self.pm.priority = 2
+        self.pm._priorities["other"] = 3
+        other = JID("jid@example.com/other")
+        self.pm.availableReceived(other, priority=1)
+        self.assertEqual(len(self.xs.output), 0)
 
-    def test_overloaded(self):
-        """Gestion de la surchage du Forwarder"""
-        f = ForwarderStub()
-        pm = PresenceManager(f)
-        settings["connector"]["max_queue_size"] = 2
-        f.queue = [1, 2, 3]
-        self.assertTrue(pm.isOverloaded())
+    def test_lower_priority_unavailable(self):
+        """Baisser la prio ne fait rien si on est indispo"""
+        self.pm.priority = -1
+        self.pm._priorities["other"] = 1
+        other = JID("jid@example.com/other")
+        self.pm.availableReceived(other, priority=3)
+        self.assertEqual(len(self.xs.output), 0)
 
-    def test_sendpresence_overloaded(self):
-        """Envoi de présence quand le forwarder est surchargé"""
-        pm = PresenceManager(ForwarderStub())
-        pm.isOverloaded = lambda: True
-        xs = XmlStreamStub()
-        pm.xmlstream = xs.xmlstream
-        pm.setHandlerParent(HandlerStub(xs.xmlstream))
-        pm.priority = 1
-        pm.sendPresence()
-        self.assertEqual(pm.priority, -1)
-        self.assertEqual(len(xs.output), 1)
-        self.assertEqual(xs.output[0].toXml(),
-                         "<presence type='unavailable'/>")
+    def test_master_for_too_long(self):
+        """Protection contre un maitre permanent"""
+        self.pm.priority = 3
+        self.pm._priorities["other"] = 1
+        self.pm._dictatorshipPrevention()
+        self.assertEqual(len(self.xs.output), 1)
+        print self.xs.output[0].toXml()
+        self.assertEqual(str(self.xs.output[0].priority), "2")
 
-    def test_sendpresence_already_overloaded(self):
-        """Envoi de présence quand le forwarder était déjà surchargé"""
-        pm = PresenceManager(ForwarderStub())
-        pm.isOverloaded = lambda: True
-        xs = XmlStreamStub()
-        pm.xmlstream = xs.xmlstream
-        pm.setHandlerParent(HandlerStub(xs.xmlstream))
-        pm.priority = -1
-        pm.sendPresence()
-        self.assertEqual(pm.priority, -1)
-        self.assertEqual(len(xs.output), 0)
+    def test_reset(self):
+        """Le reset de la prio ré-organise les priorités"""
+        self.pm.parent.jid.resource = "a"
+        self.pm.priority = 3
+        self.pm._priorities["b"] = 2
+        self.pm._priorities["c"] = 1
+        self.pm.reset()
+        self.assertEqual(len(self.xs.output), 1)
+        print self.xs.output[0].toXml()
+        self.assertEqual(str(self.xs.output[0].priority), "1")
 
-    def test_sendpresence_nochange(self):
-        """Envoi de présence sans changement"""
-        pm = PresenceManager()
-        xs = XmlStreamStub()
-        pm.xmlstream = xs.xmlstream
-        pm.priority = 1
-        pm.sendPresence(1)
-        self.assertEqual(len(xs.output), 0)
+    def test_reset_unavailable(self):
+        """Le reset de la prio ne fait rien si on est unavailable"""
+        self.pm.priority = -1
+        self.pm.reset()
+        self.assertEqual(len(self.xs.output), 0)
 
-    def test_sendpresence(self):
-        """Envoi de présence"""
-        pm = PresenceManager()
-        xs = XmlStreamStub()
-        pm.xmlstream = xs.xmlstream
-        pm.setHandlerParent(HandlerStub(xs.xmlstream))
-        pm.sendPresence()
-        self.assertEqual(len(xs.output), 1)
-        self.assertEqual(xs.output[0].toXml(),
-                         "<presence><priority>1</priority></presence>")
-        self.assertEqual(pm._task.interval, 10)
+    def test_chosen_lowest(self):
+        """Si on prend la prio 1, il faut préparer un changement de prio"""
+        self.pm._priorities["other"] = 2
+        self.pm.availableReceived(self.pm.parent.jid, priority=1)
+        self.assertEqual(len(self.xs.output), 0)
+        self.assertTrue(self.pm._changeTimer.active())
 
-    def test_available_self(self):
-        """Réception de notre propre présence"""
-        pm = PresenceManager()
-        xs = XmlStreamStub()
-        pm.xmlstream = xs.xmlstream
-        pm.setHandlerParent(HandlerStub(xs.xmlstream))
-        pm.availableReceived(JID("jid@example.com"), priority=24)
-        self.assertEqual(pm.priority, 24)
-        self.assertEqual(pm._priorities, {})
+    def test_got_unavailable(self):
+        """Un frère s'est déconnecté"""
+        self.pm._priorities["other"] = 2
+        other = JID("jid@example.com/other")
+        self.pm.reset = Mock()
+        self.pm.unavailableReceived(other)
+        self.assertTrue("other" not in self.pm._priorities)
+        self.assertTrue(self.pm.reset.called)
 
-    def test_available_other_account(self):
-        """Réception de la présence d'un autre compte"""
-        pm = PresenceManager()
-        xs = XmlStreamStub()
-        pm.xmlstream = xs.xmlstream
-        pm.setHandlerParent(HandlerStub(xs.xmlstream))
-        pm.availableReceived(JID("jid2@example.com"), priority=24)
-        self.assertEqual(pm._priorities, {})
+    def test_got_negative_priority(self):
+        """Un frère s'est rendu non disponible"""
+        self.pm._priorities["other"] = 2
+        other = JID("jid@example.com/other")
+        self.pm.reset = Mock()
+        self.pm.availableReceived(other, priority=-1)
+        self.assertTrue("other" not in self.pm._priorities)
+        self.assertTrue(self.pm.reset.called)
 
-    def test_available_other(self):
-        """Réception de la présence d'une autre instance"""
-        pm = PresenceManager()
-        xs = XmlStreamStub()
-        pm.xmlstream = xs.xmlstream
-        pm.setHandlerParent(HandlerStub(xs.xmlstream))
-        pm.availableReceived(JID("jid@example.com/testresource"), priority=24)
-        self.assertEqual(pm._priorities, {"testresource": 24})
+    def test_got_new_brother(self):
+        """Un frère s'est connecté"""
+        other = JID("jid@example.com/other")
+        self.pm.reset = Mock()
+        self.pm.availableReceived(other)
+        self.assertTrue("other" in self.pm._priorities)
+        self.assertEqual(self.pm._priorities["other"], 0)
+        self.assertTrue(self.pm.reset.called)
 
-    @deferred(timeout=30)
-    def test_available_received_conflict(self):
-        """Réception de présence en conflit"""
-        pm = PresenceManager()
-        xs = XmlStreamStub()
-        pm.xmlstream = xs.xmlstream
-        pm.setHandlerParent(HandlerStub(xs.xmlstream))
-        pm._task.start(60)
-        pm.priority = 1
-        d = wait(0.2)
-        def recv(r):
-            self.assertEqual(pm.priority, 1)
-            pm.availableReceived(JID("jid@example.com/someoneelse"),
-                                 priority=1)
-        d.addCallback(recv)
-        d.addCallback(lambda x: wait(0.2))
-        def check_task_stopped(r):
-            print [ o.toXml() for o in xs.output ]
-            self.assertEqual(str(xs.output[-1].priority), "2")
-            self.assertFalse(pm._task.running)
-        d.addCallback(check_task_stopped)
-        d.addCallback(lambda x: wait(7))
-        def check_task_started(r):
-            self.assertTrue(pm._task.running)
-        d.addCallback(check_task_started)
-        return d
+    def test_got_conflict_on_me(self):
+        """Un frère a pris le même ID que moi"""
+        self.pm.priority = 1
+        self.pm._priorities["other"] = 2
+        other = JID("jid@example.com/other")
+        self.pm.reset = Mock()
+        self.pm.availableReceived(other, priority=1)
+        self.assertTrue(self.pm.reset.called)
 
-    def test_unavailable(self):
-        """Réception d'absence"""
-        pm = PresenceManager()
-        xs = XmlStreamStub()
-        pm.xmlstream = xs.xmlstream
-        pm.setHandlerParent(HandlerStub(xs.xmlstream))
-        pm._priorities["testresource"] = 42
-        pm.unavailableReceived(JID("jid@example.com/testresource"))
-        self.assertEqual(pm._priorities, {})
+    def test_got_conflict_on_others(self):
+        """Un frère a pris le même ID qu'un autre frère"""
+        self.pm.priority = 1
+        self.pm._priorities["other"] = 3
+        self.pm._priorities["other2"] = 2
+        other = JID("jid@example.com/other")
+        self.pm.reset = Mock()
+        self.pm.availableReceived(other, priority=2)
+        self.assertTrue(self.pm.reset.called)
 
-    def test_unavailable_other(self):
-        """Réception d'absence pour un autre compte"""
-        pm = PresenceManager()
-        xs = XmlStreamStub()
-        pm.xmlstream = xs.xmlstream
-        pm.setHandlerParent(HandlerStub(xs.xmlstream))
-        pm._priorities["testresource"] = 42
-        pm.unavailableReceived(JID("jid2@example.com/testresource"))
-        self.assertEqual(pm._priorities, {"testresource": 42})
+    def test_pause_producing(self):
+        self.pm.priority = 1
+        self.pm.pauseProducing()
+        self.assertEqual(self.pm.priority, -1)
+        self.assertEqual(len(self.xs.output), 1)
+        print self.xs.output[0].toXml()
+        self.assertEqual(self.xs.output[0]["type"], "unavailable")
 
-    def test_available_early(self):
-        """Conflit la présence avant d'avoir lancé la boucle principale"""
-        pm = PresenceManager()
-        xs = XmlStreamStub()
-        pm.xmlstream = xs.xmlstream
-        pm.setHandlerParent(HandlerStub(xs.xmlstream))
-        pm.priority = 1
-        # Si le LoopingCall n'est pas encore lançé, une AssertionError sera
-        # levée et fera échouer ce test
-        pm.availableReceived(JID("jid@example.com/someoneelse"), priority=1)
+    def test_pause_producing_already_stopped(self):
+        self.pm.priority = -1
+        self.pm.pauseProducing()
+        self.assertEqual(len(self.xs.output), 0)
 
+    def test_resume_producing(self):
+        self.pm.priority = -1
+        self.pm.reset = Mock()
+        self.pm.resumeProducing()
+        self.assertEqual(len(self.xs.output), 1)
+        print self.xs.output[0].toXml()
+        self.assertEqual(self.xs.output[0].priority, None)
+        self.assertTrue(self.pm.reset.called)
 
+    def test_resume_producing_already_resumed(self):
+        self.pm.priority = 1
+        self.pm.reset = Mock()
+        self.pm.resumeProducing()
+        self.assertEqual(len(self.xs.output), 0)
+        self.assertFalse(self.pm.reset.called)
 

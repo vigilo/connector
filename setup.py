@@ -10,6 +10,7 @@ tests_require = [
     'coverage',
     'nose',
     'pylint',
+    'mock',
 ]
 
 def install_i18n(i18ndir, destdir):

@@ -79,6 +79,7 @@ class PubSubForwarder(PubSubClient):
         self._service = JID(settings['bus']['service'])
         # copy: on modifie la hashmap dans status.py
         self._nodetopublish = settings.get('publications', {}).copy()
+        self.max_queue_size = self._max_queue_size()
         self._build_queue()
         self._initialized = False
         # Base de backup
@@ -94,11 +95,12 @@ class PubSubForwarder(PubSubClient):
         self._processing_queue = False
         self._messages_forwarded = 0
         self._process_as_domish = True
+        # Gestionnaire de présence
+        self.producer = None
 
     def _build_queue(self):
-        max_queue_size = self._max_queue_size()
-        if max_queue_size is not None:
-            self.queue = deque(maxlen=max_queue_size)
+        if self.max_queue_size is not None:
+            self.queue = deque(maxlen=self.max_queue_size)
         else:
             # sur python < 2.6, il n'y a pas de maxlen
             self.queue = deque()
@@ -120,6 +122,13 @@ class PubSubForwarder(PubSubClient):
                              "on Python >= 2.6. Ignoring."))
             max_queue_size = None
         return max_queue_size
+
+    def registerProducer(self, producer, streaming):
+        assert streaming == True # on ne sait pas gérer autre chose
+        self.producer = producer
+
+    def unregisterProducer(self):
+        self.producer = None
 
     def connectionInitialized(self):
         """
@@ -195,6 +204,11 @@ class PubSubForwarder(PubSubClient):
         simultanés.
         @param msg: le message à envoyer
         """
+        if (self.producer is not None and self.max_queue_size is not None
+                and len(self.queue) >= (self.max_queue_size * 0.99) ):
+            LOGGER.info(_("Queue size too high (%s) ! Pausing reception"),
+                        len(self.queue))
+            self.producer.pauseProducing()
         if isinstance(msg, domish.Element):
             msg = msg.toXml().encode("utf-8")
         self.queue.append(msg)
@@ -282,7 +296,7 @@ class PubSubForwarder(PubSubClient):
         while len(self.queue) > 0:
             self._messages_forwarded += 1
             msg = self.queue.popleft()
-            if not isinstance(msg, basestring):
+            if isinstance(msg, domish.Element):
                 msg = msg.toXml().encode("utf-8")
             d = self.retry.put(msg)
             d.addErrback(eb)
@@ -301,11 +315,18 @@ class PubSubForwarder(PubSubClient):
         def get_from_queue(msg):
             if msg is not None:
                 return msg # le backup est prioritaire
-            # rien dans le backup, on essaye la file principale
+            # rien dans le backup, on vérifie s'il faut reprendre la réception
+            if (self.producer is not None and self.max_queue_size is not None
+                    and len(self.queue) <= (self.max_queue_size * 0.10) ):
+                LOGGER.info(_("Queue size low enough (%s), resuming reception"),
+                            len(self.queue))
+                self.producer.resumeProducing()
+            # on dépile la file principale
             try:
                 msg = self.queue.popleft()
             except IndexError:
-                return None # rien à faire
+                # plus de messages
+                return None
             if self._process_as_domish and isinstance(msg, basestring):
                 msg = parseXml(msg)
             return msg

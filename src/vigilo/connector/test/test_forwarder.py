@@ -10,11 +10,14 @@ import os, os.path
 import tempfile
 import shutil
 import unittest
+from collections import deque
 
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
 # produites par ce module !!!
 #from twisted.trial import unittest
 from nose.twistedtools import reactor, deferred
+
+from mock import Mock
 
 from twisted.internet import defer
 from twisted.words.xish import domish
@@ -232,4 +235,28 @@ class TestForwarder(unittest.TestCase):
         print processed
         self.assertTrue(isinstance(processed[1], basestring))
 
+    @deferred(timeout=30)
+    def test_queue_full(self):
+        """Si la file est pleine, on met en pause la réception"""
+        self.publisher.max_queue_size = 100
+        self.publisher._process_as_domish = False
+        self.publisher.queue = deque(range(99))
+        producer = Mock()
+        self.publisher.registerProducer(producer, True)
+        self.publisher.forwardMessage(42)
+        self.assertTrue(producer.pauseProducing.called)
+        return defer.succeed(None)
+
+    @deferred(timeout=30)
+    def test_queue_empty(self):
+        """Si la file est vide, on ré-active la réception"""
+        self.publisher.max_queue_size = 100
+        self.publisher._process_as_domish = False
+        self.publisher.queue = deque(range(2))
+        producer = Mock()
+        self.publisher.registerProducer(producer, True)
+        self.publisher._get_next_msg()
+        self.assertEqual(len(self.publisher.queue), 1)
+        self.assertTrue(producer.resumeProducing.called)
+        return defer.succeed(None)
 
