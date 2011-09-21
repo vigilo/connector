@@ -264,7 +264,7 @@ class PresenceManager(xmppim.PresenceClientProtocol):
     def resumeProducing(self):
         if self.priority >= 0:
             return
-        LOGGER.debug("Resuming data production")
+        LOGGER.info("Resuming data production")
         self.available(priority=0) # va déclencher un reset chez les autres
         self.reset()
 

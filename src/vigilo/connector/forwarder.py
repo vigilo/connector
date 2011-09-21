@@ -318,8 +318,6 @@ class PubSubForwarder(PubSubClient):
             # rien dans le backup, on vérifie s'il faut reprendre la réception
             if (self.producer is not None and self.max_queue_size is not None
                     and len(self.queue) <= (self.max_queue_size * 0.10) ):
-                LOGGER.info(_("Queue size low enough (%s), resuming reception"),
-                            len(self.queue))
                 self.producer.resumeProducing()
             # on dépile la file principale
             try:
