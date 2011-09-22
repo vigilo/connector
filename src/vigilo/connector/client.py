@@ -16,9 +16,8 @@ from wokkel.subprotocols import StreamManager
 from vigilo.connector.compression import CompressInitiatingInitializer
 from vigilo.pubsub.ipv6 import ipv6_compatible_udp_port
 
-from vigilo.common.gettext import translate
+from vigilo.common.gettext import translate, l_
 _ = translate(__name__)
-
 
 class VigiloXMPPClient(client.XMPPClient):
     """Client XMPP Vigilo"""
@@ -104,6 +103,17 @@ class VigiloXMPPClient(client.XMPPClient):
         from vigilo.common.logging import get_logger
         LOGGER = get_logger(__name__)
 
+        tls_errors = {
+            xmlstream.TLSFailed:
+                l_("Some error occurred while negotiating TLS encryption"),
+            xmlstream.TLSRequired:
+                l_("The server requires TLS encryption. Use the "
+                    "'require_tls' option to enable TLS encryption."),
+            xmlstream.TLSNotSupported:
+                l_("TLS encryption was required, but pyOpenSSL is "
+                    "not installed"),
+        }
+
         if fail.check(SASLNoAcceptableMechanism, SASLAuthError):
             LOGGER.error(_("Authentication failure: %s"),
                          fail.getErrorMessage())
@@ -135,6 +145,13 @@ class VigiloXMPPClient(client.XMPPClient):
             #except error.ReactorNotRunning:
             #    pass
             return
+
+        # S'il s'agit d'une erreur liée à TLS autre le manque de support
+        # par le serveur, on affiche un message traduit pour aider à la
+        # résolution du problème.
+        tls_error = fail.check(*tls_errors.keys())
+        if tls_error:
+            LOGGER.error(_(tls_errors[tls_error]))
 
         client.XMPPClient.initializationFailed(self, fail)
 
@@ -411,7 +428,7 @@ class OneShotClient(object):
         except Exception, e:
             self._logger.error(_(
                 "The following exception was raised when "
-                "trying to create the lock file : %s. "
+                "trying to create the lock file: %s. "
                 "Cowardly exiting..."),
                 e
             )
@@ -423,7 +440,7 @@ class OneShotClient(object):
         )
         return 0
 
-    def _stop(self, result, code):
+    def _stop(self, result, code, stream=None):
         """
         Arrête proprement le connecteur, en supprimant le fichier de
         lock et en affichant un message d'erreur en cas de timeout.
@@ -435,16 +452,55 @@ class OneShotClient(object):
             pass
 
         if isinstance(result, failure.Failure):
+            tls_errors = {
+                xmlstream.TLSFailed:
+                    l_("Some error occurred while negotiating TLS encryption"),
+                xmlstream.TLSRequired:
+                    l_("The server requires TLS encryption. Use the "
+                        "'require_tls' option to enable TLS encryption."),
+                xmlstream.TLSNotSupported:
+                    l_("TLS encryption was required, but pyOpenSSL is "
+                        "not installed"),
+            }
+
             if result.check(defer.TimeoutError):
                 self._logger.error(_("Timeout"))
+
             elif result.check(SASLNoAcceptableMechanism, SASLAuthError):
                 self._logger.error(_("Authentication failed: %s"),
                                 result.getErrorMessage())
+
             elif result.check(xmlstream.FeatureNotAdvertized):
-                self._logger.error(_("Server does not support TLS encryption."))
-                return
+                # Le nom de la fonctionnalité non-supportée n'est pas transmis
+                # avec l'erreur. On calcule le différentiel entre ce qu'on a
+                # demandé et ce qu'on a obtenu pour trouver son nom.
+                for initializer in stream.initializers:
+                    if not isinstance(initializer, \
+                        xmlstream.BaseFeatureInitiatingInitializer):
+                        continue
+
+                    if initializer.required and \
+                        initializer.feature not in stream.features:
+                        self._logger.error(_("The server does not support "
+                                            "the '%s' feature"),
+                                            initializer.feature[1])
+
             else:
-                self._logger.error(_("Error: %s"), result.getErrorMessage())
+                # S'il s'agit d'une erreur liée à TLS autre le manque de support
+                # par le serveur, on affiche un message traduit pour aider à la
+                # résolution du problème.
+                tls_error = result.check(*tls_errors.keys())
+                if tls_error:
+                    self._logger.error(_(tls_errors[tls_error]))
+
+                # Message générique pour signaler l'erreur
+                else:
+                    self._logger.error(
+                        _("Error: %(message)s (%(type)r)"), {
+                            'message': result.getErrorMessage(),
+                            'type': str(result),
+                        }
+                    )
         else:
             self._logger.debug(_("Exiting with no error"))
 
@@ -512,13 +568,16 @@ class OneShotClient(object):
             self._logger.warning(_("No handler registered for this "
                                     "one-shot XMPP client"))
 
+        d.addErrback(lambda fail: self._stop(
+            fail,
+            code=1,
+            stream=factory.streamManager.xmlstream
+        ))
+
         # Déconnecte le client du bus XMPP.
         d.addCallback(lambda _dummy: factory.streamManager.xmlstream.sendFooter())
-        d.addCallbacks(
-            self._stop, self._stop,
-            callbackKeywords={'code': 0},
-            errbackKeywords={'code': 1},
-        )
+        d.addCallback(self._stop, code=0)
+        d.addErrback(lambda _dummy: None)
 
         # Garde-fou : on limite la durée de vie du connecteur.
         reactor.callLater(

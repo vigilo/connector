@@ -7,9 +7,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: vigilo-connector 2.0.5\n"
+"Project-Id-Version: vigilo-connector 2.0.7\n"
 "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
-"POT-Creation-Date: 2011-08-19 18:47+0200\n"
+"POT-Creation-Date: 2011-09-22 19:32+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,24 +18,106 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/client.py:107
+#: src/vigilo/connector/client.py:67
 msgid "'require_compression' cannot be True when 'require_tls' is also True."
 msgstr ""
 
-#: src/vigilo/connector/client.py:150
+#: src/vigilo/connector/client.py:108 src/vigilo/connector/client.py:457
+msgid "Some error occurred while negotiating TLS encryption"
+msgstr ""
+
+#: src/vigilo/connector/client.py:110 src/vigilo/connector/client.py:459
+msgid ""
+"The server requires TLS encryption. Use the 'require_tls' option to enable "
+"TLS encryption."
+msgstr ""
+
+#: src/vigilo/connector/client.py:113 src/vigilo/connector/client.py:462
+msgid "TLS encryption was required, but pyOpenSSL is not installed"
+msgstr ""
+
+#: src/vigilo/connector/client.py:118
 #, python-format
 msgid "Authentication failure: %s"
 msgstr ""
 
-#: src/vigilo/connector/client.py:165
+#: src/vigilo/connector/client.py:137 src/vigilo/connector/client.py:484
 #, python-format
 msgid "The server does not support the '%s' feature"
 msgstr ""
 
-#: src/vigilo/connector/client.py:238
+#: src/vigilo/connector/client.py:224
 msgid ""
 "The \"watched_topics\" option has now been renamed into \"subscriptions\". "
 "Please update your configuration file."
+msgstr ""
+
+#: src/vigilo/connector/client.py:260
+#, python-format
+msgid "Server %(oldserver)s did not answer after %(attempts)d attempts"
+msgstr ""
+
+#: src/vigilo/connector/client.py:387
+#, python-format
+msgid "Creating lock file in %s"
+msgstr ""
+
+#: src/vigilo/connector/client.py:397
+#, python-format
+msgid ""
+"Found a lock file, but the following exception was raised when trying to open"
+" it: %s. Cowardly exiting..."
+msgstr ""
+
+#: src/vigilo/connector/client.py:405
+#, python-format
+msgid "Another instance of this connector is already running (PID: %s). Exiting..."
+msgstr ""
+
+#: src/vigilo/connector/client.py:413
+#, python-format
+msgid ""
+"Found a lock file, but no process is running with this PID (%s). Removing "
+"it..."
+msgstr ""
+
+#: src/vigilo/connector/client.py:429
+#, python-format
+msgid ""
+"The following exception was raised when trying to create the lock file: %s. "
+"Cowardly exiting..."
+msgstr ""
+
+#: src/vigilo/connector/client.py:438
+#, python-format
+msgid "Lock file successfully created in %s"
+msgstr ""
+
+#: src/vigilo/connector/client.py:449
+#, python-format
+msgid "Removing lock file (%s)"
+msgstr ""
+
+#: src/vigilo/connector/client.py:467
+msgid "Timeout"
+msgstr ""
+
+#: src/vigilo/connector/client.py:470
+#, python-format
+msgid "Authentication failed: %s"
+msgstr ""
+
+#: src/vigilo/connector/client.py:499
+#, python-format
+msgid "Error: %(message)s (%(type)r)"
+msgstr ""
+
+#: src/vigilo/connector/client.py:505
+msgid "Exiting with no error"
+msgstr ""
+
+#: src/vigilo/connector/client.py:568
+msgid "No handler registered for this one-shot XMPP client"
 msgstr ""
 
 #: src/vigilo/connector/converttoxml.py:57 src/vigilo/connector/converttoxml.py:64
@@ -57,46 +139,47 @@ msgstr ""
 msgid "no connection to the XMPP server"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:106
+#: src/vigilo/connector/forwarder.py:113
 #, python-format
 msgid ""
 "Can't understand the max_queue_size option, it should be an integer (or 0 for"
 " no limit). Current value: %s"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:114
+#: src/vigilo/connector/forwarder.py:121
 msgid "The max_queue_size option is only available on Python >= 2.6. Ignoring."
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:126
-msgid "Connected to the XMPP bus"
-msgstr ""
-
-#: src/vigilo/connector/forwarder.py:145
+#: src/vigilo/connector/forwarder.py:158
 #, python-format
 msgid "Lost connection to the XMPP bus (reason: %s)"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:177
+#: src/vigilo/connector/forwarder.py:190
 #, python-format
 msgid "Unable to forward the message (%(reason)s)"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:183
+#: src/vigilo/connector/forwarder.py:196
 msgid ". it has been stored for later retransmission"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:256
+#: src/vigilo/connector/forwarder.py:209
+#, python-format
+msgid "Queue size too high (%s) ! Pausing reception"
+msgstr ""
+
+#: src/vigilo/connector/forwarder.py:276
 #, python-format
 msgid "Batch sent, waiting for %d replies from the bus"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:273
+#: src/vigilo/connector/forwarder.py:293
 #, python-format
 msgid "Error trying to save a message to the backup database: %s"
 msgstr ""
 
-#: src/vigilo/connector/forwarder.py:457
+#: src/vigilo/connector/forwarder.py:485
 #, python-format
 msgid "No destination node configured for messages of type '%s'. Skipping."
 msgstr ""
@@ -146,16 +229,23 @@ msgstr ""
 msgid "The configuration file does not exist"
 msgstr ""
 
-#: src/vigilo/connector/presence.py:98
-#, python-format
-msgid "Queue size too high (%s) ! Switching presence to unavailable."
+#: src/vigilo/connector/presence.py:62
+msgid "Invalid value for setting bus/priority: it must be an integer"
 msgstr ""
 
-#: src/vigilo/connector/presence.py:139
-#, python-format
+#: src/vigilo/connector/presence.py:69
+msgid "Connected to the XMPP bus"
+msgstr ""
+
+#: src/vigilo/connector/presence.py:130
 msgid ""
-"Another instance of %(user)s@%(host)s has priority %(priority)d ! (me: "
-"%(me)s, other: %(other)s)"
+"I wanted to become master, but the priority is already taken. This should not"
+" happen."
+msgstr ""
+
+#: src/vigilo/connector/presence.py:236
+#, python-format
+msgid "Priority conflict, resetting priorities (%s)"
 msgstr ""
 
 #: src/vigilo/connector/queuetonodefw.py:86
