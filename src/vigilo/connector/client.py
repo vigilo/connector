@@ -2,8 +2,10 @@
 # Copyright (C) 2006-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
+import os, sys
 from twisted.internet import reactor, defer, error
-from twisted.python import log
+from twisted.application import service
+from twisted.python import log, failure
 from twisted.words.protocols.jabber import xmlstream
 from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism, \
                                                 SASLAuthError
@@ -12,10 +14,10 @@ from wokkel import client
 from wokkel.subprotocols import StreamManager
 
 from vigilo.connector.compression import CompressInitiatingInitializer
+from vigilo.pubsub.ipv6 import ipv6_compatible_udp_port
 
 from vigilo.common.gettext import translate
 _ = translate(__name__)
-
 
 
 class VigiloXMPPClient(client.XMPPClient):
@@ -53,8 +55,6 @@ class VigiloXMPPClient(client.XMPPClient):
         """
         from vigilo.common.logging import get_logger
         LOGGER = get_logger(__name__)
-        from vigilo.common.gettext import translate
-        _ = translate(__name__)
 
         for index, initializer in enumerate(xs.initializers[:]):
             if not isinstance(initializer, xmlstream.TLSInitiatingInitializer):
@@ -96,7 +96,7 @@ class VigiloXMPPClient(client.XMPPClient):
         """
         client.XMPPClient._disconnected(self, xs)
 
-    def initializationFailed(self, failure):
+    def initializationFailed(self, fail):
         """
         Appelé si l'initialisation échoue. Ici, on ajoute la gestion de
         l'erreur d'authentification.
@@ -104,19 +104,16 @@ class VigiloXMPPClient(client.XMPPClient):
         from vigilo.common.logging import get_logger
         LOGGER = get_logger(__name__)
 
-        from vigilo.common.gettext import translate
-        _ = translate(__name__)
-
-        if failure.check(SASLNoAcceptableMechanism, SASLAuthError):
+        if fail.check(SASLNoAcceptableMechanism, SASLAuthError):
             LOGGER.error(_("Authentication failure: %s"),
-                         failure.getErrorMessage())
+                         fail.getErrorMessage())
             try:
                 reactor.stop()
             except error.ReactorNotRunning:
                 pass
             return
 
-        if failure.check(xmlstream.FeatureNotAdvertized):
+        if fail.check(xmlstream.FeatureNotAdvertized):
             # Le nom de la fonctionnalité non-supportée n'est pas transmis
             # avec l'erreur. On calcule le différentiel entre ce qu'on a
             # demandé et ce qu'on a obtenu pour trouver son nom.
@@ -139,7 +136,7 @@ class VigiloXMPPClient(client.XMPPClient):
             #    pass
             return
 
-        client.XMPPClient.initializationFailed(self, failure)
+        client.XMPPClient.initializationFailed(self, fail)
 
     def stopService(self):
         client.XMPPClient.stopService(self)
@@ -285,3 +282,250 @@ def VigiloClientFactory(jid, password):
     a = HybridAuthenticator(jid, password)
     return MultipleServersXmlStreamFactory(a)
 
+
+class DeferredMaybeTLSClientFactory(client.DeferredClientFactory):
+    """
+    Factory asynchrone de clients XMPP de type "one-shot",
+    capable de chiffrer la connexion avec le serveur.
+    """
+
+    def __init__(self, jid, password, require_tls):
+        """
+        Initialiseur de la classe.
+
+        @param jid: Identifiant Jabber du connecteur.
+        @type jid: C{str}
+        @param password: Mot de passe du compteur Jabber du connecteur.
+        @type password: C{str}
+        @param require_tls: Indique si la connexion doit être chiffrée
+            (en utilisant le protocole TLS) ou non.
+        @type require_tls: C{bool}
+        """
+        super(DeferredMaybeTLSClientFactory, self).__init__(jid, password)
+        self.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, self._connected)
+        self.require_tls = require_tls
+
+    def _connected(self, xs):
+        """
+        On modifie dynamiquement l'attribut "required" du plugin
+        d'authentification TLSInitiatingInitializer créé automatiquement
+        par wokkel, pour imposer TLS si l'administrateur le souhaite.
+        """
+        for initializer in xs.initializers:
+            if isinstance(initializer, xmlstream.TLSInitiatingInitializer):
+                initializer.required = self.require_tls
+
+class OneShotClient(object):
+    def __init__(self, jid, password, service,
+                lock_file, timeout,
+                require_tls, require_compression):
+        """
+        Prépare un client XMPP qui ne servira qu'une seule fois (one-shot).
+
+        @param jid: Identifiant Jabber du client.
+        @type jid: C{JID}
+        @param password: Mot de passe associé au compte Jabber.
+        @type password: C{str}
+        @param service: Service de publication à utiliser.
+        @type service: C{JID}
+        @param lock_file: Emplacement du fichier de verrou à créer pour
+            empêcher l'exécution simultanée de plusieurs instances du
+            connecteur.
+        @type lock_file: C{str}
+        @param timeout: Durée maximale d'exécution du connecteur,
+            afin d'éviter des connecteurs "fous".
+        @type timeout: C{int}
+        @param require_tls: Indique si la connexion doit être chiffrée ou non.
+        @type require_tls: C{bool}
+        @param require_compression: Indique si la connexion doit être
+            compressée ou non. Cette option est incompatible avec l'option
+            C{require_tls}. Si les deux options sont activées, la connexion
+            NE SERA PAS compressée (mais elle sera chiffrée).
+        @type require_compression: C{bool}
+        """
+        from vigilo.common.logging import get_logger
+        self._logger = get_logger(__name__)
+        self._jid = jid
+        self._password = password
+        self._service = service
+        self._lock_file = lock_file
+        self._timeout = timeout
+        self._require_tls = require_tls
+        self._require_compression = require_compression
+        self._result = 0
+        self._func = None
+        self._args = ()
+        self._kwargs = {}
+
+    def _create_lockfile(self):
+        """
+        Cette fonction vérifie si une autre instance du connecteur est déjà
+        en cours d'exécution, et arrête le connecteur si c'est le cas.
+        Dans le cas contraire, elle crée un nouveau fichier de lock.
+
+        @return: Code de retour (0 en cas de succès, une autre valeur en cas
+            d'erreur).
+        @rtype: C{int}
+        """
+        self._logger.debug(_("Creating lock file in %s"), self._lock_file)
+
+        # Si un fichier de lock existe et qu'une autre
+        # instance du connecteur est lancée, on quitte
+        if os.path.isfile(self._lock_file):
+            try:
+                f = open(self._lock_file)
+                pid = f.read()
+                f.close()
+            except Exception, e:
+                self._logger.error(_(
+                    "Found a lock file, but the following "
+                    "exception was raised when trying to "
+                    "open it: %s. Cowardly exiting..."),
+                    e
+                )
+                return 1
+            if os.path.exists('/proc/' + str(pid)):
+                self._logger.error(_(
+                    "Another instance of this connector "
+                    "is already running (PID: %s). Exiting..."),
+                    pid
+                )
+                return 1
+            # Sinon, si un fichier de lock existe mais qu'aucune autre
+            # instance du connecteur n'est lancée, on supprime le fichier
+            self._logger.warning(_(
+                "Found a lock file, but no process is "
+                "running with this PID (%s). Removing it..."),
+                pid
+            )
+            try:
+                os.remove(self._lock_file)
+            except:
+                pass
+
+        # Création d'un nouveau fichier de lock
+        try:
+            f = open(self._lock_file, 'w')
+            f.write(str(os.getpid()))
+            f.close()
+        except Exception, e:
+            self._logger.error(_(
+                "The following exception was raised when "
+                "trying to create the lock file : %s. "
+                "Cowardly exiting..."),
+                e
+            )
+            return 1
+
+        self._logger.debug(
+            _("Lock file successfully created in %s"),
+            self._lock_file
+        )
+        return 0
+
+    def _stop(self, result, code):
+        """
+        Arrête proprement le connecteur, en supprimant le fichier de
+        lock et en affichant un message d'erreur en cas de timeout.
+        """
+        try:
+            self._logger.debug(_("Removing lock file (%s)"), self._lock_file)
+            os.remove(self._lock_file)
+        except:
+            pass
+
+        if isinstance(result, failure.Failure):
+            if result.check(defer.TimeoutError):
+                self._logger.error(_("Timeout"))
+            elif result.check(SASLNoAcceptableMechanism, SASLAuthError):
+                self._logger.error(_("Authentication failed: %s"),
+                                result.getErrorMessage())
+            elif result.check(xmlstream.FeatureNotAdvertized):
+                self._logger.error(_("Server does not support TLS encryption."))
+                return
+            else:
+                self._logger.error(_("Error: %s"), result.getErrorMessage())
+        else:
+            self._logger.debug(_("Exiting with no error"))
+
+        self._result = code
+        reactor.stop()
+
+    def setHandler(self, func, *args, **kwargs):
+        """
+        @param func: Configure la fonction à exécuter pour déclencher
+            les traitements de ce connecteur.
+        @type func: C{callable}
+        @note: Les paramètres supplémentaires (nommés ou non) passés
+            à cette méthode seront transmis à L{func} lors de son appel.
+        """
+        self._func = func
+        self._args = args
+        self._kwargs = kwargs
+
+    def run(self, log_traffic=False, app_name='XMPP client'):
+        """
+        Fait fonctionner le connecteur (connexion, traitement, déconnexion).
+
+        @param log_traffic: Indique si le trafic échangé avec le serveur
+            XMPP doit être journalisé ou non.
+        @type log_traffic: C{bool}
+        @param app_name: Nom à donner au client (peut aider au débogage).
+        @type app_name: C{str}
+        @return: Code de retour de l'exécution du connecteur.
+            La valeur 0 est renvoyée lorsque le connecteur a fini son
+            exécution normalement. Toute autre valeur signale une erreur.
+        @rtype: C{int}
+        """
+
+        self._result = self._create_lockfile()
+
+        # Si la création du fichier de verrou renvoie une erreur,
+        # on propage celle-ci.
+        if self._result:
+            return self._result
+
+        # Création de la factory pour le client XMPP.
+        service.Application(app_name)
+        factory = DeferredMaybeTLSClientFactory(
+            self._jid,
+            self._password,
+            self._require_tls,
+        )
+        factory.streamManager.logTraffic = bool(log_traffic)
+
+        # Monkey-patch la classe twisted.internet.udp.Port
+        # pour utiliser une implémentation compatible IPv6.
+        ipv6_compatible_udp_port()
+
+        # Création du client XMPP et ajout de la fonction de traitement.
+        d = client.clientCreator(factory)
+
+        if self._func:
+            d.addCallback(
+                self._func,
+                self._service,
+                *self._args,
+                **self._kwargs
+            )
+        else:
+            self._logger.warning(_("No handler registered for this "
+                                    "one-shot XMPP client"))
+
+        # Déconnecte le client du bus XMPP.
+        d.addCallback(lambda _dummy: factory.streamManager.xmlstream.sendFooter())
+        d.addCallbacks(
+            self._stop, self._stop,
+            callbackKeywords={'code': 0},
+            errbackKeywords={'code': 1},
+        )
+
+        # Garde-fou : on limite la durée de vie du connecteur.
+        reactor.callLater(
+            self._timeout,
+            self._stop,
+            result=failure.Failure(defer.TimeoutError()),
+            code=3
+        )
+        reactor.run()
+        return self._result
