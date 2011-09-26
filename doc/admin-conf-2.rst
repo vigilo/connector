@@ -113,6 +113,7 @@ Les types de messages supportés par un connecteur sont :
 * ``perf`` : messages de performances
 * ``state`` : messages d'état
 * ``event`` : messages d'événements
+* ``command`` : commandes Nagios
 
 La configuration proposée par défaut lors de l'installation du
 connecteur associe chacun de ces types avec un nœud descendant de « /vigilo/ »
@@ -121,9 +122,10 @@ portant le même que le type.
 Exemple de configuration possible, correspondant à une installation standard::
 
     [publications]
-    perf  = /vigilo/perf
-    state = /vigilo/state
-    event = /vigilo/event
+    perf    = /vigilo/perf
+    state   = /vigilo/state
+    event   = /vigilo/event
+    command = /vigilo/command
 
 
 .. _logging:
