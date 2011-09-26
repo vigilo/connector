@@ -1,5 +1,5 @@
-Annexe : Glossaire - Terminologie
----------------------------------
+Glossaire - Terminologie
+------------------------
 
 Ce chapitre recense les différents termes techniques employés dans ce document
 et donne une brève définition de chacun de ces termes.
