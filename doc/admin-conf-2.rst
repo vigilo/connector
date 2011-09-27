@@ -66,6 +66,17 @@ Lorsque les deux options « require_tls » et « require_compression » sont
 « True », un message d'avertissement est inscrit dans les fichiers de log, et
 le connecteur utilisera le chiffrement.
 
+Délai maximum de reconnexion
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+En cas de déconnexion du bus XMPP, les connecteurs se reconnectent
+automatiquement, selon un délai qui augmente exponentiellement (afin d'éviter
+d'innonder les journaux système avec des messages annonçant la reconnexion).
+
+L'option « max_reconnect_delay » permet d'indiquer le délai maximum (en
+secondes) qui peut s'écouler entre 2 tentatives de reconnexion.
+Par défaut, ce délai est fixé à 60 secondes.
+
 Abonnements
 ^^^^^^^^^^^
 L'option « subscriptions » contient la liste des nœuds XMPP auxquels le
