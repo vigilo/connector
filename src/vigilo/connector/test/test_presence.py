@@ -191,30 +191,42 @@ class PresenceManagerTest(unittest.TestCase):
 
     def test_pause_producing(self):
         self.pm.priority = 1
+        sm = Mock()
+        self.pm.registerStatusPublisher(sm)
         self.pm.pauseProducing()
         self.assertEqual(self.pm.priority, -1)
         self.assertEqual(len(self.xs.output), 1)
         print self.xs.output[0].toXml()
         self.assertEqual(self.xs.output[0]["type"], "unavailable")
+        self.assertTrue(sm.queueFull.called)
 
     def test_pause_producing_already_stopped(self):
         self.pm.priority = -1
+        sm = Mock()
+        self.pm.registerStatusPublisher(sm)
         self.pm.pauseProducing()
         self.assertEqual(len(self.xs.output), 0)
+        self.assertFalse(sm.queueFull.called)
 
     def test_resume_producing(self):
         self.pm.priority = -1
         self.pm.reset = Mock()
+        sm = Mock()
+        self.pm.registerStatusPublisher(sm)
         self.pm.resumeProducing()
         self.assertEqual(len(self.xs.output), 1)
         print self.xs.output[0].toXml()
         self.assertEqual(self.xs.output[0].priority, None)
         self.assertTrue(self.pm.reset.called)
+        self.assertTrue(sm.queueOk.called)
 
     def test_resume_producing_already_resumed(self):
         self.pm.priority = 1
         self.pm.reset = Mock()
+        sm = Mock()
+        self.pm.registerStatusPublisher(sm)
         self.pm.resumeProducing()
         self.assertEqual(len(self.xs.output), 0)
         self.assertFalse(self.pm.reset.called)
+        self.assertFalse(sm.queueOk.called)
 

@@ -62,6 +62,7 @@ class StatusPublisher(PubSubSender):
             for msgtype in self._nodetopublish:
                 self._nodetopublish[msgtype] = node
         self.task = task.LoopingCall(self.sendStatus)
+        self.status = (0, _("OK: running"))
         # Pas d'envoi simultané
         self.max_send_simult = 1
         self.batch_send_perf = 1
@@ -93,12 +94,14 @@ class StatusPublisher(PubSubSender):
             '<command xmlns="%(namespace)s">'
                 '<timestamp>%(timestamp)d</timestamp>'
                 '<cmdname>PROCESS_SERVICE_CHECK_RESULT</cmdname>'
-                '<value>%(host)s;%(service)s;0;OK: running</value>'
+                '<value>%(host)s;%(service)s;%(code)d;%(msg)s</value>'
             '</command>' % {
                 "namespace": NS_COMMAND,
                 "timestamp": timestamp,
                 "host": self.hostname,
                 "service": self.servicename,
+                "code": self.status[0],
+                "msg": self.status[1].encode("utf-8"),
                 }
              )
         if self.isConnected():
@@ -127,3 +130,11 @@ class StatusPublisher(PubSubSender):
                         % {"service": self.servicename,
                            "name": statname,
                            "value": statvalue})
+
+    def queueFull(self):
+        self.status = (1, _("WARNING: queue full"))
+        self.sendStatus()
+
+    def queueOk(self):
+        self.status = (0, _("OK: running"))
+        self.sendStatus()

@@ -51,6 +51,7 @@ class PresenceManager(xmppim.PresenceClientProtocol):
     def __init__(self):
         super(PresenceManager, self).__init__()
         self.priority = None
+        self.status_publisher = None
         self._priorities = {}
         self._recentReset = False
         self._changeTimer = None
@@ -253,6 +254,8 @@ class PresenceManager(xmppim.PresenceClientProtocol):
             del self._priorities[entity.resource]
         self.reset()
 
+    def registerStatusPublisher(self, sp):
+        self.status_publisher = sp
 
     # IPushProducer
     def pauseProducing(self):
@@ -260,6 +263,8 @@ class PresenceManager(xmppim.PresenceClientProtocol):
             return
         self.priority = -1
         self.unavailable()
+        if self.status_publisher is not None:
+            self.status_publisher.queueFull()
 
     def resumeProducing(self):
         if self.priority >= 0:
@@ -267,6 +272,8 @@ class PresenceManager(xmppim.PresenceClientProtocol):
         LOGGER.info("Resuming data production")
         self.available(priority=0) # va déclencher un reset chez les autres
         self.reset()
+        if self.status_publisher is not None:
+            self.status_publisher.queueOk()
 
     def stopProducing(self):
         """Non utilisé (on pourrait éventuellement se déconnecter)"""

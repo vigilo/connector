@@ -10,6 +10,8 @@ import unittest
 #from twisted.trial import unittest
 from nose.twistedtools import reactor, deferred
 
+from mock import Mock
+
 from twisted.internet import defer
 
 from vigilo.connector.status import StatusPublisher
@@ -109,4 +111,39 @@ class StatusPublisherTest(unittest.TestCase):
         d.addCallback(check)
         return d
 
+    def test_queueFull(self):
+        sp = StatusPublisher(ForwarderStub(), "dummyhost")
+        sp.sendStatus = Mock()
+        sp.queueFull()
+        self.assertEqual(sp.status[0], 1)
+        self.assertTrue(sp.status[1].startswith("WARNING: "))
+        self.assertTrue(sp.sendStatus.called)
+
+    def test_queueOk(self):
+        sp = StatusPublisher(ForwarderStub(), "dummyhost")
+        sp.sendStatus = Mock()
+        sp.status = (1, "WARNING")
+        sp.queueOk()
+        self.assertEqual(sp.status[0], 0)
+        self.assertTrue(sp.status[1].startswith("OK: "))
+        self.assertTrue(sp.sendStatus.called)
+
+    @deferred(timeout=10)
+    def test_sendStatus_custom_status(self):
+        """Envoi d'un état custom (sendStatus)"""
+        sp = StatusPublisher(ForwarderStub(), "dummyhost")
+        xs = XmlStreamStub(autoreply=True)
+        sp.xmlstream = xs.xmlstream
+        sp.isConnected = lambda: True
+        sp.status = (4, u"état custom")
+        sp.sendStatus()
+        def check(r):
+            #print len(xs.output), [ m.toXml() for m in xs.output ]
+            self.assertEqual(len(xs.output), 2)
+            msg_cmd = xs.output[0].pubsub.publish.item.command
+            self.assertEqual(unicode(msg_cmd.value),
+                             u"dummyhost;test;4;état custom")
+        d = wait(0.2)
+        d.addCallback(check)
+        return d
 
