@@ -14,7 +14,6 @@ from wokkel import client
 from wokkel.subprotocols import StreamManager
 
 from vigilo.connector.compression import CompressInitiatingInitializer
-from vigilo.pubsub.ipv6 import ipv6_compatible_udp_port
 
 from vigilo.common.gettext import translate, l_
 _ = translate(__name__)
@@ -533,6 +532,11 @@ class OneShotClient(object):
             exécution normalement. Toute autre valeur signale une erreur.
         @rtype: C{int}
         """
+        # Importé ici car sinon on importe implicitement
+        # vigilo.pubsub(.__init__) qui utilise des loggers
+        # non initialisés (ce qui génère des avertissements
+        # et empêche l'affichage des vrais logs).
+        from vigilo.pubsub.ipv6 import ipv6_compatible_udp_port
 
         self._result = self._create_lockfile()
 
