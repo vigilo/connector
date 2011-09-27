@@ -29,6 +29,9 @@ from vigilo.connector import MESSAGEONETOONE
 
 from helpers import XmlStreamStub, wait
 
+from vigilo.common.logging import get_logger
+LOGGER = get_logger(__name__)
+
 
 class TestForwarder(unittest.TestCase):
     """Teste la sauvegarde locale de messages en cas d'erreur."""
@@ -142,39 +145,35 @@ class TestForwarder(unittest.TestCase):
         msg = domish.Element((NS_PERF, 'perf'))
         msg.addElement('test', content="dummy")
         # On se connecte
-        stub = XmlStreamStub()
+        stub = XmlStreamStub(autoreply=True)
         self.publisher.xmlstream = stub.xmlstream
         self.publisher.connectionInitialized()
         # On envoie des messages
         print "envoi 1"
         for i in range(10):
-            self.publisher.forwardMessage(msg)
-        # On attend un peu
-        yield wait(0.5)
-        # On simule une réponse du bus
-        for d in self.publisher._pending_replies:
-            d.callback(None)
-        # On attend un peu
-        yield wait(0.5)
-        # On se déconnecte
-        self.publisher.xmlstream = None
-        #self.publisher._initialized = False
+            self.publisher.queue.append(msg)
+        yield self.publisher.processQueue()
+        self.assertEqual(len(self.publisher.queue), 0)
+        # On se déconnecte (ça flushe les messages)
         self.publisher.connectionLost(None)
+        self.publisher._task_process_queue.stop()
         # On envoie des messages (-> backup)
         print "envoi 2"
         for i in range(20):
-            self.publisher.forwardMessage(msg)
-        # On attend un peu
-        yield wait(1)
+            self.publisher.queue.append(msg)
+        yield self.publisher.processQueue()
+        self.assertEqual(len(self.publisher.queue), 0)
         # Les messages sont maintenant soit envoyés soit en base de backup
-        print (self.publisher.retry._cache_isempty,
-               self.publisher.retry.buffer_in,
-               self.publisher.retry.buffer_out)
-        backup_size = yield self.publisher.retry.qsize()
-        self.assertEqual(backup_size, 20)
-        self.assertEqual(len(stub.output), 10)
         # on vide les buffers (pour fiabiliser le test)
         yield self.publisher.retry.flush()
+        backup_size = yield self.publisher.retry.qsize()
+        print (self.publisher.retry._cache_isempty,
+               len(self.publisher.retry.buffer_in),
+               len(self.publisher.retry.buffer_out),
+               len(stub.output), backup_size)
+        LOGGER.debug("Beginning assertions")
+        self.assertEqual(backup_size, 20)
+        self.assertEqual(len(stub.output), 10)
         stats = yield self.publisher.getStats()
         print stats
         self.assertEqual(stats, {

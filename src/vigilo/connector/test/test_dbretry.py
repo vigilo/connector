@@ -12,6 +12,8 @@ import os
 import tempfile
 import unittest
 
+from mock import Mock
+
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
 # produites par ce module !!!
 #from twisted.trial import unittest
@@ -152,6 +154,25 @@ class TestDbRetry(unittest.TestCase):
         print stub.requests
         self.assertEqual( (("VACUUM", ), {}), stub.requests.pop() )
 
+    @deferred(timeout=30)
+    #@defer.inlineCallbacks
+    def test_flush_double(self):
+        """
+        Un double flush doit être mis en file d'attente
+        """
+        db = DbRetry(self.db_path, 'tmp_table')
+        db._flush = Mock()
+        self.assertTrue(db._is_flushing_d is None)
 
-if __name__ == "__main__":
-    unittest.main()
+        d = db.flush()
+        self.assertTrue(db._is_flushing_d is not None)
+        def check(r):
+            self.assertTrue(db._flush.called)
+            self.assertEqual(len(db._flush.call_args_list), 2)
+            # le 2e appel a été déclenché avec le 1er
+            self.assertTrue(d2.called)
+        d2 = db.flush()
+        d.addCallback(check)
+        return d
+
+

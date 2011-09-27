@@ -47,6 +47,7 @@ class DbRetry(object):
         self._load_batch_size = self._buffer_out_min * 10
         self._saving_buffer_in = False
         self._cache_isempty = False
+        self._is_flushing_d = None
         self.initialized = False
         self._table = table
         # threads: http://twistedmatrix.com/trac/ticket/3629
@@ -76,36 +77,47 @@ class DbRetry(object):
         """
         Sauvegarde tout en base, avant de quitter
         """
-        def _flush(txn):
-            def get_from_buffer_out():
-                while len(self.buffer_out) > 0:
-                    yield self.buffer_out.popleft()
-            if self.buffer_out:
-                try:
-                    txn.executemany("INSERT INTO %s VALUES (?, ?)"
-                                    % self._table, get_from_buffer_out())
-                except sqlite3.IntegrityError, e:
-                    LOGGER.debug("IntegrityError while flushing: %s", e)
-                except sqlite3.OperationalError, e:
-                    LOGGER.debug("OperationalError while flushing: %s", e)
-                self._cache_isempty = False
-            def get_from_buffer_in():
-                while len(self.buffer_in) > 0:
-                    msg = self.buffer_in.popleft()
-                    if isinstance(msg, domish.Element):
-                        msg = msg.toXml()
-                    yield (msg, )
-            if self.buffer_in:
-                txn.executemany("INSERT INTO %s VALUES (null, ?)" % self._table,
-                                get_from_buffer_in())
-                self._cache_isempty = False
+        if self._is_flushing_d is not None:
+            self._is_flushing_d.addCallback(lambda _x: self.flush())
+            return self._is_flushing_d
         LOGGER.debug("Flushing the buffers into the base")
-        d = self._db.runInteraction(_flush)
+        self._is_flushing_d = self._db.runInteraction(self._flush)
+        def cb(_x):
+            LOGGER.debug("Done flushing")
+            self._is_flushing_d = None
         def eb(f):
             LOGGER.debug("Error flushing: %s", f)
-            task.deferLater(reactor, 0.5, self.flush)
-        d.addCallbacks(lambda x: LOGGER.debug("Done flushing"), eb)
-        return d
+            self._is_flushing_d = task.deferLater(reactor, 0.5, self.flush)
+            return self._is_flushing_d
+        self._is_flushing_d.addCallbacks(cb, eb)
+        return self._is_flushing_d
+
+    def _flush(self, txn):
+        """
+        Fait réellement le flush, doit être lancé par self._db.runInteraction()
+        """
+        def get_from_buffer_out():
+            while len(self.buffer_out) > 0:
+                yield self.buffer_out.popleft()
+        if self.buffer_out:
+            try:
+                txn.executemany("INSERT INTO %s VALUES (?, ?)"
+                                % self._table, get_from_buffer_out())
+            except sqlite3.IntegrityError, e:
+                LOGGER.debug("IntegrityError while flushing: %s", e)
+            except sqlite3.OperationalError, e:
+                LOGGER.debug("OperationalError while flushing: %s", e)
+            self._cache_isempty = False
+        def get_from_buffer_in():
+            while len(self.buffer_in) > 0:
+                msg = self.buffer_in.popleft()
+                if isinstance(msg, domish.Element):
+                    msg = msg.toXml()
+                yield (msg, )
+        if self.buffer_in:
+            txn.executemany("INSERT INTO %s VALUES (null, ?)" % self._table,
+                            get_from_buffer_in())
+            self._cache_isempty = False
 
     def qsize(self):
         def set_cache(dbresult): # simple sécurité
