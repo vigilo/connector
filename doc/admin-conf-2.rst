@@ -1,11 +1,11 @@
 Connexion au serveur XMPP
 -------------------------
-Le connecteur utilise un bus de communication basé sur le protocole XMPP pour
-communiquer avec les autres connecteurs de Vigilo.
+Le connecteur utilise un bus de communication basé sur le protocole
+:term:`XMPP` pour communiquer avec les autres connecteurs de Vigilo.
 
 Ce chapitre décrit les différentes options de configuration se rapportant à la
-connexion à ce bus de communication, situées dans la section ``[bus]`` du fichier
-de configuration.
+connexion à ce bus de communication, situées dans la section ``[bus]`` du
+fichier de configuration.
 
 Trace des messages
 ^^^^^^^^^^^^^^^^^^
