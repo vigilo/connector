@@ -261,6 +261,7 @@ class PresenceManager(xmppim.PresenceClientProtocol):
     def pauseProducing(self):
         if self.priority < 0:
             return
+        LOGGER.info(_("Pausing data production"))
         self.priority = -1
         self.unavailable()
         if self.status_publisher is not None:

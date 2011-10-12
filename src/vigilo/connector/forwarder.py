@@ -206,8 +206,6 @@ class PubSubForwarder(PubSubClient):
         """
         if (self.producer is not None and self.max_queue_size is not None
                 and len(self.queue) >= (self.max_queue_size * 0.99) ):
-            LOGGER.info(_("Queue size too high (%s) ! Pausing reception"),
-                        len(self.queue))
             self.producer.pauseProducing()
         if isinstance(msg, domish.Element):
             msg = msg.toXml().encode("utf-8")
