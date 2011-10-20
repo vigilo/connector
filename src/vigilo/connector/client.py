@@ -25,6 +25,24 @@ class VigiloXMPPClient(client.XMPPClient):
                  require_tls=False, require_compression=False, max_delay=60):
         """
         Initialise le client.
+        @param jid: Identifiant Jabber du client.
+        @type jid: C{JID}
+        @param password: Mot de passe associé au compte Jabber.
+        @type password: C{str}
+        @param host: le serveur XMPP
+        @type host: C{str}
+        @param port: le port du serveur
+        @type port C{int}
+        @param require_tls: Indique si la connexion doit être chiffrée ou non.
+        @type require_tls: C{bool}
+        @param require_compression: Indique si la connexion doit être
+            compressée ou non. Cette option est incompatible avec l'option
+            C{require_tls}. Si les deux options sont activées, la connexion
+            NE SERA PAS compressée (mais elle sera chiffrée).
+        @type require_compression: C{bool}
+        @param max_delay: le délai maximum entre chaque tentative de
+            reconnexion.
+        @type max_delay: C{int}
         """
         # On court-circuite client.XMPPClient qui utilise une factory
         # qui n'a pas le comportement attendu.
@@ -236,6 +254,20 @@ from twisted.internet import tcp
 class MultipleServerConnector(tcp.Connector):
     def __init__(self, hosts, port, factory, timeout=30, attempts=3,
                  reactor=None):
+        """
+        @param host: le serveur XMPP
+        @type host: C{str}
+        @param port: le port du serveur
+        @type port C{int}
+        @param factory: Une factory pour le connecteur Twisted.
+        @type factory: L{twisted.internet.interfaces.IProtocolFactory}
+        @param timeout: Le timeout de connexion.
+        @type timeout: C{int}
+        @param attempts: Le nombre de tentative de connexion.
+        @type: C{int}
+        @param reactor: Une instance d'un réacteur de Twisted.
+        @type reactor: L{twisted.internet.reactor}
+        """
         tcp.Connector.__init__(self, None, port, factory, timeout, None,
                                reactor=reactor)
         self.hosts = hosts
@@ -332,9 +364,9 @@ class DeferredMaybeTLSClientFactory(client.DeferredClientFactory):
                 initializer.required = self.require_tls
 
 class OneShotClient(object):
-    def __init__(self, jid, password, service,
-                lock_file, timeout,
-                require_tls, require_compression):
+    def __init__(self, jid, password, host, port, service,
+                 lock_file, timeout,
+                 require_tls, require_compression):
         """
         Prépare un client XMPP qui ne servira qu'une seule fois (one-shot).
 
@@ -342,6 +374,10 @@ class OneShotClient(object):
         @type jid: C{JID}
         @param password: Mot de passe associé au compte Jabber.
         @type password: C{str}
+        @param host: le serveur XMPP
+        @type host: C{str}
+        @param port: le port du serveur
+        @type port C{int}
         @param service: Service de publication à utiliser.
         @type service: C{JID}
         @param lock_file: Emplacement du fichier de verrou à créer pour
@@ -363,6 +399,8 @@ class OneShotClient(object):
         self._logger = get_logger(__name__)
         self._jid = jid
         self._password = password
+        self._host = host
+        self._port = port
         self._service = service
         self._lock_file = lock_file
         self._timeout = timeout
@@ -505,6 +543,7 @@ class OneShotClient(object):
 
         self._result = code
         reactor.stop()
+        return result
 
     def setHandler(self, func, *args, **kwargs):
         """
@@ -559,7 +598,11 @@ class OneShotClient(object):
         ipv6_compatible_udp_port()
 
         # Création du client XMPP et ajout de la fonction de traitement.
-        d = client.clientCreator(factory)
+        if self._host and self._port:
+            reactor.connectTCP(self._host, self._port, factory)
+            d = factory.deferred
+        else:
+            d = client.clientCreator(factory)
 
         if self._func:
             d.addCallback(
@@ -592,3 +635,37 @@ class OneShotClient(object):
         )
         reactor.run()
         return self._result
+
+def oneshotclient_factory(settings):
+    try:
+        require_tls = settings['bus'].as_bool('require_tls')
+    except KeyError:
+        require_tls = False
+    #try:
+    #    require_compression = settings['bus'].as_bool('require_compression')
+    #except KeyError:
+    #    require_compression = False
+    require_compression=False, # require_compression : pas supporté pour le moment.
+
+    port = settings["bus"].get('port')
+    if port is not None:
+        port = int(port)
+
+    xmpp_client = OneShotClient(
+            jid=JID(settings['bus']['jid']),
+            password=settings['bus']['password'],
+            host=settings['bus'].get('host'),
+            port=port,
+            service=JID(settings['bus'].get('service', "pubsub.localhost")),
+            lock_file=settings['connector']['lock_file'],
+            timeout=int(settings['connector'].get('timeout', 30)),
+            require_tls=require_tls,
+            require_compression=require_compression,
+            )
+
+    try:
+        xmpp_client.logTraffic = settings['bus'].as_bool('log_traffic')
+    except KeyError:
+        xmpp_client.logTraffic = False
+
+    return xmpp_client
