@@ -18,10 +18,27 @@ from vigilo.connector.compression import CompressInitiatingInitializer
 from vigilo.common.gettext import translate, l_
 _ = translate(__name__)
 
+
+
+def split_host_port(hostdef):
+    """
+    Découpe une définition hostname:port en couple (hostname, port)
+    @todo: Support IPv6
+    """
+    hostdef = hostdef.strip()
+    if ":" in hostdef:
+        host, port = hostdef.split(":")
+        port = int(port)
+    else:
+        host = hostdef
+        port = 5222
+    return host, port
+
+
 class VigiloXMPPClient(client.XMPPClient):
     """Client XMPP Vigilo"""
 
-    def __init__(self, jid, password, host=None, port=5222,
+    def __init__(self, jid, password, host=None,
                  require_tls=False, require_compression=False, max_delay=60):
         """
         Initialise le client.
@@ -31,8 +48,6 @@ class VigiloXMPPClient(client.XMPPClient):
         @type password: C{str}
         @param host: le serveur XMPP
         @type host: C{str}
-        @param port: le port du serveur
-        @type port C{int}
         @param require_tls: Indique si la connexion doit être chiffrée ou non.
         @type require_tls: C{bool}
         @param require_compression: Indique si la connexion doit être
@@ -49,7 +64,6 @@ class VigiloXMPPClient(client.XMPPClient):
         self.jid = jid
         self.domain = jid.host
         self.host = host
-        self.port = port
 
         # On utilise notre factory personnalisée, que l'on configure.
         if isinstance(self.host, list):
@@ -186,12 +200,14 @@ class VigiloXMPPClient(client.XMPPClient):
     def _getConnection(self):
         if self.host:
             if isinstance(self.host, list):
-                c = MultipleServerConnector(self.host, self.port, self.factory,
+                hosts = [ split_host_port(h) for h in self.host ]
+                c = MultipleServerConnector(hosts, self.factory,
                                             reactor=reactor)
                 c.connect()
                 return c
             else:
-                return reactor.connectTCP(self.host, self.port, self.factory)
+                host, port = split_host_port(self.host)
+                return reactor.connectTCP(host, port, self.factory)
         else:
             c = client.XMPPClientConnector(reactor, self.domain, self.factory)
             c.connect()
@@ -213,9 +229,11 @@ def client_factory(settings):
     # Temps max entre 2 tentatives de connexion (par défaut 1 min)
     max_delay = int(settings["bus"].get("max_reconnect_delay", 60))
 
-    host = settings['bus']['host'].strip()
-    if " " in host:
-        host = [ h.strip() for h in host.split(" ") ]
+    host = settings['bus'].get('host')
+    if host is not None:
+        host = host.strip()
+        if " " in host:
+            host = [ h.strip() for h in host.split(" ") ]
 
     xmpp_client = VigiloXMPPClient(
             JID(settings['bus']['jid']),
@@ -252,7 +270,7 @@ def client_factory(settings):
 
 from twisted.internet import tcp
 class MultipleServerConnector(tcp.Connector):
-    def __init__(self, hosts, port, factory, timeout=30, attempts=3,
+    def __init__(self, hosts, factory, timeout=30, attempts=3,
                  reactor=None):
         """
         @param host: le serveur XMPP
@@ -268,7 +286,7 @@ class MultipleServerConnector(tcp.Connector):
         @param reactor: Une instance d'un réacteur de Twisted.
         @type reactor: L{twisted.internet.reactor}
         """
-        tcp.Connector.__init__(self, None, port, factory, timeout, None,
+        tcp.Connector.__init__(self, None, None, factory, timeout, None,
                                reactor=reactor)
         self.hosts = hosts
         self.attempts = attempts
@@ -278,8 +296,8 @@ class MultipleServerConnector(tcp.Connector):
     def pickServer(self):
         if not self._usableHosts:
             self._usableHosts = self.hosts[:]
-        self.host = self._usableHosts[0]
-        log.msg("Connecting to %s" % self.host)
+        self.host, self.port = self._usableHosts[0]
+        log.msg("Connecting to %s:%s" % (self.host, self.port))
 
     def connectionFailed(self, reason):
         from vigilo.common.logging import get_logger
@@ -291,7 +309,7 @@ class MultipleServerConnector(tcp.Connector):
             LOGGER.warning(_("Server %(oldserver)s did not answer after "
                     "%(attempts)d attempts"),
                     {"oldserver": self.host, "attempts": self.attempts})
-            self._usableHosts.remove(self.host)
+            self._usableHosts.remove((self.host, self.port))
             self.resetAttempts()
             if hasattr(self.factory, "resetDelay"):
                 self.factory.resetDelay()
@@ -364,43 +382,40 @@ class DeferredMaybeTLSClientFactory(client.DeferredClientFactory):
                 initializer.required = self.require_tls
 
 class OneShotClient(object):
-    def __init__(self, jid, password, host, port, service,
-                 lock_file, timeout,
+    def __init__(self, jid, password, host, service, lock_file, timeout,
                  require_tls, require_compression):
         """
         Prépare un client XMPP qui ne servira qu'une seule fois (one-shot).
 
         @param jid: Identifiant Jabber du client.
-        @type jid: C{JID}
+        @type  jid: C{JID}
         @param password: Mot de passe associé au compte Jabber.
-        @type password: C{str}
-        @param host: le serveur XMPP
-        @type host: C{str}
-        @param port: le port du serveur
-        @type port C{int}
+        @type  password: C{str}
+        @param host: le hostname du serveur XMPP (si besoin, spécifier le port
+            après des deux-points)
+        @type  host: C{str}
         @param service: Service de publication à utiliser.
-        @type service: C{JID}
+        @type  service: C{JID}
         @param lock_file: Emplacement du fichier de verrou à créer pour
             empêcher l'exécution simultanée de plusieurs instances du
             connecteur.
-        @type lock_file: C{str}
+        @type  lock_file: C{str}
         @param timeout: Durée maximale d'exécution du connecteur,
             afin d'éviter des connecteurs "fous".
-        @type timeout: C{int}
+        @type  timeout: C{int}
         @param require_tls: Indique si la connexion doit être chiffrée ou non.
-        @type require_tls: C{bool}
+        @type  require_tls: C{bool}
         @param require_compression: Indique si la connexion doit être
             compressée ou non. Cette option est incompatible avec l'option
             C{require_tls}. Si les deux options sont activées, la connexion
             NE SERA PAS compressée (mais elle sera chiffrée).
-        @type require_compression: C{bool}
+        @type  require_compression: C{bool}
         """
         from vigilo.common.logging import get_logger
         self._logger = get_logger(__name__)
         self._jid = jid
         self._password = password
         self._host = host
-        self._port = port
         self._service = service
         self._lock_file = lock_file
         self._timeout = timeout
@@ -598,8 +613,9 @@ class OneShotClient(object):
         ipv6_compatible_udp_port()
 
         # Création du client XMPP et ajout de la fonction de traitement.
-        if self._host and self._port:
-            reactor.connectTCP(self._host, self._port, factory)
+        if self._host:
+            host, port = split_host_port(self._host)
+            reactor.connectTCP(host, port, factory)
             d = factory.deferred
         else:
             d = client.clientCreator(factory)
@@ -647,15 +663,10 @@ def oneshotclient_factory(settings):
     #    require_compression = False
     require_compression=False, # require_compression : pas supporté pour le moment.
 
-    port = settings["bus"].get('port')
-    if port is not None:
-        port = int(port)
-
     xmpp_client = OneShotClient(
             jid=JID(settings['bus']['jid']),
             password=settings['bus']['password'],
             host=settings['bus'].get('host'),
-            port=port,
             service=JID(settings['bus'].get('service', "pubsub.localhost")),
             lock_file=settings['connector']['lock_file'],
             timeout=int(settings['connector'].get('timeout', 30)),
