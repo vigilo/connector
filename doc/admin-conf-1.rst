@@ -3,18 +3,20 @@ aspects divers du module, chacune de ces sections peut contenir un ensemble de
 valeurs sous la forme ``clé = valeur``. Les lignes commençant par « ; » ou
 « # » sont des commentaires et sont par conséquent ignorées.
 
-Le format de ce fichier peut donc être résumé dans l'extrait suivant::
+Le format de ce fichier peut donc être résumé dans l'extrait suivant:
+
+.. sourcecode:: ini
 
     # Ceci est un commentaire
     ; Ceci est également un commentaire
     [section1]
     option1=valeur1
     option2=valeur2
-    ...
+    ; ...
 
     [section2]
     option1=val1
-    ...
+    ; ...
 
 Les sections utilisées par le connecteur et leur rôle sont détaillées
 ci-dessous:
@@ -36,4 +38,3 @@ loggers, handlers, formatters, logger_*, handler_*, formatter_*
 
     « \* » correspond au nom d'un logger/handler/formatter défini dans la
     section loggers, handlers ou formatters (respectivement).
-

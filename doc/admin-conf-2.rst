@@ -130,7 +130,9 @@ La configuration proposée par défaut lors de l'installation du
 connecteur associe chacun de ces types avec un nœud descendant de « /vigilo/ »
 portant le même que le type.
 
-Exemple de configuration possible, correspondant à une installation standard::
+Exemple de configuration possible, correspondant à une installation standard :
+
+.. sourcecode:: ini
 
     [publications]
     perf    = /vigilo/perf
@@ -151,5 +153,3 @@ enregistrement des événements en base de données, etc.).
 Le document Vigilo - Journaux d'événements décrit spécifiquement la
 configuration de la journalisation des événements au sein de toutes les
 applications de Vigilo, y compris les connecteurs.
-
-
