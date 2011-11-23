@@ -6,14 +6,8 @@ import os, sys
 from twisted.internet import reactor, defer, error
 from twisted.application import service
 from twisted.python import log, failure
-from twisted.words.protocols.jabber import xmlstream
-from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism, \
-                                                SASLAuthError
-from twisted.words.protocols.jabber.jid import JID
-from wokkel import client
-from wokkel.subprotocols import StreamManager
 
-from vigilo.connector.compression import CompressInitiatingInitializer
+from vigilo.connector.amqp import AmqpFactory
 
 from vigilo.common.gettext import translate, l_
 _ = translate(__name__)
@@ -31,12 +25,14 @@ def split_host_port(hostdef):
         port = int(port)
     else:
         host = hostdef
-        port = 5222
+        port = 5672
     return host, port
 
 
-class VigiloXMPPClient(client.XMPPClient):
-    """Client XMPP Vigilo"""
+
+class VigiloClient(service.Service):
+    """Client du bus Vigilo"""
+
 
     def __init__(self, jid, password, host=None,
                  require_tls=False, require_compression=False, max_delay=60):
@@ -381,21 +377,21 @@ class DeferredMaybeTLSClientFactory(client.DeferredClientFactory):
             if isinstance(initializer, xmlstream.TLSInitiatingInitializer):
                 initializer.required = self.require_tls
 
-class OneShotClient(object):
-    def __init__(self, jid, password, host, service, lock_file, timeout,
-                 require_tls, require_compression):
-        """
-        Prépare un client XMPP qui ne servira qu'une seule fois (one-shot).
 
-        @param jid: Identifiant Jabber du client.
-        @type  jid: C{JID}
-        @param password: Mot de passe associé au compte Jabber.
+
+class OneShotClient(object):
+    """Client à usage unique"""
+
+    def __init__(self, host, user, password, lock_file=None,
+                 timeout=None, use_ssl=False):
+        """
+        @param user: Identifiant AMQP du client.
+        @type  user: C{str}
+        @param password: Mot de passe associé au compte AMQP.
         @type  password: C{str}
-        @param host: le hostname du serveur XMPP (si besoin, spécifier le port
+        @param host: le hostname du serveur AMQP (si besoin, spécifier le port
             après des deux-points)
         @type  host: C{str}
-        @param service: Service de publication à utiliser.
-        @type  service: C{JID}
         @param lock_file: Emplacement du fichier de verrou à créer pour
             empêcher l'exécution simultanée de plusieurs instances du
             connecteur.
@@ -403,24 +399,17 @@ class OneShotClient(object):
         @param timeout: Durée maximale d'exécution du connecteur,
             afin d'éviter des connecteurs "fous".
         @type  timeout: C{int}
-        @param require_tls: Indique si la connexion doit être chiffrée ou non.
-        @type  require_tls: C{bool}
-        @param require_compression: Indique si la connexion doit être
-            compressée ou non. Cette option est incompatible avec l'option
-            C{require_tls}. Si les deux options sont activées, la connexion
-            NE SERA PAS compressée (mais elle sera chiffrée).
-        @type  require_compression: C{bool}
+        @param use_ssl: Indique si la connexion doit être chiffrée ou non.
+        @type  use_ssl: C{bool}
         """
         from vigilo.common.logging import get_logger
         self._logger = get_logger(__name__)
-        self._jid = jid
+        self._user = user
         self._password = password
         self._host = host
-        self._service = service
         self._lock_file = lock_file
         self._timeout = timeout
-        self._require_tls = require_tls
-        self._require_compression = require_compression
+        self._use_ssl = use_ssl
         self._result = 0
         self._func = None
         self._args = ()
@@ -436,126 +425,36 @@ class OneShotClient(object):
             d'erreur).
         @rtype: C{int}
         """
+        if self.lock_file is None:
+            return 0
+        from vigilo.common.lock import grab_lock
         self._logger.debug(_("Creating lock file in %s"), self._lock_file)
-
-        # Si un fichier de lock existe et qu'une autre
-        # instance du connecteur est lancée, on quitte
-        if os.path.isfile(self._lock_file):
-            try:
-                f = open(self._lock_file)
-                pid = f.read()
-                f.close()
-            except Exception, e:
-                self._logger.error(_(
-                    "Found a lock file, but the following "
-                    "exception was raised when trying to "
-                    "open it: %s. Cowardly exiting..."),
-                    e
-                )
-                return 1
-            if os.path.exists('/proc/' + str(pid)):
-                self._logger.error(_(
-                    "Another instance of this connector "
-                    "is already running (PID: %s). Exiting..."),
-                    pid
-                )
-                return 1
-            # Sinon, si un fichier de lock existe mais qu'aucune autre
-            # instance du connecteur n'est lancée, on supprime le fichier
-            self._logger.warning(_(
-                "Found a lock file, but no process is "
-                "running with this PID (%s). Removing it..."),
-                pid
+        result = grab_lock(self._lock_file)
+        if result:
+            self._logger.debug(
+                _("Lock file successfully created in %s"),
+                self._lock_file
             )
-            try:
-                os.remove(self._lock_file)
-            except:
-                pass
+        return int(not result) # on convertit en code de retour POSIX
 
-        # Création d'un nouveau fichier de lock
-        try:
-            f = open(self._lock_file, 'w')
-            f.write(str(os.getpid()))
-            f.close()
-        except Exception, e:
-            self._logger.error(_(
-                "The following exception was raised when "
-                "trying to create the lock file: %s. "
-                "Cowardly exiting..."),
-                e
-            )
-            return 1
-
-        self._logger.debug(
-            _("Lock file successfully created in %s"),
-            self._lock_file
-        )
-        return 0
-
-    def _stop(self, result, code, stream=None):
+    def _stop(self, result, code):
         """
         Arrête proprement le connecteur, en supprimant le fichier de
         lock et en affichant un message d'erreur en cas de timeout.
         """
-        try:
-            self._logger.debug(_("Removing lock file (%s)"), self._lock_file)
-            os.remove(self._lock_file)
-        except:
-            pass
-
         if isinstance(result, failure.Failure):
-            tls_errors = {
-                xmlstream.TLSFailed:
-                    l_("Some error occurred while negotiating TLS encryption"),
-                xmlstream.TLSRequired:
-                    l_("The server requires TLS encryption. Use the "
-                        "'require_tls' option to enable TLS encryption."),
-                xmlstream.TLSNotSupported:
-                    l_("TLS encryption was required, but pyOpenSSL is "
-                        "not installed"),
-            }
-
             if result.check(defer.TimeoutError):
                 self._logger.error(_("Timeout"))
-
-            elif result.check(SASLNoAcceptableMechanism, SASLAuthError):
-                self._logger.error(_("Authentication failed: %s"),
-                                result.getErrorMessage())
-
-            elif result.check(xmlstream.FeatureNotAdvertized):
-                # Le nom de la fonctionnalité non-supportée n'est pas transmis
-                # avec l'erreur. On calcule le différentiel entre ce qu'on a
-                # demandé et ce qu'on a obtenu pour trouver son nom.
-                for initializer in stream.initializers:
-                    if not isinstance(initializer, \
-                        xmlstream.BaseFeatureInitiatingInitializer):
-                        continue
-
-                    if initializer.required and \
-                        initializer.feature not in stream.features:
-                        self._logger.error(_("The server does not support "
-                                            "the '%s' feature"),
-                                            initializer.feature[1])
-
             else:
-                # S'il s'agit d'une erreur liée à TLS autre le manque de support
-                # par le serveur, on affiche un message traduit pour aider à la
-                # résolution du problème.
-                tls_error = result.check(*tls_errors.keys())
-                if tls_error:
-                    self._logger.error(_(tls_errors[tls_error]))
-
                 # Message générique pour signaler l'erreur
-                else:
-                    self._logger.error(
-                        _("Error: %(message)s (%(type)r)"), {
-                            'message': result.getErrorMessage(),
-                            'type': str(result),
-                        }
-                    )
+                self._logger.error(
+                    _("Error: %(message)s (%(type)r)"), {
+                        'message': result.getErrorMessage(),
+                        'type': str(result),
+                    }
+                )
         else:
             self._logger.debug(_("Exiting with no error"))
-
         self._result = code
         reactor.stop()
         return result
@@ -572,12 +471,12 @@ class OneShotClient(object):
         self._args = args
         self._kwargs = kwargs
 
-    def run(self, log_traffic=False, app_name='XMPP client'):
+    def run(self, log_traffic=False, app_name='Vigilo client'):
         """
         Fait fonctionner le connecteur (connexion, traitement, déconnexion).
 
         @param log_traffic: Indique si le trafic échangé avec le serveur
-            XMPP doit être journalisé ou non.
+            doit être journalisé ou non.
         @type log_traffic: C{bool}
         @param app_name: Nom à donner au client (peut aider au débogage).
         @type app_name: C{str}
@@ -586,32 +485,16 @@ class OneShotClient(object):
             exécution normalement. Toute autre valeur signale une erreur.
         @rtype: C{int}
         """
-        # Importé ici car sinon on importe implicitement
-        # vigilo.pubsub(.__init__) qui utilise des loggers
-        # non initialisés (ce qui génère des avertissements
-        # et empêche l'affichage des vrais logs).
-        from vigilo.pubsub.ipv6 import ipv6_compatible_udp_port
-
         self._result = self._create_lockfile()
-
         # Si la création du fichier de verrou renvoie une erreur,
         # on propage celle-ci.
         if self._result:
             return self._result
 
-        # Création de la factory pour le client XMPP.
+        # Création de la factory pour le client.
         service.Application(app_name)
-        factory = DeferredMaybeTLSClientFactory(
-            self._jid,
-            self._password,
-            self._require_tls,
-        )
-        factory.streamManager.logTraffic = bool(log_traffic)
-
-        # Monkey-patch la classe twisted.internet.udp.Port
-        # pour utiliser une implémentation compatible IPv6.
-        ipv6_compatible_udp_port()
-
+        factory = AmqpFactory(user=self.user, password=self.password,
+                              log_traffic=log_traffic)
         # Création du client XMPP et ajout de la fonction de traitement.
         if self._host:
             host, port = split_host_port(self._host)
@@ -623,22 +506,17 @@ class OneShotClient(object):
         if self._func:
             d.addCallback(
                 self._func,
-                self._service,
                 *self._args,
                 **self._kwargs
             )
         else:
             self._logger.warning(_("No handler registered for this "
-                                    "one-shot XMPP client"))
+                                    "one-shot client"))
 
-        d.addErrback(lambda fail: self._stop(
-            fail,
-            code=1,
-            stream=factory.streamManager.xmlstream
-        ))
+        d.addErrback(lambda fail: self._stop(fail, code=1))
 
-        # Déconnecte le client du bus XMPP.
-        d.addCallback(lambda _dummy: factory.streamManager.xmlstream.sendFooter())
+        # Déconnecte le client du bus.
+        d.addCallback(lambda _dummy: factory.stop())
         d.addCallback(self._stop, code=0)
         d.addErrback(lambda _dummy: None)
 
@@ -654,29 +532,16 @@ class OneShotClient(object):
 
 def oneshotclient_factory(settings):
     try:
-        require_tls = settings['bus'].as_bool('require_tls')
+        use_ssl = settings['bus'].as_bool('use_ssl')
     except KeyError:
         require_tls = False
-    #try:
-    #    require_compression = settings['bus'].as_bool('require_compression')
-    #except KeyError:
-    #    require_compression = False
-    require_compression=False, # require_compression : pas supporté pour le moment.
 
-    xmpp_client = OneShotClient(
-            jid=JID(settings['bus']['jid']),
-            password=settings['bus']['password'],
-            host=settings['bus'].get('host'),
-            service=JID(settings['bus'].get('service', "pubsub.localhost")),
-            lock_file=settings['connector']['lock_file'],
+    vigilo_client = OneShotClient(
+            host=settings['bus'].get('host', 'localhost'),
+            user=settings['bus'].get('user', 'guest'),
+            password=settings['bus'].get('password', 'guest'),
+            lock_file=settings['connector'].get('lock_file'),
             timeout=int(settings['connector'].get('timeout', 30)),
-            require_tls=require_tls,
-            require_compression=require_compression,
+            use_ssl=use_ssl,
             )
-
-    try:
-        xmpp_client.logTraffic = settings['bus'].as_bool('log_traffic')
-    except KeyError:
-        xmpp_client.logTraffic = False
-
-    return xmpp_client
+    return vigilo_client
