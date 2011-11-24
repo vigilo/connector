@@ -177,18 +177,17 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
     protocol = AmqpProtocol
 
 
-    def __init__(self, user, password, vhost=None, log_traffic=False):
+    def __init__(self, user, password, vhost=None, logTraffic=False):
         self.user = user
         self.password = password
         self.vhost = vhost or '/'
-        self.log_traffic = log_traffic
+        self.logTraffic = logTraffic
         spec_file = resource_filename('vigilo.connector', 'amqp0-8.xml')
         self.spec = spec.load(spec_file)
         self.delegate = TwistedDelegate()
         self.deferred = defer.Deferred()
 
         self.p = None # The protocol instance.
-        self.client = None # Alias for protocol instance
 
         self.queued_messages = [] # List of messages waiting to be sent.
         self.read_list = [] # List of queues to listen on.
@@ -197,10 +196,9 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
     def buildProtocol(self, addr):
         p = self.protocol(self.delegate, self.vhost, self.spec)
         p.factory = self # Tell the protocol about this factory.
-        p.logTraffic = self.log_traffic
+        p.logTraffic = self.logTraffic
 
         self.p = p # Store the protocol.
-        self.client = p
 
         # Reset the reconnection delay since we're connected now.
         self.resetDelay()

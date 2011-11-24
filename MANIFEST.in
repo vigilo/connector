@@ -10,3 +10,5 @@ recursive-include i18n *.pot *.po
 
 include settings_tests.ini
 include settings.ini
+
+include src/vigilo/connector/amqp0-8.xml

@@ -45,6 +45,7 @@ setup(name='vigilo-connector',
             'vigilo-pubsub',
             'txAMQP',
             'Twisted',
+            'argparse',
             ],
         namespace_packages = [
             'vigilo',
@@ -56,6 +57,9 @@ setup(name='vigilo-connector',
             ],
         },
         entry_points={
+            'console_scripts': [
+                'vigilo-bus-config = vigilo.connector.configure:main',
+                ],
         },
         extras_require={
             'tests': tests_require,
