@@ -92,6 +92,15 @@ class VigiloClient(service.Service):
             return reactor.connectTCP(host, port, self.factory)
 
 
+    def addHandler(self, handler):
+        # Proxy to the factory
+        return self.factory.addHandler(handler)
+
+    def removeHandler(self, handler):
+        # Proxy to the factory
+        return self.factory.removeHandler(handler)
+
+
 
 def client_factory(settings):
     from vigilo.pubsub.checknode import VerificationNode

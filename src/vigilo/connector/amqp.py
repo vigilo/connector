@@ -20,6 +20,11 @@ _ = translate(__name__)
 
 
 
+NON_PERSISTENT = 1
+PERSISTENT = 2
+
+
+
 class AmqpProtocol(AMQClient):
     """
     The protocol is created and destroyed each time a connection is created and
@@ -45,79 +50,15 @@ class AmqpProtocol(AMQClient):
         d.addErrback(self._got_channel_failed)
 
 
-    def _got_channel(self, chan):
-        self.chan = chan
-        d = self.chan.channel_open()
-        d.addCallback(self._channel_open)
+    def _got_channel(self, channel):
+        d = channel.channel_open()
+        d.addCallback(self._channel_open, channel)
         d.addErrback(self._channel_open_failed)
 
 
-    def _channel_open(self, arg):
+    def _channel_open(self, _ignore, channel):
         """Called when the channel is open."""
-        # Flag that the connection is open.
-        self.connected = True
-
-        # Now that the channel is open add any readers the user has specified.
-        for l in self.factory.read_list:
-            self._subscribe(l[0], l[1], l[2])
-
-        # Send any messages waiting to be sent.
-        self.send()
-
-        # Fire the factory's 'initial connect' deferred if it hasn't already
-        if not self.factory.deferred.called:
-            self.factory.deferred.callback(self)
-
-
-    def subscribe(self, queue, exchange, routing_key, callback):
-        """Add an exchange to the list of exchanges to read from."""
-        if self.connected:
-            # Connection is already up. Add the reader.
-            self._subscribe(exchange, routing_key, callback)
-        else:
-            # Connection is not up. _channel_open will add the reader when the
-            # connection is up.
-            pass
-
-
-    @defer.inlineCallbacks
-    def send(self):
-        """If connected, send all waiting messages."""
-        if not self.connected:
-            return
-
-        while len(self.factory.queued_messages) > 0:
-            m = self.factory.queued_messages.pop(0)
-            yield self._send_message(m[0], m[1], m[2])
-
-
-    @defer.inlineCallbacks
-    def _subscribe(self, queue, exchange, routing_key, callback):
-        """This function does the work to read from an exchange."""
-        queue = exchange # For now use the exchange name as the queue name.
-        consumer_tag = exchange # Use the exchange name for the consumer tag for now.
-
-        # Declare the exchange in case it doesn't exist.
-        #yield self.chan.exchange_declare(exchange=exchange, type="direct",
-        #                                 durable=True, auto_delete=False)
-        yield self.chan.exchange_declare(exchange=exchange, type="direct",
-                                         durable=False, auto_delete=True)
-
-        # Declare the queue and bind to it.
-        yield self.chan.queue_declare(queue=queue, durable=True,
-                                      exclusive=False, auto_delete=False)
-        yield self.chan.queue_bind(queue=queue, exchange=exchange,
-                                   routing_key=routing_key)
-
-        # Consume.
-        yield self.chan.basic_consume(queue=queue, no_ack=True,
-                                      consumer_tag=consumer_tag)
-        queue = yield self.queue(consumer_tag)
-
-        # Now setup the readers.
-        d = queue.get()
-        d.addCallback(self._read_item, queue, callback)
-        d.addErrback(self._read_item_err)
+        self.factory.connectionInitialized(channel)
 
 
     def _channel_open_failed(self, error):
@@ -132,50 +73,65 @@ class AmqpProtocol(AMQClient):
         log.msg("AMQP authentication failed: %s" % error)
 
 
-    def _send_message(self, exchange, routing_key, msg):
-        """Send a single message."""
-        # First declare the exchange just in case it doesn't exist.
-        #yield self.chan.exchange_declare(exchange=exchange, type="direct",
-        #                                 durable=True, auto_delete=False)
-        d = self.chan.exchange_declare(exchange=exchange, type="direct",
-                                       durable=False, auto_delete=True)
-
-        def _send(_, exchange, routing_key, msg):
-            msg = Content(msg)
-            msg["delivery mode"] = 2 # 2 = persistent delivery.
-            print exchange, routing_key, msg
-            d_send = self.chan.basic_publish(exchange=exchange,
-                            routing_key=routing_key, content=msg)
-            d_send.addErrback(self._send_message_err)
-            return d_send
-
-        d.addCallback(_send, exchange, routing_key, msg)
-        return d
+    #def subscribe(self, queue, exchange, routing_key, callback):
+    #    """Add an exchange to the list of exchanges to read from."""
+    #    if self.connected:
+    #        # Connection is already up. Add the reader.
+    #        self._subscribe(exchange, routing_key, callback)
+    #    else:
+    #        # Connection is not up. _channel_open will add the reader when the
+    #        # connection is up.
+    #        pass
 
 
-    def _send_message_err(self, error):
-        log.err("Sending message failed", error)
+    #@defer.inlineCallbacks
+    #def _subscribe(self, queue, exchange, routing_key, callback):
+    #    """This function does the work to read from an exchange."""
+    #    queue = exchange # For now use the exchange name as the queue name.
+    #    consumer_tag = exchange # Use the exchange name for the consumer tag for now.
+
+    #    # Declare the exchange in case it doesn't exist.
+    #    #yield self.chan.exchange_declare(exchange=exchange, type="direct",
+    #    #                                 durable=True, auto_delete=False)
+    #    yield self.chan.exchange_declare(exchange=exchange, type="direct",
+    #                                     durable=False, auto_delete=True)
+
+    #    # Declare the queue and bind to it.
+    #    yield self.chan.queue_declare(queue=queue, durable=True,
+    #                                  exclusive=False, auto_delete=False)
+    #    yield self.chan.queue_bind(queue=queue, exchange=exchange,
+    #                               routing_key=routing_key)
+
+    #    # Consume.
+    #    yield self.chan.basic_consume(queue=queue, no_ack=True,
+    #                                  consumer_tag=consumer_tag)
+    #    queue = yield self.queue(consumer_tag)
+
+    #    # Now setup the readers.
+    #    d = queue.get()
+    #    d.addCallback(self._read_item, queue, callback)
+    #    d.addErrback(self._read_item_err)
 
 
-    def _read_item(self, item, queue, callback):
-        """Callback function which is called when an item is read."""
-        # Setup another read of this queue.
-        d = queue.get()
-        d.addCallback(self._read_item, queue, callback)
-        d.addErrback(self._read_item_err)
+    #def _read_item(self, item, queue, callback):
+    #    """Callback function which is called when an item is read."""
+    #    # Setup another read of this queue.
+    #    d = queue.get()
+    #    d.addCallback(self._read_item, queue, callback)
+    #    d.addErrback(self._read_item_err)
 
-        # Process the read item by running the callback.
-        callback(item)
+    #    # Process the read item by running the callback.
+    #    callback(item)
 
 
-    def _read_item_err(self, error):
-        log.err("Error reading item: ", error)
+    #def _read_item_err(self, error):
+    #    log.err("Error reading item: ", error)
 
 
 
 class AmqpFactory(protocol.ReconnectingClientFactory):
-    protocol = AmqpProtocol
 
+    protocol = AmqpProtocol
 
     def __init__(self, user, password, vhost=None, logTraffic=False):
         self.user = user
@@ -186,11 +142,24 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         self.spec = spec.load(spec_file)
         self.delegate = TwistedDelegate()
         self.deferred = defer.Deferred()
+        self.handlers = []
 
         self.p = None # The protocol instance.
+        self.channel = None # The main channel
 
-        self.queued_messages = [] # List of messages waiting to be sent.
-        self.read_list = [] # List of queues to listen on.
+        self._packetQueue = [] # List of messages waiting to be sent.
+
+
+    def addHandler(self, handler):
+        self.handlers.append(handler)
+        # get protocol handler up to speed when a connection has already
+        # been established
+        if self.channel:
+            handler.connectionInitialized(self.channel)
+
+
+    def removeHandler(self, handler):
+        self.handlers.remove(handler)
 
 
     def buildProtocol(self, addr):
@@ -215,27 +184,71 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
     def clientConnectionLost(self, connector, reason):
         log.msg("Client connection lost.")
         self.p = None
+        self.channel = None
         protocol.ReconnectingClientFactory.clientConnectionFailed(
                 self, connector, reason)
+        # Notify all child services
+        for e in self.handlers:
+            if hasattr(e, "connectionLost"):
+                e.connectionLost(reason)
+
+
+
+    def connectionInitialized(self, channel):
+        """
+        Send out cached stanzas and call each handler's
+        C{connectionInitialized} method.
+        """
+        self.channel = channel
+        # Flush all pending packets
+        d = self._sendPacketQueue()
+        def doneSendingQueue(_ignore):
+            # Trigger the deferred
+            if not self.deferred.called:
+                self.deferred.callback(self)
+            # Notify all child services
+            for e in self.handlers:
+                if hasattr(e, "connectionInitialized"):
+                    e.connectionInitialized(channel)
+        d.addCallback(doneSendingQueue)
+
+
+    @defer.inlineCallbacks
+    def _sendPacketQueue(self, _ignore=None):
+        while self._packetQueue:
+            e, k, m = self._packetQueue.pop(0)
+            yield self.send(e, k, m)
+
+
+    def send(self, exchange, routing_key, message):
+        if self.channel:
+            msg = Content(message)
+            msg["delivery mode"] = PERSISTENT
+            d = self.channel.basic_publish(exchange=exchange,
+                            routing_key=routing_key, content=msg)
+            d.addErrback(self._sendFailed)
+            return d
+        else:
+            self._packetQueue.append( (exchange, routing_key, message) )
+            return defer.succeed(None)
+
+
+    def _sendFailed(self, fail):
+        log.err(fail)
+        return fail
 
 
     def stop(self):
         self.stopTrying()
         if self.p is None:
             return
-        d = self.p.chan.channel_close()
+        if self.channel is None:
+            return
+        d = self.channel.channel_close()
         d.addCallback(lambda _r: self.p.channel(0))
         d.addCallback(lambda ch: ch.connection_close())
         d.addCallback(lambda _r: self.p.close("quit"))
         return d
-
-
-    def send_message(self, exchange=None, routing_key=None, msg=None):
-        # Add the new message to the queue.
-        self.queued_messages.append((exchange, routing_key, msg))
-        # This tells the protocol to send all queued messages.
-        if self.p != None:
-            return self.p.send()
 
 
     def read(self, exchange=None, routing_key=None, callback=None):

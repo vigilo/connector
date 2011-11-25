@@ -32,27 +32,40 @@ class BusManager(object):
         return func(args)
 
     def create_queue(self, args):
-        pass
+        LOGGER.info(_("Creating queue %s"), args.queue)
+        d = self.client.channel.queue_declare(
+                queue=args.queue, durable=True,
+                exclusive=False, auto_delete=False)
+        return d
+
     def delete_queue(self, args):
-        pass
+        LOGGER.info(_("Deleting queue %s"), args.queue)
+        d = self.client.channel.queue_delete(queue=args.queue)
+        return d
 
     def create_exchange(self, args):
         LOGGER.info(_("Creating exchange %s of type %s"),
                     args.exchange, args.type)
-        d = self.client.chan.exchange_declare(
+        d = self.client.channel.exchange_declare(
                 exchange=args.exchange, type=args.type,
                 durable=True, auto_delete=False)
         return d
 
     def delete_exchange(self, args):
         LOGGER.info(_("Deleting exchange %s"), args.exchange)
-        d = self.client.chan.exchange_delete(exchange=args.exchange)
+        d = self.client.channel.exchange_delete(exchange=args.exchange)
         return d
 
     def subscribe(self, args):
-        pass
-    def unsubscribe(self, args):
-        pass
+        key = args.key
+        if not key:
+            key = args.queue
+        LOGGER.info(_("Subscribing queue %s to exchange %s (key: %s)"),
+                    args.queue, args.exchange, key)
+        d = self.client.channel.queue_bind(queue=args.queue,
+                exchange=args.exchange, routing_key=key)
+        return d
+
 
 
 def parse_args():
@@ -118,15 +131,7 @@ def parse_args():
     parser_sq.set_defaults(func="subscribe")
     parser_sq.add_argument('queue', help=N_("Queue name"))
     parser_sq.add_argument('exchange', help=N_("Exchange name"))
-
-    # unsubscribe
-    parser_sq = subparsers.add_parser("unsubscribe",
-                    add_help=False,
-                    parents=[common_args_parser],
-                    help=N_("Unsubscribe a queue from an exchange."))
-    parser_sq.set_defaults(func="unsubscribe")
-    parser_sq.add_argument('queue', help=N_("Queue name"))
-    parser_sq.add_argument('exchange', help=N_("Exchange name"))
+    parser_sq.add_argument('-k', '--key', help=N_("Routing key"))
 
     return parser.parse_args()
 
