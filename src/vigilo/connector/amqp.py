@@ -5,8 +5,10 @@
 import os, sys
 
 from pkg_resources import resource_filename
+from zope.interface import implements
 
 from twisted.internet import reactor, defer, error, protocol
+from twisted.internet.interfaces import IPullProducer
 from twisted.application import service
 from twisted.python import log, failure
 
@@ -23,6 +25,10 @@ _ = translate(__name__)
 NON_PERSISTENT = 1
 PERSISTENT = 2
 
+
+
+class NotConnected(Exception):
+    pass
 
 
 class AmqpProtocol(AMQClient):
@@ -133,7 +139,8 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
 
     protocol = AmqpProtocol
 
-    def __init__(self, user, password, vhost=None, logTraffic=False):
+    def __init__(self, parent, user, password, vhost=None, logTraffic=False):
+        self.parent = parent
         self.user = user
         self.password = password
         self.vhost = vhost or '/'
@@ -141,25 +148,10 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         spec_file = resource_filename('vigilo.connector', 'amqp0-8.xml')
         self.spec = spec.load(spec_file)
         self.delegate = TwistedDelegate()
-        self.deferred = defer.Deferred()
         self.handlers = []
 
         self.p = None # The protocol instance.
         self.channel = None # The main channel
-
-        self._packetQueue = [] # List of messages waiting to be sent.
-
-
-    def addHandler(self, handler):
-        self.handlers.append(handler)
-        # get protocol handler up to speed when a connection has already
-        # been established
-        if self.channel:
-            handler.connectionInitialized(self.channel)
-
-
-    def removeHandler(self, handler):
-        self.handlers.remove(handler)
 
 
     def buildProtocol(self, addr):
@@ -187,11 +179,7 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         self.channel = None
         protocol.ReconnectingClientFactory.clientConnectionFailed(
                 self, connector, reason)
-        # Notify all child services
-        for e in self.handlers:
-            if hasattr(e, "connectionLost"):
-                e.connectionLost(reason)
-
+        self.parent.connectionLost(reason)
 
 
     def connectionInitialized(self, channel):
@@ -200,42 +188,7 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         C{connectionInitialized} method.
         """
         self.channel = channel
-        # Flush all pending packets
-        d = self._sendPacketQueue()
-        def doneSendingQueue(_ignore):
-            # Trigger the deferred
-            if not self.deferred.called:
-                self.deferred.callback(self)
-            # Notify all child services
-            for e in self.handlers:
-                if hasattr(e, "connectionInitialized"):
-                    e.connectionInitialized(channel)
-        d.addCallback(doneSendingQueue)
-
-
-    @defer.inlineCallbacks
-    def _sendPacketQueue(self, _ignore=None):
-        while self._packetQueue:
-            e, k, m = self._packetQueue.pop(0)
-            yield self.send(e, k, m)
-
-
-    def send(self, exchange, routing_key, message):
-        if self.channel:
-            msg = Content(message)
-            msg["delivery mode"] = PERSISTENT
-            d = self.channel.basic_publish(exchange=exchange,
-                            routing_key=routing_key, content=msg)
-            d.addErrback(self._sendFailed)
-            return d
-        else:
-            self._packetQueue.append( (exchange, routing_key, message) )
-            return defer.succeed(None)
-
-
-    def _sendFailed(self, fail):
-        log.err(fail)
-        return fail
+        self.parent.connectionInitialized(channel)
 
 
     def stop(self):
@@ -249,19 +202,6 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         d.addCallback(lambda ch: ch.connection_close())
         d.addCallback(lambda _r: self.p.close("quit"))
         return d
-
-
-    def read(self, exchange=None, routing_key=None, callback=None):
-        """Configure an exchange to be read from."""
-        assert(exchange != None and routing_key != None and callback != None)
-
-        # Add this to the read list so that we have it to re-add if we lose the
-        # connection.
-        self.read_list.append((exchange, routing_key, callback))
-
-        # Tell the protocol to read this if it is already connected.
-        if self.p != None:
-            self.p.read(exchange, routing_key, callback)
 
 
 

@@ -2,12 +2,17 @@
 # Copyright (C) 2006-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
-import os, sys
-from twisted.internet import reactor, defer, error, tcp
+import os
+
+from zope.interface import implements
+
+from twisted.internet import reactor, defer, error, tcp, interfaces
 from twisted.application import service
 from twisted.python import log, failure
 
-from vigilo.connector.amqp import AmqpFactory
+from txamqp.content import Content
+from txamqp.queue import Closed
+from vigilo.connector.amqp import AmqpFactory, PERSISTENT
 
 from vigilo.common.gettext import translate, l_
 _ = translate(__name__)
@@ -15,7 +20,7 @@ _ = translate(__name__)
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
-from vigilo.common.lock import grab_lock
+from vigilo.common.lock import grab_lock # après get_logger
 
 
 def split_host_port(hostdef):
@@ -37,9 +42,10 @@ def split_host_port(hostdef):
 class VigiloClient(service.Service):
     """Client du bus Vigilo"""
 
+    #implements(interfaces.IPullProducer)
 
-    def __init__(self, host, user, password, use_ssl=False, max_delay=60,
-                 log_traffic=False):
+    def __init__(self, host, user, password, use_ssl=False,
+                 max_delay=60, log_traffic=False):
         """
         Initialise le client.
         @param host: le serveur AMQP
@@ -59,8 +65,13 @@ class VigiloClient(service.Service):
         self.password = password
         self.use_ssl = use_ssl
 
-        self.factory = AmqpFactory(user=self.user, password=self.password,
-                                   logTraffic=log_traffic)
+        self.handlers = []
+        self.deferred = defer.Deferred()
+        self.queues = []
+        self._packetQueue = [] # List of messages waiting to be sent.
+
+        self.factory = AmqpFactory(parent=self, user=self.user,
+                password=self.password, logTraffic=log_traffic)
         self.factory.maxDelay = max_delay
 
 
@@ -75,11 +86,6 @@ class VigiloClient(service.Service):
         self._connection.disconnect()
 
 
-    def initializationFailed(self, reason):
-        self.stopService()
-        reason.raiseException()
-
-
     def _getConnection(self):
         if isinstance(self.host, list):
             hosts = [ split_host_port(h) for h in self.host ]
@@ -92,13 +98,196 @@ class VigiloClient(service.Service):
             return reactor.connectTCP(host, port, self.factory)
 
 
+    def initializationFailed(self, reason):
+        self.stopService()
+        reason.raiseException()
+
+
     def addHandler(self, handler):
-        # Proxy to the factory
-        return self.factory.addHandler(handler)
+        self.handlers.append(handler)
+        handler.client = self
+        # get protocol handler up to speed when a connection has already
+        # been established
+        if self.factory.channel:
+            handler.connectionInitialized(self.factory.channel)
 
     def removeHandler(self, handler):
-        # Proxy to the factory
-        return self.factory.removeHandler(handler)
+        handler.client = None
+        self.handlers.remove(handler)
+
+
+    def connectionLost(self, reason):
+        # Notify all child services
+        for e in self.handlers:
+            if hasattr(e, "connectionLost"):
+                e.connectionLost(reason)
+
+
+    def connectionInitialized(self, channel):
+        """
+        Send out cached stanzas and call each handler's
+        C{connectionInitialized} method.
+        """
+        # Flush all pending packets
+        d = self._sendPacketQueue()
+        def doneSendingQueue(_ignore):
+            # Trigger the deferred
+            if not self.deferred.called:
+                self.deferred.callback(self)
+            # Notify all child services
+            for e in self.handlers:
+                if hasattr(e, "connectionInitialized"):
+                    e.connectionInitialized(channel)
+        d.addCallback(doneSendingQueue)
+
+
+    @defer.inlineCallbacks
+    def _sendPacketQueue(self):
+        while self._packetQueue:
+            e, k, m = self._packetQueue.pop(0)
+            yield self.send(e, k, m)
+
+    # Wrappers
+
+    def getQueue(self, *args, **kwargs):
+        if not self.factory.channel:
+            return None
+        return self.factory.p.queue(*args, **kwargs)
+
+    def send(self, exchange, routing_key, message):
+        if self.factory.channel:
+            msg = Content(message)
+            msg["delivery mode"] = PERSISTENT
+            d = self.factory.channel.basic_publish(exchange=exchange,
+                            routing_key=routing_key, content=msg)
+            d.addErrback(self._sendFailed)
+            return d
+        else:
+            self._packetQueue.append( (exchange, routing_key, message) )
+            return defer.succeed(None)
+
+    def _sendFailed(self, fail):
+        log.err(fail)
+        return fail
+
+
+
+class QueueSubscriber(object):
+    """Abonnement à une file d'attente"""
+
+    implements(interfaces.IPullProducer)
+
+
+    def __init__(self, client, queue_name):
+        self.client = client
+        self.queue_name = queue_name
+        self.consumer = None
+        self._channel = None
+        self._queue = None
+        self._do_consume = True
+        self.ready = defer.Deferred()
+        self.client.addHandler(self)
+
+
+    def connectionInitialized(self, channel):
+        self._channel = channel
+        d = self._create()
+        d.addCallback(lambda _x: self._subscribe())
+        return d
+
+    def connectionLost(self, reason):
+        self._channel = None
+        self._queue = None
+        self.ready = defer.Deferred()
+
+
+    def _create(self):
+        if not self._channel:
+            return
+        d = self._channel.queue_declare(queue=self.queue_name, durable=True,
+                                        exclusive=False, auto_delete=False)
+        return d
+
+    def _subscribe(self):
+        if not self._channel:
+            return
+        d = self._channel.basic_consume(queue=self.queue_name,
+                                        consumer_tag=self.queue_name)
+        d.addCallback(lambda reply: self.client.getQueue(reply.consumer_tag))
+        def store_queue(queue):
+            self._queue = queue
+        d.addCallback(store_queue)
+        d.addCallback(self.ready.callback)
+        return d
+
+
+    def resumeProducing(self):
+        if not self._queue:
+            return defer.fail(NotConnected(_("Can't resume producing: not connected yet")))
+        d = self._queue.get()
+        def eb(f):
+            f.trap(Closed) # déconnexion pendant le get()
+        d.addCallbacks(lambda msg: self.consumer.write(msg), eb)
+        return d
+
+
+    # Proxies
+        
+    def ack(self, msg, multiple=False):
+        return self._channel.basic_ack(msg.delivery_tag, multiple=multiple)
+
+    def send(self, exchange, routing_key, message):
+        return self.client.send(exchange, routing_key, message)
+
+
+
+class MessageHandler(object):
+
+    implements(interfaces.IConsumer)
+
+
+    def __init__(self, client):
+        self.client = client
+        self.producer = None
+        self.keepProducing = True
+
+
+    def write(self, msg):
+        d = defer.maybeDeferred(self.processMessage, msg)
+        d.addCallbacks(self.processingSucceeded, self.processingFailed,
+                       callbackArgs=(msg, ))
+        if self.keepProducing:
+            d.addBoth(lambda _x: self.producer.resumeProducing())
+        return d
+
+
+    def processMessage(self, msg):
+        raise NotImplementedError()
+
+    def processingSucceeded(self, _ignored, msg):
+        self.producer.ack(msg)
+
+    def processingFailed(self, error):
+        LOGGER.error(error)
+
+
+    def subscribe(self, queue_name):
+        # attention, pas d'injection de deps, faire le vrai boulot dans
+        # registerProducer()
+        subscriber = QueueSubscriber(self.client, queue_name)
+        self.registerProducer(subscriber, False)
+
+    def unsubscribe(self):
+        return self.unregisterProducer()
+
+    def registerProducer(self, producer, streaming):
+        self.producer = producer
+        self.producer.consumer = self
+        self.producer.ready.addCallback(
+                lambda _x: self.producer.resumeProducing())
+
+    def unregisterProducer(self):
+        self.producer = None
 
 
 
@@ -131,6 +320,12 @@ def client_factory(settings):
         vigilo_client.logTraffic = settings['bus'].as_bool('log_traffic')
     except KeyError:
         vigilo_client.logTraffic = False
+
+    try:
+        subscriptions = settings['bus'].as_list('subscriptions')
+    except KeyError:
+        subscriptions = []
+    vigilo_client.setupSubscriptions(subscriptions)
 
     return vigilo_client
 
