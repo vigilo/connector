@@ -4,7 +4,20 @@
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
 import os, sys
+from platform import python_version_tuple
 from setuptools import setup, find_packages
+
+
+install_requires = [
+    'setuptools',
+    'vigilo-common',
+    'vigilo-pubsub',
+    'txAMQP',
+    'Twisted',
+    'argparse',
+]
+if tuple(python_version_tuple()) < ('2', '6'):
+    install_requires.append("simplejson")
 
 tests_require = [
     'coverage',
@@ -37,19 +50,8 @@ setup(name='vigilo-connector',
         license='http://www.gnu.org/licenses/gpl-2.0.html',
         long_description="This library gives an API to create an AMQP "
                          "connector for Vigilo.",
-        install_requires=[
-            # dashes become underscores
-            # order is important (wokkel before Twisted)
-            'setuptools',
-            'vigilo-common',
-            'vigilo-pubsub',
-            'txAMQP',
-            'Twisted',
-            'argparse',
-            ],
-        namespace_packages = [
-            'vigilo',
-            ],
+        install_requires=install_requires,
+        namespace_packages = [ 'vigilo' ],
         packages=find_packages("src"),
         message_extractors={
             'src': [

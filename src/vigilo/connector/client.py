@@ -12,7 +12,6 @@ from twisted.python import log, failure
 
 from txamqp.content import Content
 from txamqp.queue import Closed
-from vigilo.connector.amqp import AmqpFactory, PERSISTENT
 
 from vigilo.common.gettext import translate, l_
 _ = translate(__name__)
@@ -21,6 +20,10 @@ from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
 from vigilo.common.lock import grab_lock # après get_logger
+
+from vigilo.connector.amqp import AmqpFactory, PERSISTENT
+from vigilo.connector.interfaces import InterfaceNotImplemented
+from vigilo.connector.interfaces import IBusHandler, IBusProducer
 
 
 def split_host_port(hostdef):
@@ -42,7 +45,6 @@ def split_host_port(hostdef):
 class VigiloClient(service.Service):
     """Client du bus Vigilo"""
 
-    #implements(interfaces.IPullProducer)
 
     def __init__(self, host, user, password, use_ssl=False,
                  max_delay=60, log_traffic=False):
@@ -103,12 +105,18 @@ class VigiloClient(service.Service):
         reason.raiseException()
 
 
+    def isConnected(self):
+        return self.factory.channel is not None
+
+
     def addHandler(self, handler):
+        if not IBusHandler.implementedBy(handler):
+            raise InterfaceNotImplemented(IBusHandler, handler)
         self.handlers.append(handler)
         handler.client = self
         # get protocol handler up to speed when a connection has already
         # been established
-        if self.factory.channel:
+        if self.isConnected():
             handler.connectionInitialized(self.factory.channel)
 
     def removeHandler(self, handler):
@@ -150,12 +158,12 @@ class VigiloClient(service.Service):
     # Wrappers
 
     def getQueue(self, *args, **kwargs):
-        if not self.factory.channel:
+        if not isConnected():
             return None
         return self.factory.p.queue(*args, **kwargs)
 
     def send(self, exchange, routing_key, message):
-        if self.factory.channel:
+        if isConnected():
             msg = Content(message)
             msg["delivery mode"] = PERSISTENT
             d = self.factory.channel.basic_publish(exchange=exchange,
@@ -175,7 +183,7 @@ class VigiloClient(service.Service):
 class QueueSubscriber(object):
     """Abonnement à une file d'attente"""
 
-    implements(interfaces.IPullProducer)
+    implements(IBusProducer, IBusHandler)
 
 
     def __init__(self, client, queue_name):
@@ -223,16 +231,17 @@ class QueueSubscriber(object):
 
     def resumeProducing(self):
         if not self._queue:
-            return defer.fail(NotConnected(_("Can't resume producing: not connected yet")))
+            return defer.fail(NotConnected(
+                        _("Can't resume producing: not connected yet")))
         d = self._queue.get()
         def eb(f):
             f.trap(Closed) # déconnexion pendant le get()
-        d.addCallbacks(lambda msg: self.consumer.write(msg), eb)
+        d.addCallbacks(self.consumer.write, eb)
         return d
 
 
     # Proxies
-        
+
     def ack(self, msg, multiple=False):
         return self._channel.basic_ack(msg.delivery_tag, multiple=multiple)
 
@@ -253,13 +262,26 @@ class MessageHandler(object):
 
 
     def write(self, msg):
-        d = defer.maybeDeferred(self.processMessage, msg)
+        content = json.loads(msg.content.body)
+        if "messages" in content:
+            d = self._processList(content["messages"])
+        else:
+            d = defer.maybeDeferred(self.processMessage, content)
         d.addCallbacks(self.processingSucceeded, self.processingFailed,
                        callbackArgs=(msg, ))
         if self.keepProducing:
             d.addBoth(lambda _x: self.producer.resumeProducing())
         return d
 
+    def _processList(self, msglist):
+        def processOne(_ignored):
+            if not msglist:
+                return
+            msg = msglist.pop(0)
+            d = defer.maybeDeferred(self.processMessage, msg)
+            d.addCallback(processOne)
+            return d
+        return processOne(None)
 
     def processMessage(self, msg):
         raise NotImplementedError()
@@ -281,6 +303,7 @@ class MessageHandler(object):
         return self.unregisterProducer()
 
     def registerProducer(self, producer, streaming):
+        #assert streaming == False # on ne prend que des PullProducers
         self.producer = producer
         self.producer.consumer = self
         self.producer.ready.addCallback(
@@ -321,11 +344,11 @@ def client_factory(settings):
     except KeyError:
         vigilo_client.logTraffic = False
 
-    try:
-        subscriptions = settings['bus'].as_list('subscriptions')
-    except KeyError:
-        subscriptions = []
-    vigilo_client.setupSubscriptions(subscriptions)
+    #try:
+    #    subscriptions = settings['bus'].as_list('subscriptions')
+    #except KeyError:
+    #    subscriptions = []
+    #vigilo_client.setupSubscriptions(subscriptions)
 
     return vigilo_client
 

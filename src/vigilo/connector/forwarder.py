@@ -12,7 +12,16 @@ import sqlite3
 from collections import deque
 from platform import python_version_tuple
 
+try:
+    import json
+except ImportError:
+    from simplejson as json
+
+from zope.interface import implements
+
 from twisted.internet import reactor, defer, task
+from twisted.internet.interfaces import IConsumer, IPullProducer
+from twisted.application import service
 from twisted.python.failure import Failure
 from twisted.words.xish import domish
 from twisted.words.protocols.jabber.jid import JID
@@ -21,8 +30,10 @@ from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
 
 from vigilo.common.conf import settings
-from vigilo.pubsub.xml import NS_PERF
-from vigilo.connector import MESSAGEONETOONE
+#from vigilo.pubsub.xml import NS_PERF
+from vigilo.connector.interfaces import InterfaceNotImplemented
+from vigilo.connector.interfaces import IBusHandler
+#from vigilo.connector import MESSAGEONETOONE
 from vigilo.connector.store import DbRetry
 from vigilo.common.gettext import translate
 _ = translate(__name__)
@@ -30,13 +41,322 @@ from vigilo.common.logging import get_logger, get_error_message
 LOGGER = get_logger(__name__)
 
 
+
 class NotConnectedError(Exception):
     def __str__(self):
         return _('no connection')
 
-class XMPPNotConnectedError(NotConnectedError):
+
+class BusNotConnectedError(NotConnectedError):
     def __str__(self):
-        return _('no connection to the XMPP server')
+        return _('no connection to the bus')
+
+
+
+class BusPublisher(object):
+
+    implements(IConsumer, IBusHandler)
+
+
+    def __init__(self, dbfilename=None, dbtable=None):
+        self.name = self.__class__.__name__
+        self.producer = None
+        self._is_streaming = True
+        # copy: on modifie la hashmap dans status.py
+        self._publications = settings.get('publications', {}).copy()
+        self._initialized = False
+        # Stats
+        self._messages_forwarded = 0
+        self._messages_sent = 0
+        # Accumulation des messages de perf
+        self.batch_send_perf = int(settings["bus"].get("batch_send_perf", 1))
+        self._batch_perf_queue = deque()
+
+
+    def connectionInitialized(self):
+        """
+        Lancée à la connexion (ou re-connexion).
+        Redéfinie pour pouvoir vider les messages en attente.
+        """
+        self._initialized = True
+        # les stats sont des COUNTERs, on peut réinitialiser
+        self._messages_sent = 0
+        if self.producer is not None:
+            self.producer.resumeProducing()
+
+
+    def connectionLost(self, reason):
+        """
+        Lancée à la perte de la connexion au bus. Permet d'arrêter d'envoyer
+        les messages en attente.
+        """
+        self._initialized = False
+        if self.producer is not None:
+            self.producer.pauseProducing()
+        LOGGER.info(_('Lost connection to the XMPP bus (reason: %s)'), reason)
+
+
+    def isConnected(self):
+        """
+        Teste si on est connecté au bus
+        """
+        return self._initialized
+
+
+    def getStats(self):
+        """Récupère des métriques de fonctionnement du connecteur"""
+        stats = {
+            "sent": self._messages_sent,
+            }
+        return defer.succeed(stats)
+
+
+    def registerProducer(self, producer, streaming):
+        self.producer = producer
+        self._is_streaming = streaming
+        self.producer.consumer = self
+        if self.isConnected():
+            self.producer.resumeProducing()
+
+    def unregisterProducer(self):
+        self.producer.pauseProducing()
+        self.producer = None
+
+
+    def write(self, data):
+        d = defer.maybeDeferred(self.sendMessage, data)
+        def doneSending(result):
+            if not self._is_streaming:
+                self.producer.resumeProducing()
+            return result
+        d.addBoth(doneSending)
+        return d
+
+
+    def sendMessage(self, msg):
+        """
+        Traite un message en l'envoyant sur le bus.
+        Ne sera pas lancé plus de L{max_send_simult} fois sans attendre les
+        réponses.
+        @param msg: message à traiter
+        @type  msg: C{str} ou C{twisted.words.xish.domish.Element}
+        @return: le C{Deferred} avec la réponse, ou C{None} si cela n'a pas
+            lieu d'être (message envoyé en push)
+        """
+        self._messages_sent += 1
+        if isinstance(msg, basestring):
+            msg = json.loads(msg)
+        # accumulation des messages de perf
+        msg = self._accumulate_perf_msgs(msg)
+        if msg is None:
+            return
+        msg_text = json.dumps(msg)
+        if not self.client.isConnected():
+            self.store(msg_text)
+
+        if msg["type"] not in self._publications:
+            LOGGER.error(_("No destination node configured for messages "
+                           "of type '%s'. Skipping."), msg["type"])
+            return
+        exchange = "vigilo.%s" % self._publications[msg["type"]]
+        routing_key = msg.get("routing_key", msg["type"])
+        result = self.client.send(exchange, routing_key, msg_text)
+        return result
+
+
+    def _accumulate_perf_msgs(self, msg):
+        if self.batch_send_perf <= 1 or msg["type"] != "perf":
+            return msg # on est pas concerné
+        self._batch_perf_queue.append(msg)
+        if len(self._batch_perf_queue) < self.batch_send_perf:
+            return None
+        batch_msg = {"type": "perf",
+                     "messages": list(self._batch_perf_queue)}
+        self._batch_perf_queue.clear()
+        #LOGGER.info("Sent a batch perf message with %d messages",
+        #            self.batch_send_perf)
+        return batch_msg
+
+
+
+class BackupProvider(service.Service):
+    """
+    Ajoute à un PushProducer la possibilité d'être mis en pause. Les données
+    vont alors dans une file d'attente mémoire qui est sauvegardée sur le
+    disque dans une base.
+    """
+
+    implements(IPushProducer, IConsumer)
+
+
+    def __init__(self, dbfilename=None, dbtable=None):
+        self.producer = None
+        self.consumer = None
+        self.paused = True
+        # File d'attente mémoire
+        self.max_queue_size = self._max_queue_size()
+        self.queue = None
+        self._build_queue()
+        self._processing_queue = False
+        # Base de backup
+        if dbfilename is None or dbtable is None:
+            self.retry = None
+        else:
+            self.retry = DbRetry(dbfilename, dbtable)
+
+
+    def _build_queue(self):
+        if self.max_queue_size is not None:
+            self.queue = deque(maxlen=self.max_queue_size)
+        else:
+            # sur python < 2.6, il n'y a pas de maxlen
+            self.queue = deque()
+
+
+    def _max_queue_size(self):
+        max_queue_size = settings.get("connector", {}).get("max_queue_size", 0)
+        try:
+            max_queue_size = int(max_queue_size)
+        except ValueError:
+            LOGGER.warning(_("Can't understand the max_queue_size option, it "
+                             "should be an integer (or 0 for no limit). "
+                             "Current value: %s"), max_queue_size)
+            return None
+        if max_queue_size <= 0:
+            max_queue_size = None
+        if (max_queue_size is not None and
+                    tuple(python_version_tuple()) < ('2', '6')):
+            LOGGER.warning(_("The max_queue_size option is only available "
+                             "on Python >= 2.6. Ignoring."))
+            max_queue_size = None
+        return max_queue_size
+
+
+    def setup(self):
+        d = self.retry.initdb()
+        return d
+
+
+    def startService(self):
+        d = self.retry.initdb()
+        return d
+
+
+    def stopService(self):
+        d = self.pauseProducing()
+        return d
+
+
+    def registerProducer(self, producer, streaming):
+        assert streaming == True # Ça n'a pas de sens avec un PullProducer
+        self.producer = producer
+        self.producer.consumer = self
+
+    def unregisterProducer(self):
+        #self.producer.pauseProducing() # A priori il sait pas faire
+        self.producer = None
+
+
+    def getStats(self):
+        """Récupère des métriques de fonctionnement"""
+        stats = {
+            "queue": len(self.queue),
+            "backup_in_buf": len(self.retry.buffer_in),
+            "backup_out_buf": len(self.retry.buffer_out),
+            }
+        backup_size_d = self.retry.qsize()
+        def add_backup_size(backup_size):
+            stats["backup"] = backup_size
+            return stats
+        backup_size_d.addCallbacks(add_backup_size,
+                                   lambda e: add_backup_size("U"))
+        return backup_size_d
+
+
+    def write(self, data):
+        self.queue.append(data)
+        self.processQueue()
+
+
+    def pauseProducing(self):
+        self.paused = True
+        d = self._saveToDb()
+        d.addCallback(lambda _x: self.retry.flush())
+        return d
+
+
+    def resumeProducing(self):
+        self.paused = False
+        d = self.retry.initdb()
+        d.addCallback(lambda _x: self.processQueue())
+        return d
+
+
+    def stopProducing(self):
+        pass
+
+
+    def processQueue(self):
+        if self.paused:
+            return
+        if self._processing_queue:
+            return
+
+        self._processing_queue = True
+        msg = self._getNextMsg()
+        if msg is None:
+            self._processing_queue = False
+            return
+
+        d = self.consumer.write(msg)
+        d.addErrback(self._send_failed, msg)
+        d.addCallback(lambda _x: self.processQueue())
+        return d
+
+
+    def _send_failed(self, e, msg):
+        """errback: remet le message en base"""
+        errmsg = _('Unable to forward the message (%(reason)s)')
+        LOGGER.error(errmsg % {"reason": e.getErrorMessage()})
+        self.queue.append(msg)
+
+
+    def _saveToDb(self):
+        """Sauvegarde tous les messages de la file dans la base de backup"""
+        def eb(f):
+            LOGGER.error(_("Error trying to save a message to the backup "
+                           "database: %s"), f.getErrorMessage())
+        saved = []
+        while len(self.queue) > 0:
+            msg = self.queue.popleft()
+            if isinstance(msg, dict):
+                msg = json.dumps(msg)
+            d = self.retry.put(msg)
+            d.addErrback(eb)
+            saved.append(d)
+        return defer.DeferredList(saved)
+
+    def _getNextMsg(self):
+        """
+        Récupère le prochain message à traiter, en commençant par essayer dans
+        la base de backup
+        """
+        d = self.retry.pop()
+        def get_from_queue(msg):
+            if msg is not None:
+                return msg # le backup est prioritaire
+            # on dépile la file principale
+            try:
+                msg = self.queue.popleft()
+            except IndexError:
+                # plus de messages
+                return None
+            return msg
+        d.addCallback(get_from_queue)
+        return d
+
+
+
 
 
 class PubSubForwarder(PubSubClient):
