@@ -24,11 +24,13 @@ from vigilo.common.gettext import translate
 _ = translate(__name__)
 
 
+
 class DbRetry(object):
     """
     Implémente une base de données locale qui peut-être utilisée pour stocker
     des messages XML lorsque le destinataire final n'est pas joignable.
     """
+
 
     def __init__(self, filename, table):
         """
@@ -48,30 +50,32 @@ class DbRetry(object):
         self._saving_buffer_in = False
         self._cache_isempty = False
         self._is_flushing_d = None
-        self.initialized = False
+        self.initialized = defer.Deferred()
         self._table = table
+        self._db = None
         # threads: http://twistedmatrix.com/trac/ticket/3629
         self._db = adbapi.ConnectionPool("sqlite3.dbapi2", filename,
                                          check_same_thread=False)
 
+
+
     def initdb(self):
-        if self.initialized:
-            return defer.succeed(None)
         # Création de la table. Si une erreur se produit, elle sera
         # tout simplement propagée à l'appelant, qui décidera de ce
         # qu'il convient de faire.
         d = self._db.runOperation('CREATE TABLE IF NOT EXISTS %s '
                     '(id INTEGER PRIMARY KEY, msg TXT)' % self._table)
-        def set_empty_cache(count_result):
-            self._cache_isempty = (count_result[0][0] == 0)
-        def after_init(r):
-            self.initialized = True
-            return r
+
         d.addCallback(lambda x: self._db.runQuery("SELECT count(*) FROM %s"
                                                   % self._table))
+
+        def set_empty_cache(count_result):
+            self._cache_isempty = (count_result[0][0] == 0)
         d.addCallback(set_empty_cache)
-        d.addCallback(after_init)
+
+        d.addCallback(self.initialized.callback)
         return d
+
 
     def flush(self):
         """
@@ -91,6 +95,7 @@ class DbRetry(object):
             return self._is_flushing_d
         self._is_flushing_d.addCallbacks(cb, eb)
         return self._is_flushing_d
+
 
     def _flush(self, txn):
         """
@@ -119,6 +124,7 @@ class DbRetry(object):
                             get_from_buffer_in())
             self._cache_isempty = False
 
+
     def qsize(self):
         def set_cache(dbresult): # simple sécurité
             self._cache_isempty = (dbresult[0][0] == 0)
@@ -131,6 +137,7 @@ class DbRetry(object):
         d.addCallback(set_cache)
         d.addCallback(add_buffers)
         return d
+
 
     # -- Récupération depuis la base
 
@@ -167,6 +174,7 @@ class DbRetry(object):
         d.addCallback(get_from_buffer)
         return d
 
+
     def _fill_buffer_out(self, txn):
         """
         Re-remplis le buffer de sortie depuis la base SQLite.
@@ -198,6 +206,7 @@ class DbRetry(object):
         LOGGER.debug("Filled output buffer with %d messages from database",
                      len(msgs))
 
+
     def _get_from_buffer_in(self):
         """
         Quand la base est vide, on utilise le contenu de la file d'entrée
@@ -210,6 +219,7 @@ class DbRetry(object):
         while len(self.buffer_in) > 0:
             msg = self.buffer_in.popleft()
             self.buffer_out.append((None, msg))
+
 
     def _vacuum(self):
         LOGGER.debug("Starting VACUUM")
@@ -227,6 +237,7 @@ class DbRetry(object):
             LOGGER.debug("VACUUM is done")
         d.addBoth(log)
         return d
+
 
     # -- Insertion dans la base
 
@@ -248,6 +259,7 @@ class DbRetry(object):
             return self._db.runInteraction(self._save_buffer_in)
         else:
             return defer.succeed(None)
+
 
     def _save_buffer_in(self, txn):
         """

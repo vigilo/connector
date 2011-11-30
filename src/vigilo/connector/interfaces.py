@@ -23,6 +23,11 @@ class IBusHandler(Interface):
         "Une référence à l'instance de C{VigiloClient} connectée au bus"
         )
 
+    def setClient(client):
+        """
+        Enregistre le handler auprès du client. Il sera notifié des évènements
+        survenant sur celui-ci.
+        """
 
 
 class IBusProducer(IPullProducer):

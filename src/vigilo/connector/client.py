@@ -71,6 +71,7 @@ class VigiloClient(service.Service):
         self.deferred = defer.Deferred()
         self.queues = []
         self._packetQueue = [] # List of messages waiting to be sent.
+        self.channel = None
 
         self.factory = AmqpFactory(parent=self, user=self.user,
                 password=self.password, logTraffic=log_traffic)
@@ -80,12 +81,25 @@ class VigiloClient(service.Service):
     def startService(self):
         service.Service.startService(self)
         self._connection = self._getConnection()
+        # Notify all child services
+        dl = []
+        for h in self.handlers:
+            if hasattr(h, "startService"):
+                dl.append(defer.maybeDeferred(h.startService))
+        return defer.gatherResults(dl)
 
 
     def stopService(self):
         service.Service.stopService(self)
+        # Notify all child services
+        dl = []
+        for h in self.handlers:
+            if hasattr(h, "stopService"):
+                dl.append(defer.maybeDeferred(h.stopService))
+        # On se déconnecte nous-même
         self.factory.stopTrying()
         self._connection.disconnect()
+        return defer.gatherResults(dl)
 
 
     def _getConnection(self):
@@ -106,18 +120,17 @@ class VigiloClient(service.Service):
 
 
     def isConnected(self):
-        return self.factory.channel is not None
+        return self.channel is not None
 
 
     def addHandler(self, handler):
         if not IBusHandler.providedBy(handler):
             raise InterfaceNotProvided(IBusHandler, handler)
         self.handlers.append(handler)
-        handler.client = self
         # get protocol handler up to speed when a connection has already
         # been established
         if self.isConnected():
-            handler.connectionInitialized(self.factory.channel)
+            handler.connectionInitialized()
 
     def removeHandler(self, handler):
         handler.client = None
@@ -126,12 +139,12 @@ class VigiloClient(service.Service):
 
     def connectionLost(self, reason):
         # Notify all child services
-        for e in self.handlers:
-            if hasattr(e, "connectionLost"):
-                e.connectionLost(reason)
+        for h in self.handlers:
+            if hasattr(h, "connectionLost"):
+                h.connectionLost(reason)
 
 
-    def connectionInitialized(self, channel):
+    def connectionInitialized(self):
         """
         Send out cached stanzas and call each handler's
         C{connectionInitialized} method.
@@ -143,9 +156,9 @@ class VigiloClient(service.Service):
             if not self.deferred.called:
                 self.deferred.callback(self)
             # Notify all child services
-            for e in self.handlers:
-                if hasattr(e, "connectionInitialized"):
-                    e.connectionInitialized(channel)
+            for h in self.handlers:
+                if hasattr(h, "connectionInitialized"):
+                    h.connectionInitialized()
         d.addCallback(doneSendingQueue)
 
 
@@ -163,10 +176,10 @@ class VigiloClient(service.Service):
         return self.factory.p.queue(*args, **kwargs)
 
     def send(self, exchange, routing_key, message):
-        if isConnected():
+        if self.isConnected():
             msg = Content(message)
             msg["delivery mode"] = PERSISTENT
-            d = self.factory.channel.basic_publish(exchange=exchange,
+            d = self.channel.basic_publish(exchange=exchange,
                             routing_key=routing_key, content=msg)
             d.addErrback(self._sendFailed)
             return d
@@ -180,25 +193,39 @@ class VigiloClient(service.Service):
 
 
 
-class QueueSubscriber(object):
+class BusHandler(object):
+    """Abonnement à une file d'attente"""
+
+    implements(IBusHandler)
+
+
+    def __init__(self):
+        self.client = None
+
+    def setClient(self, client):
+        self.client = client
+        self.client.addHandler(self)
+
+
+
+class QueueSubscriber(BusHandler):
     """Abonnement à une file d'attente"""
 
     implements(IBusProducer, IBusHandler)
 
 
-    def __init__(self, client, queue_name):
-        self.client = client
+    def __init__(self, queue_name):
+        BusHandler.__init__(self)
         self.queue_name = queue_name
         self.consumer = None
         self._channel = None
         self._queue = None
         self._do_consume = True
         self.ready = defer.Deferred()
-        self.client.addHandler(self)
 
 
-    def connectionInitialized(self, channel):
-        self._channel = channel
+    def connectionInitialized(self):
+        self._channel = self.client.channel
         d = self._create()
         d.addCallback(lambda _x: self._subscribe())
         return d
@@ -250,13 +277,13 @@ class QueueSubscriber(object):
 
 
 
-class MessageHandler(object):
+class MessageHandler(BusHandler):
 
-    implements(interfaces.IConsumer)
+    implements(interfaces.IConsumer, IBusHandler)
 
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self):
+        BusHandler.__init__(self)
         self.producer = None
         self.keepProducing = True
 
@@ -296,7 +323,8 @@ class MessageHandler(object):
     def subscribe(self, queue_name):
         # attention, pas d'injection de deps, faire le vrai boulot dans
         # registerProducer()
-        subscriber = QueueSubscriber(self.client, queue_name)
+        subscriber = QueueSubscriber(queue_name)
+        subscriber.setClient(self.client)
         self.registerProducer(subscriber, False)
 
     def unsubscribe(self):

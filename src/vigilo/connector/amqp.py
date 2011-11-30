@@ -177,6 +177,7 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         log.msg("Client connection lost.")
         self.p = None
         self.channel = None
+        self.parent.channel = None
         protocol.ReconnectingClientFactory.clientConnectionFailed(
                 self, connector, reason)
         self.parent.connectionLost(reason)
@@ -188,7 +189,8 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         C{connectionInitialized} method.
         """
         self.channel = channel
-        self.parent.connectionInitialized(channel)
+        self.parent.channel = channel
+        self.parent.connectionInitialized()
 
 
     def stop(self):

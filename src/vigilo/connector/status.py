@@ -14,7 +14,7 @@ import time
 import socket
 
 from zope.interface import implements
-from twisted.internet import reactor, task
+from twisted.internet import reactor, task, defer
 
 #from vigilo.pubsub.xml import NS_PERF, NS_COMMAND
 from vigilo.connector.forwarder import BusPublisher
@@ -144,7 +144,7 @@ class StatusPublisher(BusPublisher):
             return stats
         dl.addCallback(merge)
         return dl
-            
+
 
     def _sendStats(self, stats, msg_perf):
         dl = []
@@ -165,7 +165,7 @@ def statuspublisher_factory(settings, servicename, client, providers=[]):
                     settings["connector"].get("hostname", None),
                     servicename=servicename,
                     node=settings["connector"].get("status_node", None))
-    client.addHandler(stats_publisher)
+    stats_publisher.setClient(client)
     for provider in providers:
         stats_publisher.registerProvider(provider)
     return stats_publisher
