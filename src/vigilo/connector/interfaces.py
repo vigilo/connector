@@ -8,7 +8,7 @@ from twisted.internet.interfaces import IPullProducer, IConsumer
 
 
 
-class InterfaceNotImplemented(Exception):
+class InterfaceNotProvided(Exception):
     pass
 
 

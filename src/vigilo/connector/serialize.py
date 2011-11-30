@@ -9,7 +9,7 @@ function to convert text to XML
 try:
     import json
 except ImportError:
-    from simplejson as json
+    import simplejson as json
 
 #from twisted.words.xish import domish
 from vigilo.common.logging import get_logger
@@ -23,14 +23,18 @@ from vigilo.common.gettext import translate
 
 _ = translate(__name__)
 
-def serialize(text):
+
+def parseMessage(text, format="dict"):
     """
     Sérialise un texte séparé par des I{pipes} en message Vigilo (JSON)
     @param text: Texte séparé par des I{pipes}
     @type  text: C{str}
-    @return: Texte au format JSON
+    @param format: format de sortie : C{dict} ou C{json}. Par défaut : C{dict}
+    @type  format: C{str}
+    @return: Texte au format demandé
     @rtype:  C{str}
     """
+    assert format in ["dict", "json"]
     text = text.strip()
     try:
         text = unicode(text, 'utf8', errors='strict')
@@ -51,7 +55,10 @@ def serialize(text):
         if msg_dict is None:
             return None
         #LOGGER.debug("Converted %s to %s", str(elements), msg.toXml())
-        return json.dumps(msg_dict)
+        if format == "dict":
+            return msg_dict
+        elif format == "json":
+            return json.dumps(msg_dict)
 
     except (TypeError, AttributeError):
         LOGGER.warning(_("Unknown/malformed message type: '%s'") %

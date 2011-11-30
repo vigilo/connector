@@ -13,28 +13,29 @@ import sys
 import time
 import socket
 
+from zope.interface import implements
 from twisted.internet import reactor, task
 
-from vigilo.pubsub.xml import NS_PERF, NS_COMMAND
-from vigilo.connector.forwarder import PubSubSender
+#from vigilo.pubsub.xml import NS_PERF, NS_COMMAND
+from vigilo.connector.forwarder import BusPublisher
+from vigilo.connector.interfaces import IBusHandler
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
 
-class StatusPublisher(PubSubSender):
+class StatusPublisher(BusPublisher):
     """
     Supervision et métrologie d'un connecteur.
     """
 
-    def __init__(self, forwarder, hostname, servicename=None, frequency=60,
-                 node=None):
+    implements(IBusHandler)
+
+
+    def __init__(self, hostname=None, servicename=None,
+                 frequency=60, node=None):
         """
-        @param forwarder: le conecteur à superviser
-        @type  forwarder: instance de L{PubSubForwarder
-            <vigilo.connector.forwarder.PubSubForwarder>} (ou une de ses
-            sous-classes)
         @param hostname: le nom d'hôte à utiliser pour le message Nagios
         @type  hostname: C{str}
         @param servicename: le nom de service Nagios à utiliser
@@ -47,30 +48,42 @@ class StatusPublisher(PubSubSender):
         @type  node: C{str}
         """
         super(StatusPublisher, self).__init__()
-        self.forwarder = forwarder
+        self.providers = []
+
         self.hostname = hostname
-        if servicename is not None:
-            self.servicename = servicename
-        else:
-            self.servicename = os.path.basename(sys.argv[0])
-        self.frequency = frequency
         if self.hostname is None:
             self.hostname = socket.gethostname()
             if "." in self.hostname: # on ne veut pas le FQDN
                 self.hostname = self.hostname[:self.hostname.index(".")]
+
+        if servicename is not None:
+            self.servicename = servicename
+        else:
+            self.servicename = os.path.basename(sys.argv[0])
+
+        self.frequency = frequency
+
         if node is not None:
-            for msgtype in self._nodetopublish:
-                self._nodetopublish[msgtype] = node
+            for msgtype in self._publications:
+                self._publications[msgtype] = node
+
         self.task = task.LoopingCall(self.sendStatus)
         self.status = (0, _("OK: running"))
         # Pas d'envoi simultané
         self.max_send_simult = 1
         self.batch_send_perf = 1
 
+
+    def registerProvider(self, provider):
+        assert hasattr(provider, "getStats"), \
+               "%r does not have a getStats method" % provider
+        self.providers.append(provider)
+
+    def unregisterProvider(self, provider):
+        self.providers.remove(provider)
+
+
     def connectionInitialized(self):
-        """
-        Lancée à la connexion (ou re-connexion).
-        """
         super(StatusPublisher, self).connectionInitialized()
         def start_task():
             if not self.task.running:
@@ -80,61 +93,79 @@ class StatusPublisher(PubSubSender):
         # tâches potentielles d'initialisation
         reactor.callLater(10, start_task)
 
+
     def connectionLost(self, reason):
-        """
-        Lancée à la perte de la connexion au bus.
-        """
         super(StatusPublisher, self).connectionLost(reason)
-        #self.task.stop() # on doit continuer à générer des stats
+        # On doit continuer à générer des stats pour que la métrologie soit
+        # continue, donc on ne fait pas self.task.stop()
+
 
     def sendStatus(self):
         timestamp = int(time.time())
+
         # État Nagios
-        msg_state = (
-            '<command xmlns="%(namespace)s">'
-                '<timestamp>%(timestamp)d</timestamp>'
-                '<cmdname>PROCESS_SERVICE_CHECK_RESULT</cmdname>'
-                '<value>%(host)s;%(service)s;%(code)d;%(msg)s</value>'
-            '</command>' % {
-                "namespace": NS_COMMAND,
+        msg_state = {
+                "type": "nagios",
+                "timestamp": timestamp,
+                "cmdname": "PROCESS_SERVICE_CHECK_RESULT",
+                }
+        msg_state["value"] = ("%(host)s;%(service)s;%(code)d;%(msg)s"
+                              % { "host": self.hostname,
+                                  "service": self.servicename,
+                                  "code": self.status[0],
+                                  "msg": self.status[1].encode("utf-8"),
+                                })
+
+        # Métrologie
+        msg_perf = {
+                "type": "perf",
                 "timestamp": timestamp,
                 "host": self.hostname,
-                "service": self.servicename,
-                "code": self.status[0],
-                "msg": self.status[1].encode("utf-8"),
                 }
-             )
-        if self.isConnected():
-            self.forwardMessage(msg_state)
-        # Métrologie
-        msg_perf = ('<perf xmlns="%(namespace)s">'
-                        '<timestamp>%(timestamp)d</timestamp>'
-                        '<host>%(host)s</host>'
-                        '<datasource>%(service)s-%%(datasource)s</datasource>'
-                        '<value>%%(value)s</value>'
-                    '</perf>' % {
-                        "namespace": NS_PERF,
-                        "timestamp": timestamp,
-                        "host": self.hostname,
-                        "service": self.servicename,
-                        }
-                     )
-        stats = self.forwarder.getStats()
-        stats.addCallback(self._send_stats, msg_perf)
+        d = self._collectStats()
+        # on envoie même si on est pas connecté pour avoir des graphes continus
+        d.addCallback(self._sendStats, msg_perf)
 
-    def _send_stats(self, stats, msg_perf):
+        if self.isConnected():
+            d.addCallback(lambda _x: self.sendMessage(msg_state))
+
+        return d
+
+
+    def _collectStats(self):
+        dl = []
+        for provider in self.providers:
+            dl.append(provider.getStats())
+        dl = defer.gatherResults(dl)
+        def merge(results):
+            stats = {}
+            for result in results:
+                stats.update(result)
+            return stats
+        dl.addCallback(merge)
+        return dl
+            
+
+    def _sendStats(self, stats, msg_perf):
+        dl = []
         for statname, statvalue in stats.iteritems():
-            self.forwardMessage(msg_perf % {"datasource": statname,
-                                            "value": statvalue})
+            msg = msg_perf.copy()
+            msg["datasource"] = "%s-%s" % (self.servicename, statname)
+            msg["value"] = statvalue
+            dl.append(self.sendMessage(msg))
             LOGGER.info(_("Stats for %(service)s: %(name)s = %(value)s")
                         % {"service": self.servicename,
                            "name": statname,
                            "value": statvalue})
+        return defer.DeferredList(dl)
 
-    def queueFull(self):
-        self.status = (1, _("WARNING: queue full"))
-        self.sendStatus()
 
-    def queueOk(self):
-        self.status = (0, _("OK: running"))
-        self.sendStatus()
+def statuspublisher_factory(settings, servicename, client, providers=[]):
+    stats_publisher = StatusPublisher(
+                    settings["connector"].get("hostname", None),
+                    servicename=servicename,
+                    node=settings["connector"].get("status_node", None))
+    client.addHandler(stats_publisher)
+    for provider in providers:
+        stats_publisher.registerProvider(provider)
+    return stats_publisher

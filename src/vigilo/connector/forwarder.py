@@ -8,6 +8,7 @@ Classe de base pour les composants d'un connecteur.
 
 from __future__ import absolute_import
 
+import os
 import sqlite3
 from collections import deque
 from platform import python_version_tuple
@@ -15,12 +16,12 @@ from platform import python_version_tuple
 try:
     import json
 except ImportError:
-    from simplejson as json
+    import simplejson as json
 
 from zope.interface import implements
 
 from twisted.internet import reactor, defer, task
-from twisted.internet.interfaces import IConsumer, IPullProducer
+from twisted.internet.interfaces import IConsumer, IPullProducer, IPushProducer
 from twisted.application import service
 from twisted.python.failure import Failure
 from twisted.words.xish import domish
@@ -29,9 +30,7 @@ from twisted.words.protocols.jabber import error
 from wokkel.pubsub import PubSubClient, Item
 from wokkel.generic import parseXml
 
-from vigilo.common.conf import settings
 #from vigilo.pubsub.xml import NS_PERF
-from vigilo.connector.interfaces import InterfaceNotImplemented
 from vigilo.connector.interfaces import IBusHandler
 #from vigilo.connector import MESSAGEONETOONE
 from vigilo.connector.store import DbRetry
@@ -42,14 +41,14 @@ LOGGER = get_logger(__name__)
 
 
 
-class NotConnectedError(Exception):
-    def __str__(self):
-        return _('no connection')
-
-
-class BusNotConnectedError(NotConnectedError):
-    def __str__(self):
-        return _('no connection to the bus')
+#class NotConnectedError(Exception):
+#    def __str__(self):
+#        return _('no connection')
+#
+#
+#class BusNotConnectedError(NotConnectedError):
+#    def __str__(self):
+#        return _('no connection to the bus')
 
 
 
@@ -58,18 +57,17 @@ class BusPublisher(object):
     implements(IConsumer, IBusHandler)
 
 
-    def __init__(self, dbfilename=None, dbtable=None):
+    def __init__(self, publications={}, batch_send_perf=1):
         self.name = self.__class__.__name__
         self.producer = None
         self._is_streaming = True
-        # copy: on modifie la hashmap dans status.py
-        self._publications = settings.get('publications', {}).copy()
+        self._publications = publications
         self._initialized = False
         # Stats
         self._messages_forwarded = 0
         self._messages_sent = 0
         # Accumulation des messages de perf
-        self.batch_send_perf = int(settings["bus"].get("batch_send_perf", 1))
+        self.batch_send_perf = batch_send_perf
         self._batch_perf_queue = deque()
 
 
@@ -124,9 +122,9 @@ class BusPublisher(object):
 
 
     def write(self, data):
-        d = defer.maybeDeferred(self.sendMessage, data)
+        d = self.sendMessage(data)
         def doneSending(result):
-            if not self._is_streaming:
+            if self.producer is not None and not self._is_streaming:
                 self.producer.resumeProducing()
             return result
         d.addBoth(doneSending)
@@ -149,15 +147,17 @@ class BusPublisher(object):
         # accumulation des messages de perf
         msg = self._accumulate_perf_msgs(msg)
         if msg is None:
-            return
+            return defer.succeed(None)
         msg_text = json.dumps(msg)
         if not self.client.isConnected():
             self.store(msg_text)
+            return defer.succeed(None)
 
         if msg["type"] not in self._publications:
             LOGGER.error(_("No destination node configured for messages "
                            "of type '%s'. Skipping."), msg["type"])
-            return
+            return defer.succeed(None)
+
         exchange = "vigilo.%s" % self._publications[msg["type"]]
         routing_key = msg.get("routing_key", msg["type"])
         result = self.client.send(exchange, routing_key, msg_text)
@@ -178,6 +178,16 @@ class BusPublisher(object):
         return batch_msg
 
 
+def buspublisher_factory(settings, client=None):
+    # copy: on modifie la hashmap dans status.py
+    publications = settings.get('publications', {}).copy()
+    batch_send_perf = int(settings["bus"].get("batch_send_perf", 1))
+    publisher = BusPublisher(publications, batch_send_perf)
+    if client is not None:
+        client.addHandler(publisher)
+    return publisher
+
+
 
 class BackupProvider(service.Service):
     """
@@ -189,12 +199,12 @@ class BackupProvider(service.Service):
     implements(IPushProducer, IConsumer)
 
 
-    def __init__(self, dbfilename=None, dbtable=None):
+    def __init__(self, dbfilename=None, dbtable=None, max_queue_size=None):
         self.producer = None
         self.consumer = None
         self.paused = True
         # File d'attente mémoire
-        self.max_queue_size = self._max_queue_size()
+        self.max_queue_size = max_queue_size
         self.queue = None
         self._build_queue()
         self._processing_queue = False
@@ -203,6 +213,13 @@ class BackupProvider(service.Service):
             self.retry = None
         else:
             self.retry = DbRetry(dbfilename, dbtable)
+        # Stats
+        self.stat_names = {
+                "queue": "queue",
+                "backup_in_buf": "backup_in_buf",
+                "backup_out_buf": "backup_out_buf",
+                "backup": "backup",
+                }
 
 
     def _build_queue(self):
@@ -213,37 +230,17 @@ class BackupProvider(service.Service):
             self.queue = deque()
 
 
-    def _max_queue_size(self):
-        max_queue_size = settings.get("connector", {}).get("max_queue_size", 0)
-        try:
-            max_queue_size = int(max_queue_size)
-        except ValueError:
-            LOGGER.warning(_("Can't understand the max_queue_size option, it "
-                             "should be an integer (or 0 for no limit). "
-                             "Current value: %s"), max_queue_size)
-            return None
-        if max_queue_size <= 0:
-            max_queue_size = None
-        if (max_queue_size is not None and
-                    tuple(python_version_tuple()) < ('2', '6')):
-            LOGGER.warning(_("The max_queue_size option is only available "
-                             "on Python >= 2.6. Ignoring."))
-            max_queue_size = None
-        return max_queue_size
-
-
-    def setup(self):
-        d = self.retry.initdb()
-        return d
-
-
     def startService(self):
         d = self.retry.initdb()
+        if self.producer is not None:
+            d.addCallback(lambda _x: self.producer.startService())
         return d
 
 
     def stopService(self):
-        d = self.pauseProducing()
+        d = self.producer.stopService()
+        d.addCallback(lambda _x: self._saveToDb())
+        d.addCallback(lambda _x: self.retry.flush())
         return d
 
 
@@ -260,13 +257,13 @@ class BackupProvider(service.Service):
     def getStats(self):
         """Récupère des métriques de fonctionnement"""
         stats = {
-            "queue": len(self.queue),
-            "backup_in_buf": len(self.retry.buffer_in),
-            "backup_out_buf": len(self.retry.buffer_out),
+            self.stat_names["queue"]: len(self.queue),
+            self.stat_names["backup_in_buf"]: len(self.retry.buffer_in),
+            self.stat_names["backup_out_buf"]: len(self.retry.buffer_out),
             }
         backup_size_d = self.retry.qsize()
         def add_backup_size(backup_size):
-            stats["backup"] = backup_size
+            stats[ self.stat_names["backup"] ] = backup_size
             return stats
         backup_size_d.addCallbacks(add_backup_size,
                                    lambda e: add_backup_size("U"))
@@ -354,6 +351,49 @@ class BackupProvider(service.Service):
             return msg
         d.addCallback(get_from_queue)
         return d
+
+
+def backupprovider_factory(settings, producer=None):
+    # Max queue size
+    try:
+        max_queue_size = int(settings["connector"]["max_queue_size"])
+    except KeyError:
+        max_queue_size = 0
+    except ValueError:
+        LOGGER.warning(_("Can't understand the max_queue_size option, it "
+                         "should be an integer (or 0 for no limit). "
+                         "Current value: %s"), max_queue_size)
+        max_queue_size = 0
+    if max_queue_size <= 0:
+        max_queue_size = None
+    if (max_queue_size is not None and
+                tuple(python_version_tuple()) < ('2', '6')):
+        LOGGER.warning(_("The max_queue_size option is only available "
+                         "on Python >= 2.6. Ignoring."))
+        max_queue_size = None
+
+    # Base de backup
+    bkpfile = settings['connector'].get('backup_file', ":memory:")
+    if bkpfile != ':memory:':
+        if not os.path.exists(os.path.dirname(bkpfile)):
+            msg = _("Directory not found: '%(dir)s'") % \
+                    {'dir': os.path.dirname(bkpfile)}
+            LOGGER.error(msg)
+            raise OSError(msg)
+        if not os.access(os.path.dirname(bkpfile), os.R_OK | os.W_OK | os.X_OK):
+            msg = _("Wrong permissions on directory: '%(dir)s'") % \
+                    {'dir': os.path.dirname(bkpfile)}
+            LOGGER.error(msg)
+            raise OSError(msg)
+    bkptable = settings['connector'].get('backup_table_to_bus', "tobus")
+
+    backup = BackupProvider(bkpfile, bkptable, max_queue_size)
+
+    if producer is not None:
+        backup.registerProducer(producer, True)
+
+    return backup
+
 
 
 

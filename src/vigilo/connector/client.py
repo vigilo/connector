@@ -22,7 +22,7 @@ LOGGER = get_logger(__name__)
 from vigilo.common.lock import grab_lock # après get_logger
 
 from vigilo.connector.amqp import AmqpFactory, PERSISTENT
-from vigilo.connector.interfaces import InterfaceNotImplemented
+from vigilo.connector.interfaces import InterfaceNotProvided
 from vigilo.connector.interfaces import IBusHandler, IBusProducer
 
 
@@ -110,8 +110,8 @@ class VigiloClient(service.Service):
 
 
     def addHandler(self, handler):
-        if not IBusHandler.implementedBy(handler):
-            raise InterfaceNotImplemented(IBusHandler, handler)
+        if not IBusHandler.providedBy(handler):
+            raise InterfaceNotProvided(IBusHandler, handler)
         self.handlers.append(handler)
         handler.client = self
         # get protocol handler up to speed when a connection has already
@@ -315,25 +315,25 @@ class MessageHandler(object):
 
 
 def client_factory(settings):
-    from vigilo.pubsub.checknode import VerificationNode
-
-    try:
-        require_tls = settings['bus'].as_bool('use_ssl')
-    except KeyError:
-        require_tls = False
-
-    # Temps max entre 2 tentatives de connexion (par défaut 1 min)
-    max_delay = int(settings["bus"].get("max_reconnect_delay", 60))
-
+    # adresse du bus
     host = settings['bus'].get('host')
     if host is not None:
         host = host.strip()
         if " " in host:
             host = [ h.strip() for h in host.split(" ") ]
 
+    # SSL
+    try:
+        use_ssl = settings['bus'].as_bool('use_ssl')
+    except KeyError:
+        use_ssl = False
+
+    # Temps max entre 2 tentatives de connexion (par défaut 1 min)
+    max_delay = int(settings["bus"].get("max_reconnect_delay", 60))
+
     vigilo_client = VigiloClient(
             host,
-            JID(settings['bus']['jid']),
+            settings['bus']['user'],
             settings['bus']['password'],
             use_ssl=use_ssl,
             max_delay=max_delay)
