@@ -36,14 +36,14 @@ def parseMessage(text, format="dict"):
     """
     assert format in ["dict", "json"]
     text = text.strip()
+    if not text:
+        LOGGER.debug("Got empty line")
+        return
+
     try:
         text = unicode(text, 'utf8', errors='strict')
     except UnicodeDecodeError:
         text = unicode(text, 'iso-8859-15', errors='replace')
-
-    if not elements:
-        LOGGER.debug("Got empty line")
-        return
 
     elements = text.split('|')
     if not elements:
@@ -66,7 +66,7 @@ def parseMessage(text, format="dict"):
         return None
 
 
-def msg2dict(elements, type):
+def msg2dict(elements):
     msg_type = elements[0]
     d = {
         "type": msg_type,
@@ -74,29 +74,29 @@ def msg2dict(elements, type):
     }
 
     if msg_type == "event" and len(elements) == 6:
-        d["host"] = elements[2],
+        d["host"] = elements[2]
         if elements[3] and elements[3].lower() != "host":
             d["service"] = elements[3]
-        d["state"] = elements[4],
-        d["message"] = elements[5],
+        d["state"] = elements[4]
+        d["message"] = elements[5]
 
     elif msg_type == "perf" and len(elements) == 5:
-        d["host"] = elements[2],
-        d["datasource"] = elements[3],
-        d["value"] = elements[4],
+        d["host"] = elements[2]
+        d["datasource"] = elements[3]
+        d["value"] = elements[4]
 
     elif msg_type == "command" and len(elements) >= 3:
-        d["cmdname"] = elements[2],
-        d["value"] = "|".join(elements[3:]),
+        d["cmdname"] = elements[2]
+        d["value"] = "|".join(elements[3:])
 
     elif msg_type == "state" and len(elements) == 9:
-        d["host"] = elements[2],
-        d["ip"] = elements[3],
+        d["host"] = elements[2]
+        d["ip"] = elements[3]
         d["service"] = elements[4]
-        d["code"] = elements[5],
-        d["type"] = elements[6],
-        d["attempt"] = elements[7],
-        d["message"] = elements[8],
+        d["code"] = elements[5]
+        d["type"] = elements[6]
+        d["attempt"] = elements[7]
+        d["message"] = elements[8]
 
     else:
         LOGGER.warning(_("Unknown/malformed message type: '%s'") %

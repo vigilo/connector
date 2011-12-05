@@ -145,7 +145,7 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         self.password = password
         self.vhost = vhost or '/'
         self.logTraffic = logTraffic
-        spec_file = resource_filename('vigilo.connector', 'amqp0-8.xml')
+        spec_file = resource_filename('vigilo.connector', 'amqp0-9-1.xml')
         self.spec = spec.load(spec_file)
         self.delegate = TwistedDelegate()
         self.handlers = []

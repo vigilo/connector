@@ -4,6 +4,11 @@
 
 import os
 
+try:
+    import json
+except ImportError:
+    import simplejson as json
+
 from zope.interface import implements
 
 from twisted.internet import reactor, defer, error, tcp, interfaces
@@ -66,6 +71,7 @@ class VigiloClient(service.Service):
         self.user = user
         self.password = password
         self.use_ssl = use_ssl
+        self.log_traffic = log_traffic
 
         self.handlers = []
         self.deferred = defer.Deferred()
@@ -97,8 +103,7 @@ class VigiloClient(service.Service):
             if hasattr(h, "stopService"):
                 dl.append(defer.maybeDeferred(h.stopService))
         # On se déconnecte nous-même
-        self.factory.stopTrying()
-        self._connection.disconnect()
+        dl.append(self.factory.stop())
         return defer.gatherResults(dl)
 
 
@@ -120,7 +125,7 @@ class VigiloClient(service.Service):
 
 
     def isConnected(self):
-        return self.channel is not None
+        return (self.channel is not None)
 
 
     def addHandler(self, handler):
@@ -171,7 +176,7 @@ class VigiloClient(service.Service):
     # Wrappers
 
     def getQueue(self, *args, **kwargs):
-        if not isConnected():
+        if not self.isConnected():
             return None
         return self.factory.p.queue(*args, **kwargs)
 
@@ -179,6 +184,9 @@ class VigiloClient(service.Service):
         if self.isConnected():
             msg = Content(message)
             msg["delivery mode"] = PERSISTENT
+            if self.log_traffic:
+                LOGGER.debug("PUBLISH to %s with key %s: %s"
+                             % (exchange, routing_key, msg))
             d = self.channel.basic_publish(exchange=exchange,
                             routing_key=routing_key, content=msg)
             d.addErrback(self._sendFailed)
@@ -238,7 +246,7 @@ class QueueSubscriber(BusHandler):
 
     def _create(self):
         if not self._channel:
-            return
+            return defer.succeed(None)
         d = self._channel.queue_declare(queue=self.queue_name, durable=True,
                                         exclusive=False, auto_delete=False)
         return d
@@ -261,9 +269,15 @@ class QueueSubscriber(BusHandler):
             return defer.fail(NotConnected(
                         _("Can't resume producing: not connected yet")))
         d = self._queue.get()
+        def cb(msg):
+            if self.client.log_traffic:
+                qname, msgid, unknown, exch, rkey = msg.fields
+                LOGGER.debug("RECEIVED from %s on %s with key %s: %s"
+                             % (exch, qname, rkey, msg.content.body))
+            return self.consumer.write(msg)
         def eb(f):
             f.trap(Closed) # déconnexion pendant le get()
-        d.addCallbacks(self.consumer.write, eb)
+        d.addCallbacks(cb, eb)
         return d
 
 
@@ -342,46 +356,6 @@ class MessageHandler(BusHandler):
 
 
 
-def client_factory(settings):
-    # adresse du bus
-    host = settings['bus'].get('host')
-    if host is not None:
-        host = host.strip()
-        if " " in host:
-            host = [ h.strip() for h in host.split(" ") ]
-
-    # SSL
-    try:
-        use_ssl = settings['bus'].as_bool('use_ssl')
-    except KeyError:
-        use_ssl = False
-
-    # Temps max entre 2 tentatives de connexion (par défaut 1 min)
-    max_delay = int(settings["bus"].get("max_reconnect_delay", 60))
-
-    vigilo_client = VigiloClient(
-            host,
-            settings['bus']['user'],
-            settings['bus']['password'],
-            use_ssl=use_ssl,
-            max_delay=max_delay)
-    vigilo_client.setName('vigilo_client')
-
-    try:
-        vigilo_client.logTraffic = settings['bus'].as_bool('log_traffic')
-    except KeyError:
-        vigilo_client.logTraffic = False
-
-    #try:
-    #    subscriptions = settings['bus'].as_list('subscriptions')
-    #except KeyError:
-    #    subscriptions = []
-    #vigilo_client.setupSubscriptions(subscriptions)
-
-    return vigilo_client
-
-
-
 class MultipleServerConnector(tcp.Connector):
     def __init__(self, hosts, factory, timeout=30, attempts=3,
                  reactor=None):
@@ -431,6 +405,47 @@ class MultipleServerConnector(tcp.Connector):
     def _makeTransport(self):
         self.pickServer()
         return tcp.Connector._makeTransport(self)
+
+
+
+def client_factory(settings):
+    # adresse du bus
+    host = settings['bus'].get('host')
+    if host is not None:
+        host = host.strip()
+        if " " in host:
+            host = [ h.strip() for h in host.split(" ") ]
+
+    # SSL
+    try:
+        use_ssl = settings['bus'].as_bool('use_ssl')
+    except KeyError:
+        use_ssl = False
+
+    # Temps max entre 2 tentatives de connexion (par défaut 1 min)
+    max_delay = int(settings["bus"].get("max_reconnect_delay", 60))
+
+    try:
+        log_traffic = settings['bus'].as_bool('log_traffic')
+    except (KeyError, ValueError):
+        log_traffic = False
+
+    vigilo_client = VigiloClient(
+            host,
+            settings['bus']['user'],
+            settings['bus']['password'],
+            use_ssl=use_ssl,
+            max_delay=max_delay,
+            log_traffic=log_traffic)
+    vigilo_client.setName('vigilo_client')
+
+    #try:
+    #    subscriptions = settings['bus'].as_list('subscriptions')
+    #except KeyError:
+    #    subscriptions = []
+    #vigilo_client.setupSubscriptions(subscriptions)
+
+    return vigilo_client
 
 
 
@@ -502,9 +517,9 @@ class OneShotClient(object):
         else:
             self._logger.debug(_("Exiting with no error"))
         self._result = code
-        self.client.stopService()
-        reactor.stop()
-        return result
+        d = self.client.stopService()
+        d.addCallback(lambda _x: reactor.stop())
+        return d
 
 
     def setHandler(self, func, *args, **kwargs):
@@ -539,7 +554,7 @@ class OneShotClient(object):
         # Création du client
         self.client.factory.logTraffic = log_traffic
         self.client.startService()
-        d = self.client.factory.deferred
+        d = self.client.deferred
 
         # Ajout de la fonction de traitement.
         if self._func:
@@ -555,7 +570,7 @@ class OneShotClient(object):
         d.addErrback(lambda fail: self._stop(fail, code=1))
 
         # Déconnecte le client du bus.
-        d.addCallback(lambda _dummy: self.client.factory.stop())
+        #d.addCallback(lambda _dummy: self.client.factory.stop())
         d.addCallback(self._stop, code=0)
         #d.addErrback(lambda _dummy: None)
         d.addErrback(log.err)
