@@ -247,18 +247,19 @@ class QueueSubscriber(BusHandler):
     def _create(self):
         if not self._channel:
             return defer.succeed(None)
-        d = self._channel.queue_declare(queue=self.queue_name, durable=True,
-                                        exclusive=False, auto_delete=False)
+        d = self._channel.queue_declare(queue="vigilo.%s" % self.queue_name,
+                    durable=True, exclusive=False, auto_delete=False)
         return d
 
     def _subscribe(self):
         if not self._channel:
             return
-        d = self._channel.basic_consume(queue=self.queue_name,
+        d = self._channel.basic_consume(queue="vigilo.%s" % self.queue_name,
                                         consumer_tag=self.queue_name)
         d.addCallback(lambda reply: self.client.getQueue(reply.consumer_tag))
         def store_queue(queue):
             self._queue = queue
+            return queue
         d.addCallback(store_queue)
         d.addCallback(self.ready.callback)
         return d
@@ -498,7 +499,7 @@ class OneShotClient(object):
             self._stop(failure.Failure(LockingError()), 4)
 
 
-    def _stop(self, result, code):
+    def _stop(self, result, code=None):
         """
         Arrête proprement le connecteur, en affichant un message d'erreur en
         cas de timeout.
@@ -514,11 +515,15 @@ class OneShotClient(object):
                         'type': str(result),
                     }
                 )
+            if code is None:
+                code = 1
         else:
             self._logger.debug(_("Exiting with no error"))
+            if code is None:
+                code = 0
         self._result = code
         d = self.client.stopService()
-        d.addCallback(lambda _x: reactor.stop())
+        d.addBoth(lambda _x: reactor.stop())
         return d
 
 
@@ -567,13 +572,15 @@ class OneShotClient(object):
             self._logger.warning(_("No handler registered for this "
                                     "one-shot client"))
 
-        d.addErrback(lambda fail: self._stop(fail, code=1))
+        #d.addErrback(lambda fail: self._stop(fail, code=1))
+        d.addBoth(self._stop)
 
         # Déconnecte le client du bus.
-        #d.addCallback(lambda _dummy: self.client.factory.stop())
-        d.addCallback(self._stop, code=0)
+        #d.addCallback(self._stop, self._stop,
+        #              callbackKeywords={"code": 0},
+        #              errbackKeywords={"code": 1})
         #d.addErrback(lambda _dummy: None)
-        d.addErrback(log.err)
+        #d.addErrback(log.err)
 
         # Garde-fou : on limite la durée de vie du connecteur.
         reactor.callLater(

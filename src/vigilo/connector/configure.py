@@ -4,9 +4,12 @@
 
 from __future__ import absolute_import
 
+import os
 import sys
 import logging
 import argparse
+
+from configobj import ConfigObj
 
 from twisted.internet import reactor, defer
 
@@ -33,27 +36,27 @@ class BusManager(object):
 
     def create_queue(self, args):
         LOGGER.info(_("Creating queue %s"), args.queue)
-        d = self.client.channel.queue_declare(
-                queue=args.queue, durable=True,
-                exclusive=False, auto_delete=False)
+        d = self.client.channel.queue_declare(queue="vigilo.%s" % args.queue,
+                durable=True, exclusive=False, auto_delete=False)
         return d
 
     def delete_queue(self, args):
         LOGGER.info(_("Deleting queue %s"), args.queue)
-        d = self.client.channel.queue_delete(queue=args.queue)
+        d = self.client.channel.queue_delete(queue="vigilo.%s" % args.queue)
         return d
 
     def create_exchange(self, args):
         LOGGER.info(_("Creating exchange %s of type %s"),
                     args.exchange, args.type)
         d = self.client.channel.exchange_declare(
-                exchange=args.exchange, type=args.type,
-                durable=True, auto_delete=False)
+                exchange="vigilo.%s" % args.exchange, type=args.type,
+                durable=True)
         return d
 
     def delete_exchange(self, args):
         LOGGER.info(_("Deleting exchange %s"), args.exchange)
-        d = self.client.channel.exchange_delete(exchange=args.exchange)
+        d = self.client.channel.exchange_delete(
+                exchange="vigilo.%s" % args.exchange)
         return d
 
     def subscribe(self, args):
@@ -62,9 +65,42 @@ class BusManager(object):
             key = args.queue
         LOGGER.info(_("Subscribing queue %s to exchange %s (key: %s)"),
                     args.queue, args.exchange, key)
-        d = self.client.channel.queue_bind(queue=args.queue,
-                exchange=args.exchange, routing_key=key)
+        d = self.client.channel.queue_bind(queue="vigilo.%s" % args.queue,
+                exchange="vigilo.%s" % args.exchange, routing_key=key)
         return d
+
+
+    @defer.inlineCallbacks
+    def read_file(self, args):
+        filename = args.filename
+        if not filename or not os.path.exists(filename):
+            LOGGER.error(_("Can't find file '%s'"), filename)
+            raise Exception(_("Can't find file '%s'") % filename)
+        conf = ConfigObj(filename)
+        yield defer.succeed(None) # au cas où il n'y aurait rien à faire
+
+        for exchange in conf.sections:
+            if not exchange.startswith("exchange:"):
+                continue
+            ename = exchange[len("exchange:"):]
+            etype = conf[exchange].get("type", "fanout")
+            LOGGER.info(_("Creating exchange %s of type %s"), ename, etype)
+            yield self.client.channel.exchange_declare(
+                    exchange="vigilo.%s" % ename, type=etype, durable=True)
+
+        for binding in conf.sections:
+            if not binding.startswith("binding:"):
+                continue
+            exchange = conf[binding].get("exchange")
+            queue = conf[binding].get("queue")
+            key = conf[binding].get("key")
+            LOGGER.info(_("Creating queue %s"), queue)
+            yield self.client.channel.queue_declare(queue="vigilo.%s" % queue,
+                        durable=True, exclusive=False, auto_delete=False)
+            LOGGER.info(_("Subscribing queue %s to exchange %s (key: %s)"),
+                        queue, exchange, key)
+            yield self.client.channel.queue_bind(queue="vigilo.%s" % queue,
+                        exchange="vigilo.%s" % exchange, routing_key=key)
 
 
 
@@ -132,6 +168,14 @@ def parse_args():
     parser_sq.add_argument('queue', help=N_("Queue name"))
     parser_sq.add_argument('exchange', help=N_("Exchange name"))
     parser_sq.add_argument('-k', '--key', help=N_("Routing key"))
+
+    # read-config
+    parser_cq = subparsers.add_parser("read-config",
+                    add_help=False,
+                    parents=[common_args_parser],
+                    help=N_("Reads the configuration from an INI file."))
+    parser_cq.set_defaults(func="read_file")
+    parser_cq.add_argument('filename', help=N_("Configuration file"))
 
     return parser.parse_args()
 
