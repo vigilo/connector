@@ -209,7 +209,8 @@ def state2xml(state_list):
     msg.addElement('timestamp', content=state_list[1])
     msg.addElement('host', content=state_list[2])
     msg.addElement('ip', content=state_list[3])
-    msg.addElement('service', content=state_list[4])
+    if state_list[4] and state_list[4].lower() != "host":
+        msg.addElement('service', content=state_list[4])
     msg.addElement('code', content=state_list[5])
     msg.addElement('type', content=state_list[6])
     msg.addElement('attempt', content=state_list[7])
