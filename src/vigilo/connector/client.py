@@ -16,7 +16,7 @@ from twisted.application import service
 from twisted.python import log, failure
 
 from txamqp.content import Content
-from txamqp.queue import Closed
+import txamqp
 
 from vigilo.common.gettext import translate, l_
 _ = translate(__name__)
@@ -103,8 +103,9 @@ class VigiloClient(service.Service):
             if hasattr(h, "stopService"):
                 dl.append(defer.maybeDeferred(h.stopService))
         # On se déconnecte nous-même
-        dl.append(self.factory.stop())
-        return defer.gatherResults(dl)
+        dl = defer.gatherResults(dl)
+        dl.addCallback(lambda _x: self.factory.stop())
+        return dl
 
 
     def _getConnection(self):
@@ -277,7 +278,7 @@ class QueueSubscriber(BusHandler):
                              % (exch, qname, rkey, msg.content.body))
             return self.consumer.write(msg)
         def eb(f):
-            f.trap(Closed) # déconnexion pendant le get()
+            f.trap(txamqp.queue.Closed) # déconnexion pendant le get()
         d.addCallbacks(cb, eb)
         return d
 
@@ -450,12 +451,6 @@ def client_factory(settings):
 
 
 
-class LockingError(Exception):
-    """Exception remontée quand un fichier de lock est trouvé"""
-    pass
-
-
-
 class OneShotClient(object):
     """Gestionnaire de client en vue d'un usage unique"""
 
@@ -496,32 +491,40 @@ class OneShotClient(object):
             self._logger.debug(_("Lock file successfully created in %s"),
                                self.lock_file)
         else:
-            self._stop(failure.Failure(LockingError()), 4)
+            self._result = 4
+            self._logger.error(
+                _("Error: lockfile found, another instance may be running.")
+            )
+            reactor.stop()
 
 
-    def _stop(self, result, code=None):
-        """
-        Arrête proprement le connecteur, en affichant un message d'erreur en
-        cas de timeout.
-        """
-        if isinstance(result, failure.Failure):
-            if result.check(defer.TimeoutError):
-                self._logger.error(_("Timeout"))
-            else:
-                # Message générique pour signaler l'erreur
-                self._logger.error(
-                    _("Error: %(message)s (%(type)r)"), {
-                        'message': result.getErrorMessage(),
-                        'type': str(result),
+    def _handle_errors(self, result):
+        """Affichant un message d'erreur"""
+        self._result = 1
+        if result.check(txamqp.client.Closed):
+            srv_msg = result.value.args[0]
+            errcode = srv_msg.fields[0]
+            message = srv_msg.fields[1]
+            self._logger.error(
+                    _("Error %(code)s: %(message)s"), {
+                        "code": errcode,
+                        "message": message,
                     }
                 )
-            if code is None:
-                code = 1
         else:
-            self._logger.debug(_("Exiting with no error"))
-            if code is None:
-                code = 0
-        self._result = code
+            # Message générique pour signaler l'erreur
+            self._logger.error(_("Error: %s"), result.getErrorMessage())
+            self._logger.error(result.getTraceback())
+
+
+    def _handle_timeout(self):
+        self._result = 3
+        self._logger.error(_("Timeout"))
+        return self._stop()
+
+
+    def _stop(self, _ignored=None):
+        """Arrête proprement le connecteur"""
         d = self.client.stopService()
         d.addBoth(lambda _x: reactor.stop())
         return d
@@ -570,24 +573,15 @@ class OneShotClient(object):
             )
         else:
             self._logger.warning(_("No handler registered for this "
-                                    "one-shot client"))
+                                   "one-shot client"))
 
-        #d.addErrback(lambda fail: self._stop(fail, code=1))
+        d.addErrback(self._handle_errors)
         d.addBoth(self._stop)
-
-        # Déconnecte le client du bus.
-        #d.addCallback(self._stop, self._stop,
-        #              callbackKeywords={"code": 0},
-        #              errbackKeywords={"code": 1})
-        #d.addErrback(lambda _dummy: None)
-        #d.addErrback(log.err)
 
         # Garde-fou : on limite la durée de vie du connecteur.
         reactor.callLater(
             self.timeout,
-            self._stop,
-            result=failure.Failure(defer.TimeoutError()),
-            code=3
+            self._handle_timeout,
         )
         reactor.run()
         return self._result

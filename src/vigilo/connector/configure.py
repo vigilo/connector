@@ -31,32 +31,41 @@ class BusManager(object):
 
     def run(self, client, args):
         self.client = client
+        args = self._preprocess(args)
         func = getattr(self, args.func)
         return func(args)
 
+    def _preprocess(self, args):
+        if (hasattr(args, "queue") and
+                not args.queue.startswith("vigilo.")):
+            args.queue = "vigilo.%s" % args.queue
+        if (hasattr(args, "exchange") and
+                not args.exchange.startswith("vigilo.")):
+            args.exchange = "vigilo.%s" % args.exchange
+        return args
+
+
     def create_queue(self, args):
         LOGGER.info(_("Creating queue %s"), args.queue)
-        d = self.client.channel.queue_declare(queue="vigilo.%s" % args.queue,
+        d = self.client.channel.queue_declare(queue=args.queue,
                 durable=True, exclusive=False, auto_delete=False)
         return d
 
     def delete_queue(self, args):
         LOGGER.info(_("Deleting queue %s"), args.queue)
-        d = self.client.channel.queue_delete(queue="vigilo.%s" % args.queue)
+        d = self.client.channel.queue_delete(queue=args.queue)
         return d
 
     def create_exchange(self, args):
         LOGGER.info(_("Creating exchange %s of type %s"),
                     args.exchange, args.type)
-        d = self.client.channel.exchange_declare(
-                exchange="vigilo.%s" % args.exchange, type=args.type,
-                durable=True)
+        d = self.client.channel.exchange_declare(exchange=args.exchange,
+                type=args.type, durable=True)
         return d
 
     def delete_exchange(self, args):
         LOGGER.info(_("Deleting exchange %s"), args.exchange)
-        d = self.client.channel.exchange_delete(
-                exchange="vigilo.%s" % args.exchange)
+        d = self.client.channel.exchange_delete(exchange=args.exchange)
         return d
 
     def subscribe(self, args):
@@ -65,8 +74,18 @@ class BusManager(object):
             key = args.queue
         LOGGER.info(_("Subscribing queue %s to exchange %s (key: %s)"),
                     args.queue, args.exchange, key)
-        d = self.client.channel.queue_bind(queue="vigilo.%s" % args.queue,
-                exchange="vigilo.%s" % args.exchange, routing_key=key)
+        d = self.client.channel.queue_bind(queue=args.queue,
+                exchange=args.exchange, routing_key=key)
+        return d
+
+    def unsubscribe(self, args):
+        key = args.key
+        if not key:
+            key = args.queue
+        LOGGER.info(_("Unsubscribing queue %s from exchange %s (key: %s)"),
+                    args.queue, args.exchange, key)
+        d = self.client.channel.queue_unbind(queue=args.queue,
+                exchange=args.exchange, routing_key=key)
         return d
 
 
@@ -84,7 +103,7 @@ class BusManager(object):
                 continue
             ename = exchange[len("exchange:"):]
             etype = conf[exchange].get("type", "fanout")
-            LOGGER.info(_("Creating exchange %s of type %s"), ename, etype)
+            LOGGER.info(_("Exchange %s (%s)"), ename, etype)
             yield self.client.channel.exchange_declare(
                     exchange="vigilo.%s" % ename, type=etype, durable=True)
 
@@ -94,10 +113,10 @@ class BusManager(object):
             exchange = conf[binding].get("exchange")
             queue = conf[binding].get("queue")
             key = conf[binding].get("key")
-            LOGGER.info(_("Creating queue %s"), queue)
+            LOGGER.info(_("Queue %s"), queue)
             yield self.client.channel.queue_declare(queue="vigilo.%s" % queue,
                         durable=True, exclusive=False, auto_delete=False)
-            LOGGER.info(_("Subscribing queue %s to exchange %s (key: %s)"),
+            LOGGER.info(_("Queue %s subscribed to exchange %s (key: %s)"),
                         queue, exchange, key)
             yield self.client.channel.queue_bind(queue="vigilo.%s" % queue,
                         exchange="vigilo.%s" % exchange, routing_key=key)
@@ -169,13 +188,23 @@ def parse_args():
     parser_sq.add_argument('exchange', help=N_("Exchange name"))
     parser_sq.add_argument('-k', '--key', help=N_("Routing key"))
 
+    # unsubscribe
+    parser_uq = subparsers.add_parser("unsubscribe",
+                    add_help=False,
+                    parents=[common_args_parser],
+                    help=N_("Unsubscribe a queue from an exchange."))
+    parser_uq.set_defaults(func="unsubscribe")
+    parser_uq.add_argument('queue', help=N_("Queue name"))
+    parser_uq.add_argument('exchange', help=N_("Exchange name"))
+    parser_uq.add_argument('-k', '--key', help=N_("Routing key"))
+
     # read-config
-    parser_cq = subparsers.add_parser("read-config",
+    parser_rc = subparsers.add_parser("read-config",
                     add_help=False,
                     parents=[common_args_parser],
                     help=N_("Reads the configuration from an INI file."))
-    parser_cq.set_defaults(func="read_file")
-    parser_cq.add_argument('filename', help=N_("Configuration file"))
+    parser_rc.set_defaults(func="read_file")
+    parser_rc.add_argument('filename', help=N_("Configuration file"))
 
     return parser.parse_args()
 
