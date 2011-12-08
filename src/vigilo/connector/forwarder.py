@@ -120,7 +120,6 @@ class BusPublisher(BusHandler):
 
 
     def write(self, data):
-        print data
         d = self.sendMessage(data)
         def doneSending(result):
             if self.producer is not None and not self._is_streaming:
