@@ -46,7 +46,11 @@ class TestForwarder(unittest.TestCase):
         return self.publisher.retry.initdb()
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        try:
+            shutil.rmtree(self.tmpdir)
+        except OSError, e:
+            # on ignore, c'est souvent le fichier journal sqlite qui a disparu
+            print e
 
     @deferred(timeout=30)
     @defer.inlineCallbacks
