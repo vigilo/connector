@@ -16,13 +16,13 @@ import socket
 from zope.interface import implements
 from twisted.internet import reactor, task, defer
 
-#from vigilo.pubsub.xml import NS_PERF, NS_COMMAND
 from vigilo.connector.forwarder import BusPublisher
 from vigilo.connector.interfaces import IBusHandler
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
+
 
 
 class StatusPublisher(BusPublisher):
@@ -158,6 +158,7 @@ class StatusPublisher(BusPublisher):
                            "name": statname,
                            "value": statvalue})
         return defer.DeferredList(dl)
+
 
 
 def statuspublisher_factory(settings, servicename, client, providers=[]):

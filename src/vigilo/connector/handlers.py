@@ -1,9 +1,9 @@
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
-# Copyright (C) 2006-2011 CS-SI
+# Copyright (C) 2011-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
 """
-Classe de base pour les composants d'un connecteur.
+Gestionnaires de messages
 """
 
 from __future__ import absolute_import
@@ -37,18 +37,165 @@ LOGGER = get_logger(__name__)
 
 
 
-#class NotConnectedError(Exception):
-#    def __str__(self):
-#        return _('no connection')
-#
-#
-#class BusNotConnectedError(NotConnectedError):
-#    def __str__(self):
-#        return _('no connection to the bus')
+class BusHandler(object):
+    """Gestionnaire de base à brancher à un client du bus"""
+
+    implements(IBusHandler)
+
+
+    def __init__(self):
+        self.client = None
+
+    def setClient(self, client):
+        self.client = client
+        self.client.addHandler(self)
+
+
+
+class QueueSubscriber(BusHandler):
+    """Abonnement à une file d'attente"""
+
+    implements(IBusProducer, IBusHandler)
+
+
+    def __init__(self, queue_name):
+        BusHandler.__init__(self)
+        self.queue_name = queue_name
+        self.consumer = None
+        self._channel = None
+        self._queue = None
+        self._do_consume = True
+        self.ready = defer.Deferred()
+
+
+    def connectionInitialized(self):
+        self._channel = self.client.channel
+        d = self._create()
+        d.addCallback(lambda _x: self._subscribe())
+        return d
+
+    def connectionLost(self, reason):
+        self._channel = None
+        self._queue = None
+        self.ready = defer.Deferred()
+
+
+    def _create(self):
+        if not self._channel:
+            return defer.succeed(None)
+        d = self._channel.queue_declare(queue="vigilo.%s" % self.queue_name,
+                    durable=True, exclusive=False, auto_delete=False)
+        return d
+
+    def _subscribe(self):
+        if not self._channel:
+            return
+        d = self._channel.basic_consume(queue="vigilo.%s" % self.queue_name,
+                                        consumer_tag=self.queue_name)
+        d.addCallback(lambda reply: self.client.getQueue(reply.consumer_tag))
+        def store_queue(queue):
+            self._queue = queue
+            return queue
+        d.addCallback(store_queue)
+        d.addCallback(self.ready.callback)
+        return d
+
+
+    def resumeProducing(self):
+        if not self._queue:
+            return defer.fail(NotConnected(
+                        _("Can't resume producing: not connected yet")))
+        d = self._queue.get()
+        def cb(msg):
+            if self.client.log_traffic:
+                qname, msgid, unknown, exch, rkey = msg.fields
+                LOGGER.debug("RECEIVED from %s on %s with key %s: %s"
+                             % (exch, qname, rkey, msg.content.body))
+            return self.consumer.write(msg)
+        def eb(f):
+            f.trap(txamqp.queue.Closed) # déconnexion pendant le get()
+        d.addCallbacks(cb, eb)
+        return d
+
+
+    # Proxies
+
+    def ack(self, msg, multiple=False):
+        return self._channel.basic_ack(msg.delivery_tag, multiple=multiple)
+
+    def send(self, exchange, routing_key, message):
+        return self.client.send(exchange, routing_key, message)
+
+
+
+class MessageHandler(BusHandler):
+    """Gère la réception des messages"""
+
+    implements(IConsumer, IBusHandler)
+
+
+    def __init__(self):
+        BusHandler.__init__(self)
+        self.producer = None
+        self.keepProducing = True
+
+
+    def write(self, msg):
+        content = json.loads(msg.content.body)
+        if "messages" in content:
+            d = self._processList(content["messages"])
+        else:
+            d = defer.maybeDeferred(self.processMessage, content)
+        d.addCallbacks(self.processingSucceeded, self.processingFailed,
+                       callbackArgs=(msg, ))
+        if self.keepProducing:
+            d.addBoth(lambda _x: self.producer.resumeProducing())
+        return d
+
+    def _processList(self, msglist):
+        def processOne(_ignored):
+            if not msglist:
+                return
+            msg = msglist.pop(0)
+            d = defer.maybeDeferred(self.processMessage, msg)
+            d.addCallback(processOne)
+            return d
+        return processOne(None)
+
+    def processMessage(self, msg):
+        raise NotImplementedError()
+
+    def processingSucceeded(self, _ignored, msg):
+        self.producer.ack(msg)
+
+    def processingFailed(self, error):
+        LOGGER.error(error)
+
+
+    def subscribe(self, queue_name):
+        # attention, pas d'injection de deps, faire le vrai boulot dans
+        # registerProducer()
+        subscriber = QueueSubscriber(queue_name)
+        subscriber.setClient(self.client)
+        self.registerProducer(subscriber, False)
+
+    def unsubscribe(self):
+        return self.unregisterProducer()
+
+    def registerProducer(self, producer, streaming):
+        #assert streaming == False # on ne prend que des PullProducers
+        self.producer = producer
+        self.producer.consumer = self
+        self.producer.ready.addCallback(
+                lambda _x: self.producer.resumeProducing())
+
+    def unregisterProducer(self):
+        self.producer = None
 
 
 
 class BusPublisher(BusHandler):
+    """Gère la publication de messages"""
 
     implements(IConsumer, IBusHandler)
 
@@ -174,16 +321,6 @@ class BusPublisher(BusHandler):
         #LOGGER.info("Sent a batch perf message with %d messages",
         #            self.batch_send_perf)
         return batch_msg
-
-
-def buspublisher_factory(settings, client=None):
-    # copy: on modifie la hashmap dans status.py
-    publications = settings.get('publications', {}).copy()
-    batch_send_perf = int(settings["bus"].get("batch_send_perf", 1))
-    publisher = BusPublisher(publications, batch_send_perf)
-    if client is not None:
-        publisher.setClient(client)
-    return publisher
 
 
 
@@ -359,6 +496,19 @@ class BackupProvider(Service):
             return msg
         d.addCallback(get_from_queue)
         return d
+
+
+# Factories
+
+
+def buspublisher_factory(settings, client=None):
+    # copy: on modifie la hashmap dans status.py
+    publications = settings.get('publications', {}).copy()
+    batch_send_perf = int(settings["bus"].get("batch_send_perf", 1))
+    publisher = BusPublisher(publications, batch_send_perf)
+    if client is not None:
+        publisher.setClient(client)
+    return publisher
 
 
 def backupprovider_factory(settings, producer=None):

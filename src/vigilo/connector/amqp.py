@@ -27,10 +27,6 @@ PERSISTENT = 2
 
 
 
-class NotConnected(Exception):
-    pass
-
-
 class AmqpProtocol(AMQClient):
     """
     The protocol is created and destroyed each time a connection is created and
@@ -77,61 +73,6 @@ class AmqpProtocol(AMQClient):
 
     def _authentication_failed(self, error):
         log.msg("AMQP authentication failed: %s" % error)
-
-
-    #def subscribe(self, queue, exchange, routing_key, callback):
-    #    """Add an exchange to the list of exchanges to read from."""
-    #    if self.connected:
-    #        # Connection is already up. Add the reader.
-    #        self._subscribe(exchange, routing_key, callback)
-    #    else:
-    #        # Connection is not up. _channel_open will add the reader when the
-    #        # connection is up.
-    #        pass
-
-
-    #@defer.inlineCallbacks
-    #def _subscribe(self, queue, exchange, routing_key, callback):
-    #    """This function does the work to read from an exchange."""
-    #    queue = exchange # For now use the exchange name as the queue name.
-    #    consumer_tag = exchange # Use the exchange name for the consumer tag for now.
-
-    #    # Declare the exchange in case it doesn't exist.
-    #    #yield self.chan.exchange_declare(exchange=exchange, type="direct",
-    #    #                                 durable=True, auto_delete=False)
-    #    yield self.chan.exchange_declare(exchange=exchange, type="direct",
-    #                                     durable=False, auto_delete=True)
-
-    #    # Declare the queue and bind to it.
-    #    yield self.chan.queue_declare(queue=queue, durable=True,
-    #                                  exclusive=False, auto_delete=False)
-    #    yield self.chan.queue_bind(queue=queue, exchange=exchange,
-    #                               routing_key=routing_key)
-
-    #    # Consume.
-    #    yield self.chan.basic_consume(queue=queue, no_ack=True,
-    #                                  consumer_tag=consumer_tag)
-    #    queue = yield self.queue(consumer_tag)
-
-    #    # Now setup the readers.
-    #    d = queue.get()
-    #    d.addCallback(self._read_item, queue, callback)
-    #    d.addErrback(self._read_item_err)
-
-
-    #def _read_item(self, item, queue, callback):
-    #    """Callback function which is called when an item is read."""
-    #    # Setup another read of this queue.
-    #    d = queue.get()
-    #    d.addCallback(self._read_item, queue, callback)
-    #    d.addErrback(self._read_item_err)
-
-    #    # Process the read item by running the callback.
-    #    callback(item)
-
-
-    #def _read_item_err(self, error):
-    #    log.err("Error reading item: ", error)
 
 
 
@@ -204,6 +145,3 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         d.addCallback(lambda ch: ch.connection_close())
         d.addCallback(lambda _r: self.p.close("quit"))
         return d
-
-
-

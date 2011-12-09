@@ -105,6 +105,7 @@ class SocketListener(Service):
         pass
 
 
+
 def socketlistener_factory(socket_filename):
     if not os.path.exists(os.path.dirname(socket_filename)):
         msg = _("Directory not found: '%(dir)s'") % \
@@ -120,6 +121,3 @@ def socketlistener_factory(socket_filename):
         raise OSError(msg)
 
     return SocketListener(socket_filename)
-
-
-

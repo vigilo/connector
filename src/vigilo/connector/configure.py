@@ -25,6 +25,9 @@ N_ = translate_narrow(__name__)
 
 
 class BusManager(object):
+    """
+    Classe contenant toutes les méthodes de gestion du bus
+    """
 
     def __init__(self):
         self.client = None

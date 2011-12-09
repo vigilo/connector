@@ -3,13 +3,8 @@
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
 """
-function to convert text to XML
+function to convert text to dict
 """
-
-try:
-    import json
-except ImportError:
-    import simplejson as json
 
 #from twisted.words.xish import domish
 from vigilo.common.logging import get_logger
@@ -24,17 +19,14 @@ from vigilo.common.gettext import translate
 _ = translate(__name__)
 
 
-def parseMessage(text, format="dict"):
+def parseMessage(text):
     """
-    Sérialise un texte séparé par des I{pipes} en message Vigilo (JSON)
+    Sérialise un texte séparé par des I{pipes} en message Vigilo (C{dict})
     @param text: Texte séparé par des I{pipes}
     @type  text: C{str}
-    @param format: format de sortie : C{dict} ou C{json}. Par défaut : C{dict}
-    @type  format: C{str}
-    @return: Texte au format demandé
+    @return: Message parsé dans un dictionnaire
     @rtype:  C{str}
     """
-    assert format in ["dict", "json"]
     text = text.strip()
     if not text:
         LOGGER.debug("Got empty line")
@@ -55,10 +47,7 @@ def parseMessage(text, format="dict"):
         if msg_dict is None:
             return None
         #LOGGER.debug("Converted %s to %s", str(elements), msg.toXml())
-        if format == "dict":
-            return msg_dict
-        elif format == "json":
-            return json.dumps(msg_dict)
+        return msg_dict
 
     except (TypeError, AttributeError):
         LOGGER.warning(_("Unknown/malformed message type: '%s'") %
