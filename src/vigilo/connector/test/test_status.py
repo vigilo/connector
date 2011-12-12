@@ -4,6 +4,7 @@
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
 import unittest
+import socket
 
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
 # produites par ce module !!!
@@ -11,44 +12,55 @@ import unittest
 from nose.twistedtools import reactor, deferred
 
 from mock import Mock
+from configobj import ConfigObj
 
 from twisted.internet import defer
 
-from vigilo.connector.status import StatusPublisher
-from vigilo.pubsub.xml import NS_PERF
+from vigilo.connector.status import statuspublisher_factory
+#from vigilo.pubsub.xml import NS_PERF
 
-from helpers import XmlStreamStub, wait
+from helpers import ClientStub, wait, json
 
 
-class ForwarderStub(object):
+
+class ProviderStub(object):
+
     def getStats(self):
         return defer.succeed({"dummykey": "dummyvalue"})
 
-class StatusPublisherTest(unittest.TestCase):
+
+
+class StatusPublisherTestCase(unittest.TestCase):
     """Teste la diffusion de l'état du connecteur"""
+
+    def setUp(self):
+        self.settings = ConfigObj()
+        self.settings["connector"] = {}
+        self.localhn = socket.gethostname()
+        if "." in self.localhn: # on ne veut pas le FQDN
+            self.localhn = self.localhn[:self.localhn.index(".")]
 
     @deferred(timeout=10)
     def test_send_stats(self):
         """Relai d'un ensemble de statistiques"""
-        sp = StatusPublisher(ForwarderStub(), "dummyhost")
-        xs = XmlStreamStub(autoreply=True)
-        sp.xmlstream = xs.xmlstream
+        client = ClientStub("testhost", None, None)
+        sp = statuspublisher_factory(self.settings, "testsvc", client)
         sp.isConnected = lambda: True
+        client.stub_connect()
         stats = {"key1": "value1", "key2": "value2", "key3": "value3"}
-        msg = ('<perf xmlns=\''+NS_PERF+'\'>'
-               '<d>%(datasource)s</d>'
-               '<v>%(value)s</v>'
-               '</perf>')
-        sp._send_stats(stats, msg)
+        msg = {"type": "perf"}
+        sp._sendStats(stats, msg)
         def check(r_):
-            print [ m.pubsub.publish.item.toXml() for m in xs.output ]
-            self.assertEqual(len(xs.output), 3)
-            msg_out = [ m.pubsub.publish.item.perf.toXml()
-                        for m in xs.output ]
-            msg_out.sort()
-            msg_in = [ msg % {"datasource": k, "value": v}
-                       for k, v in stats.iteritems() ]
-            msg_in.sort()
+            output = client.channel.sent
+            print output
+            self.assertEqual(len(output), 3)
+            msg_out = [ json.loads(m["content"].body)
+                        for m in output ]
+            msg_in = []
+            for k, v in stats.iteritems():
+                m = msg.copy()
+                m.update({"datasource": "testsvc-%s" % k, "value": v})
+                msg_in.append(m)
             self.assertEqual(msg_in, msg_out)
         d = wait(0.2)
         d.addCallback(check)
@@ -57,22 +69,30 @@ class StatusPublisherTest(unittest.TestCase):
     @deferred(timeout=10)
     def test_sendStatus(self):
         """Envoi de l'état (sendStatus)"""
-        sp = StatusPublisher(ForwarderStub(), "dummyhost")
-        xs = XmlStreamStub(autoreply=True)
-        sp.xmlstream = xs.xmlstream
+        client = ClientStub("testhost", None, None)
+        sp = statuspublisher_factory(self.settings, "testservice", client,
+                                     [ProviderStub()])
+
         sp.isConnected = lambda: True
+        client.stub_connect()
+
         sp.sendStatus()
+
         def check(r):
-            self.assertEqual(len(xs.output), 2)
-            msg_cmd = xs.output[0].pubsub.publish.item.command
-            self.assertEqual(str(msg_cmd.cmdname),
+            output = client.channel.sent
+            print output
+            self.assertEqual(len(output), 2)
+            msg_perf = json.loads(output[0]["content"].body)
+            self.assertEqual(msg_perf["type"], "perf")
+            self.assertEqual(msg_perf["host"], self.localhn)
+            self.assertEqual(msg_perf["datasource"], "testservice-dummykey")
+            self.assertEqual(msg_perf["value"], "dummyvalue")
+            msg_cmd = json.loads(output[1]["content"].body)
+            self.assertEqual(msg_cmd["type"], "nagios")
+            self.assertEqual(msg_cmd["cmdname"],
                              "PROCESS_SERVICE_CHECK_RESULT")
-            self.assertTrue(str(msg_cmd.value).startswith(
-                            "dummyhost;test;0;OK:"))
-            msg_perf = xs.output[1].pubsub.publish.item.perf
-            self.assertEqual(str(msg_perf.host), "dummyhost")
-            self.assertEqual(str(msg_perf.datasource), "test-dummykey")
-            self.assertEqual(str(msg_perf.value), "dummyvalue")
+            self.assertTrue(msg_cmd["value"].startswith(
+                            "%s;testservice;0;OK:" % self.localhn))
         d = wait(0.2)
         d.addCallback(check)
         return d
@@ -80,18 +100,23 @@ class StatusPublisherTest(unittest.TestCase):
     @deferred(timeout=10)
     def test_servicename(self):
         """On force le nom du service à utiliser"""
-        sp = StatusPublisher(ForwarderStub(), "dummyhost", "dummyservice")
-        xs = XmlStreamStub(autoreply=True)
-        sp.xmlstream = xs.xmlstream
+        client = ClientStub("testhost", None, None)
+        self.settings["connector"]["hostname"] = "changedhost"
+        sp = statuspublisher_factory(self.settings, "changedsvc", client,
+                                     [ProviderStub()])
         sp.isConnected = lambda: True
+        client.stub_connect()
         sp.sendStatus()
         def check(r):
-            msg_cmd = xs.output[0].pubsub.publish.item.command
-            self.assertTrue(str(msg_cmd.value).startswith(
-                            "dummyhost;dummyservice;"))
-            msg_perf = xs.output[1].pubsub.publish.item.perf
-            self.assertEqual(str(msg_perf.datasource),
-                             "dummyservice-dummykey")
+            output = client.channel.sent
+            msg_perf = json.loads(output[0]["content"].body)
+            self.assertEqual(msg_perf["type"], "perf")
+            self.assertEqual(msg_perf["datasource"],
+                             "changedsvc-dummykey")
+            msg_cmd = json.loads(output[1]["content"].body)
+            self.assertEqual(msg_cmd["type"], "nagios")
+            self.assertTrue(msg_cmd["value"].startswith(
+                            "changedhost;changedsvc;"))
         d = wait(0.2)
         d.addCallback(check)
         return d
@@ -99,50 +124,18 @@ class StatusPublisherTest(unittest.TestCase):
     @deferred(timeout=10)
     def test_force_node(self):
         """On force le nom du noeud pubsub à utiliser"""
-        sp = StatusPublisher(ForwarderStub(), "dummyhost", node="/testnode")
-        xs = XmlStreamStub(autoreply=True)
-        sp.xmlstream = xs.xmlstream
+        self.settings["connector"]["status_node"] = "testnode"
+        client = ClientStub("testhost", None, None)
+        sp = statuspublisher_factory(self.settings, "dummyservice", client,
+                                     [ProviderStub()])
         sp.isConnected = lambda: True
+        client.stub_connect()
         sp.sendStatus()
         def check(r):
-            for msg in xs.output:
-                self.assertEqual(msg.pubsub.publish["node"], "/testnode")
-        d = wait(0.2)
-        d.addCallback(check)
-        return d
-
-    def test_queueFull(self):
-        sp = StatusPublisher(ForwarderStub(), "dummyhost")
-        sp.sendStatus = Mock()
-        sp.queueFull()
-        self.assertEqual(sp.status[0], 1)
-        self.assertTrue(sp.status[1].startswith("WARNING: "))
-        self.assertTrue(sp.sendStatus.called)
-
-    def test_queueOk(self):
-        sp = StatusPublisher(ForwarderStub(), "dummyhost")
-        sp.sendStatus = Mock()
-        sp.status = (1, "WARNING")
-        sp.queueOk()
-        self.assertEqual(sp.status[0], 0)
-        self.assertTrue(sp.status[1].startswith("OK: "))
-        self.assertTrue(sp.sendStatus.called)
-
-    @deferred(timeout=10)
-    def test_sendStatus_custom_status(self):
-        """Envoi d'un état custom (sendStatus)"""
-        sp = StatusPublisher(ForwarderStub(), "dummyhost")
-        xs = XmlStreamStub(autoreply=True)
-        sp.xmlstream = xs.xmlstream
-        sp.isConnected = lambda: True
-        sp.status = (4, u"état custom")
-        sp.sendStatus()
-        def check(r):
-            #print len(xs.output), [ m.toXml() for m in xs.output ]
-            self.assertEqual(len(xs.output), 2)
-            msg_cmd = xs.output[0].pubsub.publish.item.command
-            self.assertEqual(unicode(msg_cmd.value),
-                             u"dummyhost;test;4;état custom")
+            output = client.channel.sent
+            for msg in output:
+                print msg
+                self.assertEqual(msg["exchange"], "testnode")
         d = wait(0.2)
         d.addCallback(check)
         return d

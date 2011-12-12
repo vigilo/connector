@@ -15,7 +15,7 @@ from twisted.internet import protocol
 from configobj import ConfigObj
 
 from vigilo.connector.client import MultipleServerConnector
-from vigilo.connector.client import MultipleServersXmlStreamFactory
+#from vigilo.connector.client import MultipleServersXmlStreamFactory
 from vigilo.connector.client import client_factory, oneshotclient_factory
 
 
@@ -28,7 +28,7 @@ class MSCTestCase(unittest.TestCase):
         self.assertEqual(c.host, "test1")
 
     def test_change_host(self):
-        f = MultipleServersXmlStreamFactory(None)
+        f = protocol.ReconnectingClientFactory()
         # reconnexion manuelle
         f.continueTrying = False
         c = MultipleServerConnector([("test1", 5222), ("test2", 5222)], f,
@@ -47,42 +47,37 @@ class MSCTestCase(unittest.TestCase):
 
 
 
-class VXCTestCase(unittest.TestCase):
+class VCTestCase(unittest.TestCase):
 
     def setUp(self):
         self.settings = ConfigObj()
         self.settings["bus"] = {
-                "jid": "test@localhost",
-                "password": "dummy",
+                "user": "test",
+                "password": "test",
                 }
 
-    @mock.patch("twisted.internet.reactor.stop")
-    @mock.patch("twisted.internet.reactor.run")
-    @mock.patch("wokkel.client.XMPPClientConnector")
-    def test_no_host_no_port(self, mockedClientCreator, mockedRun, mockedStop):
-        vxc = client_factory(self.settings)
-        vxc._getConnection()
-        self.assertEqual(mockedClientCreator.call_count, 1)
-
-    @mock.patch("twisted.internet.reactor.stop")
-    @mock.patch("twisted.internet.reactor.run")
+    #@mock.patch("twisted.internet.reactor.stop")
+    #@mock.patch("twisted.internet.reactor.run")
     @mock.patch("twisted.internet.reactor.connectTCP")
-    def test_host_no_port(self, mockedConnectTCP, mockedRun, mockedStop):
+    #def test_host_no_port(self, mockedConnectTCP, mockedRun, mockedStop):
+    def test_host_no_port(self, mockedConnectTCP):
         self.settings["bus"]["host"] = "testhost"
-        vxc = client_factory(self.settings)
-        vxc._getConnection()
+        vc = client_factory(self.settings)
+        vc._getConnection()
         self.assertEqual(mockedConnectTCP.call_count, 1)
-        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5222))
+        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5672))
 
-    @mock.patch("twisted.internet.reactor.stop")
-    @mock.patch("twisted.internet.reactor.run")
+    #@mock.patch("twisted.internet.reactor.stop")
+    #@mock.patch("twisted.internet.reactor.run")
     @mock.patch("twisted.internet.reactor.connectTCP")
-    def test_host_and_port(self, mockedConnectTCP, mockedRun, mockedStop):
+    #def test_host_and_port(self, mockedConnectTCP, mockedRun, mockedStop):
+    def test_host_and_port(self, mockedConnectTCP):
         self.settings["bus"]["host"] = "testhost:5333"
-        vxc = client_factory(self.settings)
-        vxc._getConnection()
+        vc = client_factory(self.settings)
+        vc._getConnection()
         self.assertEqual(mockedConnectTCP.call_count, 1)
         self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5333))
+
 
 
 class OSCTestCase(unittest.TestCase):
@@ -93,8 +88,8 @@ class OSCTestCase(unittest.TestCase):
     def setUp(self):
         self.settings = ConfigObj()
         self.settings["bus"] = {
-                "jid": "test@localhost",
-                "password": "dummy",
+                "user": "test",
+                "password": "test",
                 }
         self.settings["connector"] = {
                 "lock_file": "/nonexistant",
@@ -102,25 +97,15 @@ class OSCTestCase(unittest.TestCase):
 
     @mock.patch("twisted.internet.reactor.stop")
     @mock.patch("twisted.internet.reactor.run")
-    @mock.patch("wokkel.client.clientCreator")
-    def test_no_host_no_port(self, mockedClientCreator, mockedRun, mockedStop):
-        osc = oneshotclient_factory(self.settings)
-        osc._create_lockfile = mock.Mock()
-        osc._create_lockfile.return_value = False
-        osc.run()
-        self.assertEqual(mockedClientCreator.call_count, 1)
-
-    @mock.patch("twisted.internet.reactor.stop")
-    @mock.patch("twisted.internet.reactor.run")
     @mock.patch("twisted.internet.reactor.connectTCP")
     def test_host_no_port(self, mockedConnectTCP, mockedRun, mockedStop):
         self.settings["bus"]["host"] = "testhost"
         osc = oneshotclient_factory(self.settings)
-        osc._create_lockfile = mock.Mock()
-        osc._create_lockfile.return_value = False
+        osc.create_lockfile = mock.Mock()
+        osc.create_lockfile.return_value = False
         osc.run()
         self.assertEqual(mockedConnectTCP.call_count, 1)
-        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5222))
+        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5672))
 
     @mock.patch("twisted.internet.reactor.stop")
     @mock.patch("twisted.internet.reactor.run")
@@ -128,8 +113,8 @@ class OSCTestCase(unittest.TestCase):
     def test_host_and_port(self, mockedConnectTCP, mockedRun, mockedStop):
         self.settings["bus"]["host"] = "testhost:5333"
         osc = oneshotclient_factory(self.settings)
-        osc._create_lockfile = mock.Mock()
-        osc._create_lockfile.return_value = False
+        osc.create_lockfile = mock.Mock()
+        osc.create_lockfile.return_value = False
         osc.run()
         self.assertEqual(mockedConnectTCP.call_count, 1)
         self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5333))

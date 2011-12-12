@@ -34,11 +34,12 @@ class BusManager(object):
 
     def run(self, client, args):
         self.client = client
-        args = self._preprocess(args)
+        #args = self._preprocess(args)
         func = getattr(self, args.func)
         return func(args)
 
     def _preprocess(self, args):
+        """ajoute le préfixe "vigilo" aux exchanges et au queues"""
         if (hasattr(args, "queue") and
                 not args.queue.startswith("vigilo.")):
             args.queue = "vigilo.%s" % args.queue

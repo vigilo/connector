@@ -16,7 +16,7 @@ import socket
 from zope.interface import implements
 from twisted.internet import reactor, task, defer
 
-from vigilo.connector.forwarder import BusPublisher
+from vigilo.connector.handlers import BusPublisher
 from vigilo.connector.interfaces import IBusHandler
 from vigilo.common.gettext import translate
 _ = translate(__name__)
@@ -33,8 +33,7 @@ class StatusPublisher(BusPublisher):
     implements(IBusHandler)
 
 
-    def __init__(self, hostname=None, servicename=None,
-                 frequency=60, node=None):
+    def __init__(self, hostname, servicename, frequency=60, node=None):
         """
         @param hostname: le nom d'hôte à utiliser pour le message Nagios
         @type  hostname: C{str}
@@ -48,24 +47,14 @@ class StatusPublisher(BusPublisher):
         @type  node: C{str}
         """
         super(StatusPublisher, self).__init__()
+        self.hostname = hostname
+        self.servicename = servicename
+        self.frequency = frequency
         self.providers = []
 
-        self.hostname = hostname
-        if self.hostname is None:
-            self.hostname = socket.gethostname()
-            if "." in self.hostname: # on ne veut pas le FQDN
-                self.hostname = self.hostname[:self.hostname.index(".")]
-
-        if servicename is not None:
-            self.servicename = servicename
-        else:
-            self.servicename = os.path.basename(sys.argv[0])
-
-        self.frequency = frequency
-
         if node is not None:
-            for msgtype in self._publications:
-                self._publications[msgtype] = node
+            self._publications["nagios"] = node
+            self._publications["perf"] = node
 
         self.task = task.LoopingCall(self.sendStatus)
         self.status = (0, _("OK: running"))
@@ -162,11 +151,20 @@ class StatusPublisher(BusPublisher):
 
 
 def statuspublisher_factory(settings, servicename, client, providers=[]):
-    stats_publisher = StatusPublisher(
-                    settings["connector"].get("hostname", None),
-                    servicename=servicename,
+    hostname = settings["connector"].get("hostname", None)
+    if hostname is None:
+        hostname = socket.gethostname()
+        if "." in hostname: # on ne veut pas le FQDN
+            hostname = hostname[:hostname.index(".")]
+
+    if servicename is None:
+        servicename = os.path.basename(sys.argv[0])
+
+    stats_publisher = StatusPublisher(hostname, servicename,
                     node=settings["connector"].get("status_node", None))
+
     stats_publisher.setClient(client)
     for provider in providers:
         stats_publisher.registerProvider(provider)
+
     return stats_publisher

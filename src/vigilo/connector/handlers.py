@@ -26,9 +26,8 @@ from twisted.application.service import Service
 from twisted.python.failure import Failure
 
 #from vigilo.pubsub.xml import NS_PERF
-from vigilo.connector.interfaces import IBusHandler
+from vigilo.connector.interfaces import IBusHandler, IBusProducer
 #from vigilo.connector import MESSAGEONETOONE
-from vigilo.connector.client import BusHandler
 from vigilo.connector.store import DbRetry
 from vigilo.common.gettext import translate
 _ = translate(__name__)
@@ -83,14 +82,14 @@ class QueueSubscriber(BusHandler):
     def _create(self):
         if not self._channel:
             return defer.succeed(None)
-        d = self._channel.queue_declare(queue="vigilo.%s" % self.queue_name,
+        d = self._channel.queue_declare(queue=self.queue_name,
                     durable=True, exclusive=False, auto_delete=False)
         return d
 
     def _subscribe(self):
         if not self._channel:
             return
-        d = self._channel.basic_consume(queue="vigilo.%s" % self.queue_name,
+        d = self._channel.basic_consume(queue=self.queue_name,
                                         consumer_tag=self.queue_name)
         d.addCallback(lambda reply: self.client.getQueue(reply.consumer_tag))
         def store_queue(queue):
@@ -235,6 +234,8 @@ class BusPublisher(BusHandler):
         self._initialized = False
         if self.producer is not None:
             self.producer.pauseProducing()
+        if reason is None:
+            reason = Failure(Exception())
         LOGGER.info(_('Lost connection to the XMPP bus (reason: %s)'),
                     get_error_message(reason))
 
@@ -294,16 +295,12 @@ class BusPublisher(BusHandler):
         if msg is None:
             return defer.succeed(None)
         msg_text = json.dumps(msg)
-        if not self.client.isConnected():
-            self.store(msg_text)
-            return defer.succeed(None)
 
         if msg["type"] in self._publications:
-            destination = self._publications[msg["type"]]
+            exchange = self._publications[msg["type"]]
         else:
-            destination = msg["type"]
+            exchange = msg["type"]
 
-        exchange = "vigilo.%s" % destination
         routing_key = msg.get("routing_key", msg["type"])
         result = self.client.send(exchange, routing_key, msg_text)
         return result
@@ -373,7 +370,10 @@ class BackupProvider(Service):
 
 
     def stopService(self):
-        d = self.producer.stopService()
+        if self.producer is not None:
+            d = self.producer.stopService()
+        else:
+            d = defer.succeed(None)
         d.addCallback(lambda _x: self._saveToDb())
         d.addCallback(lambda _x: self.retry.flush())
         return d
@@ -431,27 +431,24 @@ class BackupProvider(Service):
         pass
 
 
+    @defer.inlineCallbacks
     def processQueue(self):
-        if self.paused:
-            return
         if self._processing_queue:
+            return
+        if self.paused:
+            yield self._saveToDb()
             return
 
         self._processing_queue = True
-        return self._processQueue()
-
-    def _processQueue(self):
-        d = self._getNextMsg()
-        def processMsg(msg):
+        while True:
+            msg = yield self._getNextMsg()
             if msg is None:
-                self._processing_queue = False
-                return
-            d_write = self.consumer.write(msg)
-            d_write.addErrback(self._send_failed, msg)
-            d_write.addCallback(lambda _x: self._processQueue())
-            return d
-        d.addCallback(processMsg)
-        return d
+                break
+            try:
+                yield self.consumer.write(msg)
+            except Exception, e:
+                self._send_failed(e, msg)
+        self._processing_queue = False
 
 
     def _send_failed(self, e, msg):
@@ -471,9 +468,7 @@ class BackupProvider(Service):
         saved = []
         while len(self.queue) > 0:
             msg = self.queue.popleft()
-            if isinstance(msg, dict):
-                msg = json.dumps(msg)
-            d = self.retry.put(msg)
+            d = self.retry.put(json.dumps(msg))
             d.addErrback(eb)
             saved.append(d)
         return defer.DeferredList(saved)
@@ -486,7 +481,7 @@ class BackupProvider(Service):
         d = self.retry.pop()
         def get_from_queue(msg):
             if msg is not None:
-                return msg # le backup est prioritaire
+                return json.loads(msg) # le backup est prioritaire
             # on dépile la file principale
             try:
                 msg = self.queue.popleft()

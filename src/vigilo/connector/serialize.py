@@ -49,7 +49,7 @@ def parseMessage(text):
         #LOGGER.debug("Converted %s to %s", str(elements), msg.toXml())
         return msg_dict
 
-    except (TypeError, AttributeError):
+    except (TypeError, AttributeError, IndexError):
         LOGGER.warning(_("Unknown/malformed message type: '%s'") %
                        elements[0])
         return None

@@ -72,6 +72,7 @@ class SocketListener(Service):
         if os.path.exists(self.socket_filename):
             os.remove(self.socket_filename)
         self._socket = reactor.listenUNIX(self.socket_filename, self.factory)
+        return defer.succeed(None)
 
 
     def stopService(self):
