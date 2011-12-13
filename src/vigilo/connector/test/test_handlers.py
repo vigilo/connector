@@ -50,7 +50,7 @@ class BackupProviderTestCase(unittest.TestCase):
     def test_store_message(self):
         """Stockage local d'un message lorsque le bus est indisponible."""
         msg = {"type": "perf"}
-        self.bp.pauseProducing()
+        self.bp.paused = True
 
         before = yield self.bp.retry.qsize()
         self.bp.queue.append(msg)
@@ -63,10 +63,11 @@ class BackupProviderTestCase(unittest.TestCase):
     @defer.inlineCallbacks
     def test_unstore_order(self):
         msg1 = {"type": "perf", "value": "1"}
-        self.bp.pauseProducing()
+        self.bp.paused = True
         consumer = ConsumerStub()
         self.bp.consumer = consumer
-        yield self.bp.write(msg1)
+        self.bp.queue.append(msg1)
+        yield self.bp.processQueue()
         # Le message est maintenant en base de backup
         backup_size = yield self.bp.retry.qsize()
         self.assertEqual(backup_size, 1)
@@ -76,7 +77,8 @@ class BackupProviderTestCase(unittest.TestCase):
         yield wait(0.5)
         # On en envoie un deuxième
         msg2 = {"type": "perf", "value": "2"}
-        yield self.bp.write(msg2)
+        self.bp.queue.append(msg2)
+        yield self.bp.processQueue()
         # On attend un peu
         yield wait(0.5)
         # On vérifie que les deux messages ont bien été envoyés dans le bon
@@ -103,14 +105,14 @@ class BackupProviderTestCase(unittest.TestCase):
             next_msg = yield self.bp._getNextMsg()
             self.assertEqual(next_msg, msg)
 
-    @deferred(timeout=30)
+    @deferred(timeout=10)
     @defer.inlineCallbacks
     def test_save_to_db(self):
-        self.bp.pauseProducing()
+        self.bp.paused = True
         count = 42
         for i in range(count):
             msg = {"type": "perf", "value": "dummy"}
-            self.bp.write(msg)
+            self.bp.queue.append(msg)
         yield self.bp._saveToDb()
         self.assertEqual(len(self.bp.queue), 0)
         db_size = yield self.bp.retry.qsize()
@@ -131,7 +133,7 @@ class BackupProviderTestCase(unittest.TestCase):
         yield self.bp.processQueue()
         self.assertEqual(len(self.bp.queue), 0)
         # On se déconnecte (ça flushe les messages)
-        self.bp.pauseProducing()
+        yield self.bp.pauseProducing()
         # On envoie des messages (-> backup)
         print "envoi 2"
         for i in range(20):
@@ -186,6 +188,7 @@ class BusPublisherTestCase(unittest.TestCase):
         # on en envoie un de plus, ce qui doit envoyer un message accumulé
         self.bp.write(msg)
         self.assertEqual(len(output), 1)
+        print repr(output[0])
         sent = json.loads(output[0]["content"].body)
         self.assertEqual(len(sent["messages"]), count)
 

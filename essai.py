@@ -20,10 +20,11 @@ settings.load_file("./settings_tests.ini")
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
-from vigilo.connector.client import VigiloClient, QueueSubscriber, MessageHandler
+from vigilo.connector.client import VigiloClient
+from vigilo.connector.handlers import BusHandler, QueueSubscriber, MessageHandler
 
 
-class Tester(object):
+class Tester(BusHandler):
     client = None
     def connectionInitialized(self, arg):
         print "initialized"
@@ -41,7 +42,8 @@ class MsgLogger(MessageHandler):
 
 client = VigiloClient(host="localhost", user="guest", password="guest", log_traffic=True)
 client.addHandler(Tester())
-msglogger = MsgLogger(client)
+msglogger = MsgLogger()
+msglogger.setClient(client)
 msglogger.subscribe("truc")
 msglogger.sendDummy()
 

@@ -471,7 +471,7 @@ class BackupProvider(Service):
             d = self.retry.put(json.dumps(msg))
             d.addErrback(eb)
             saved.append(d)
-        return defer.DeferredList(saved)
+        return defer.gatherResults(saved)
 
     def _getNextMsg(self):
         """

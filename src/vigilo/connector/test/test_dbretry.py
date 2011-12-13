@@ -155,7 +155,6 @@ class TestDbRetry(unittest.TestCase):
         self.assertEqual( (("VACUUM", ), {}), stub.requests.pop() )
 
     @deferred(timeout=30)
-    #@defer.inlineCallbacks
     def test_flush_double(self):
         """
         Un double flush doit être mis en file d'attente

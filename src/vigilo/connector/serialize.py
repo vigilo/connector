@@ -83,7 +83,7 @@ def msg2dict(elements):
         d["ip"] = elements[3]
         d["service"] = elements[4]
         d["code"] = elements[5]
-        d["type"] = elements[6]
+        d["statetype"] = elements[6]
         d["attempt"] = elements[7]
         d["message"] = elements[8]
 

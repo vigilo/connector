@@ -102,7 +102,7 @@ class SerializeTestCase(unittest.TestCase):
                 "host": u"server.example.com",
                 "service": u"Load",
                 "code": u"1",
-                "type": u"SOFT",
+                "statetype": u"SOFT",
                 "attempt": u"2",
                 "ip": "192.168.1.1",
                 "message": u"WARNING: Load average is above 4 (4.5)",
