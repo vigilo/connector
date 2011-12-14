@@ -137,6 +137,8 @@ class MessageHandler(BusHandler):
         BusHandler.__init__(self)
         self.producer = None
         self.keepProducing = True
+        # Stats
+        self._messages_forwarded = 0
 
 
     def write(self, msg):
@@ -169,6 +171,14 @@ class MessageHandler(BusHandler):
 
     def processingFailed(self, error):
         LOGGER.error(error)
+
+
+    def getStats(self):
+        """Récupère des métriques de fonctionnement du connecteur"""
+        stats = {
+            "forwarded": self._messages_forwarded,
+            }
+        return defer.succeed(stats)
 
 
     def subscribe(self, queue_name):
@@ -250,6 +260,7 @@ class BusPublisher(BusHandler):
     def getStats(self):
         """Récupère des métriques de fonctionnement du connecteur"""
         stats = {
+            "forwarded": self._messages_forwarded,
             "sent": self._messages_sent,
             }
         return defer.succeed(stats)

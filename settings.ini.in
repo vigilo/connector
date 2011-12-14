@@ -50,6 +50,12 @@ exchange = event
 queue = connector-nagios-localhost
 key = event
 
+; commandes Nagios pour le groupe Vigilo
+[binding:nagios-localhost-nagios-Vigilo]
+exchange = nagios
+queue = connector-nagios-localhost
+key = Vigilo
+
 
 
 [loggers]

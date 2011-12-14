@@ -107,9 +107,13 @@ class ConsumerStub(object):
 
     def __init__(self):
         self.written = []
+        self.connected = True
 
     def write(self, data):
         self.written.append(data)
+
+    def isConnected(self):
+        return self.connected
 
 
 
@@ -127,6 +131,7 @@ class LoggingTransaction(Transaction):
     def executemany(self, *args, **kw):
         self.parent.requests.append( (args, kw) )
         return self._cursor.executemany(*args, **kw)
+
 
 class ConnectionPoolStub(object):
     """Wrapper pour ConnectionPool"""
