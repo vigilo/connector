@@ -2,13 +2,8 @@
 # Copyright (C) 2010-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
-import os
-
-from zope.interface import implements
-
-from twisted.internet import reactor, defer, error, tcp, interfaces
+from twisted.internet import reactor, defer, tcp
 from twisted.application import service
-from twisted.python import log, failure
 
 from txamqp.content import Content
 import txamqp
@@ -16,14 +11,14 @@ import txamqp
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
-from vigilo.common.gettext import translate, l_
+from vigilo.common.gettext import translate
 _ = translate(__name__)
 
 from vigilo.common.lock import grab_lock # après get_logger
 
 from vigilo.connector.amqp import AmqpFactory, PERSISTENT
 from vigilo.connector.interfaces import InterfaceNotProvided
-from vigilo.connector.interfaces import IBusHandler, IBusProducer
+from vigilo.connector.interfaces import IBusHandler
 
 
 def split_host_port(hostdef):

@@ -5,13 +5,12 @@
 from __future__ import absolute_import
 
 import os
-import sys
 import logging
 import argparse
 
 from configobj import ConfigObj
 
-from twisted.internet import reactor, defer
+from twisted.internet import defer
 
 from vigilo.connector.client import OneShotClient
 

@@ -7,7 +7,6 @@ import os, os.path
 import tempfile
 import shutil
 import unittest
-from collections import deque
 
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
 # produites par ce module !!!

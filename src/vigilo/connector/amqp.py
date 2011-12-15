@@ -2,22 +2,16 @@
 # Copyright (C) 2006-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
-import os, sys
-
 from pkg_resources import resource_filename
-from zope.interface import implements
 
-from twisted.internet import reactor, defer, error, protocol
-from twisted.internet.interfaces import IPullProducer
-from twisted.application import service
-from twisted.python import log, failure
+from twisted.internet import protocol
+from twisted.python import log
 
 from txamqp.protocol import AMQClient
 from txamqp.client import TwistedDelegate
-from txamqp.content import Content
 from txamqp import spec
 
-from vigilo.common.gettext import translate, l_
+from vigilo.common.gettext import translate
 _ = translate(__name__)
 
 

@@ -2,9 +2,11 @@
 # Copyright (C) 2011-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
+# les méthodes de ces classes n'ont pas "self" comme premier argument
+# pylint: disable-msg=E0213
 
 from zope.interface import Interface, Attribute
-from twisted.internet.interfaces import IPullProducer, IConsumer
+from twisted.internet.interfaces import IPullProducer
 
 
 

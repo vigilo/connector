@@ -11,7 +11,6 @@ import socket
 #from twisted.trial import unittest
 from nose.twistedtools import reactor, deferred
 
-from mock import Mock
 from configobj import ConfigObj
 
 from twisted.internet import defer

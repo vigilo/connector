@@ -9,7 +9,6 @@ Gestionnaires de messages
 from __future__ import absolute_import
 
 import os
-import sqlite3
 from collections import deque
 from platform import python_version_tuple
 
@@ -20,15 +19,16 @@ except ImportError:
 
 from zope.interface import implements
 
-from twisted.internet import reactor, defer, task
-from twisted.internet.interfaces import IConsumer, IPullProducer, IPushProducer
+from twisted.internet import defer
+from twisted.internet.interfaces import IConsumer, IPushProducer
 from twisted.application.service import Service
 from twisted.python.failure import Failure
 
-#from vigilo.pubsub.xml import NS_PERF
+import txamqp
+
 from vigilo.connector.interfaces import IBusHandler, IBusProducer
-#from vigilo.connector import MESSAGEONETOONE
 from vigilo.connector.store import DbRetry
+
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 from vigilo.common.logging import get_logger, get_error_message
@@ -102,7 +102,7 @@ class QueueSubscriber(BusHandler):
 
     def resumeProducing(self):
         if not self._queue:
-            return defer.fail(NotConnected(
+            return defer.fail(Exception(
                         _("Can't resume producing: not connected yet")))
         d = self._queue.get()
         def cb(msg):
@@ -143,7 +143,7 @@ class MessageHandler(BusHandler):
 
     def write(self, msg):
         content = json.loads(msg.content.body)
-        if "messages" in content:
+        if "messages" in content and content["messages"]:
             d = self._processList(content["messages"])
         else:
             d = defer.maybeDeferred(self.processMessage, content)
@@ -153,18 +153,17 @@ class MessageHandler(BusHandler):
             d.addBoth(lambda _x: self.producer.resumeProducing())
         return d
 
+
+    @defer.inlineCallbacks
     def _processList(self, msglist):
-        def processOne(_ignored):
-            if not msglist:
-                return
+        while msglist:
             msg = msglist.pop(0)
-            d = defer.maybeDeferred(self.processMessage, msg)
-            d.addCallback(processOne)
-            return d
-        return processOne(None)
+            yield defer.maybeDeferred(self.processMessage, msg)
+
 
     def processMessage(self, msg):
         raise NotImplementedError()
+
 
     def processingSucceeded(self, _ignored, msg):
         self.producer.ack(msg)

@@ -13,8 +13,6 @@ import unittest
 #from twisted.trial import unittest
 from nose.twistedtools import reactor, deferred
 
-from mock import Mock
-
 from twisted.internet import defer
 
 from vigilo.connector.socket import SocketListener

@@ -10,6 +10,7 @@ from twisted.internet import reactor, defer
 from nose.plugins.skip import SkipTest
 from vigilo.connector.client import VigiloClient
 
+# pylint: disable-msg=W0611
 try:
     import json
 except ImportError:
