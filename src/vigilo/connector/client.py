@@ -13,11 +13,11 @@ from twisted.python import log, failure
 from txamqp.content import Content
 import txamqp
 
-from vigilo.common.gettext import translate, l_
-_ = translate(__name__)
-
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
+
+from vigilo.common.gettext import translate, l_
+_ = translate(__name__)
 
 from vigilo.common.lock import grab_lock # après get_logger
 
@@ -192,7 +192,7 @@ class VigiloClient(service.Service):
             return defer.succeed(None)
 
     def _sendFailed(self, fail):
-        log.err(fail)
+        LOGGER.warning(fail)
         return fail
 
 
@@ -225,7 +225,7 @@ class MultipleServerConnector(tcp.Connector):
         if not self._usableHosts:
             self._usableHosts = self.hosts[:]
         self.host, self.port = self._usableHosts[0]
-        log.msg("Connecting to %s:%s" % (self.host, self.port))
+        LOGGER.info("Connecting to %s:%s", self.host, self.port)
 
     def connectionFailed(self, reason):
         assert self._attemptsLeft is not None
