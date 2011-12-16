@@ -13,6 +13,7 @@ from twisted.python import usage
 from vigilo.common.gettext import translate
 _ = translate("vigilo.connector")
 
+
 class Options(usage.Options):
     """
     Une classe qui gère les options
@@ -47,6 +48,7 @@ class Options(usage.Options):
                 not os.path.exists(self["config"])):
             raise usage.UsageError(_("The configuration file does not exist"))
 
+
 def make_options(module):
     """
     Factory pour les options d'un connecteur XMPP de Vigilo.
@@ -68,3 +70,12 @@ def make_options(module):
         """
         return Options(module)
     return _inner
+
+
+def getSettings(options, module):
+    from vigilo.common.conf import settings
+    if options["config"] is not None:
+        settings.load_file(options["config"])
+    else:
+        settings.load_module(module)
+    return settings

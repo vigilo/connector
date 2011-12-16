@@ -5,11 +5,3 @@
 """ generic vigilo connector """
 
 
-def getSettings(options):
-    from vigilo.common.conf import settings
-    if options["config"] is not None:
-        settings.load_file(options["config"])
-    else:
-        settings.load_module(__name__)
-    return settings
-

@@ -128,9 +128,9 @@ class QueueSubscriber(BusHandler):
 
 
 class MessageHandler(BusHandler):
-    """Gère la réception des messages"""
+    """Gère la réception des messages. Peut aussi agir comme un IPushProducer"""
 
-    implements(IConsumer, IBusHandler)
+    implements(IConsumer, IPushProducer, IBusHandler)
 
 
     def __init__(self):
@@ -170,6 +170,14 @@ class MessageHandler(BusHandler):
 
     def processingFailed(self, error):
         LOGGER.error(error)
+
+
+    def pauseProducing(self):
+        self.keepProducing = False
+
+    def resumeProducing(self):
+        self.keepProducing = True
+        self.producer.resumeProducing()
 
 
     def getStats(self):
