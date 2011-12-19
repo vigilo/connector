@@ -9,10 +9,12 @@ import logging
 import argparse
 
 from configobj import ConfigObj
+from zope.interface import implements
 
 from twisted.internet import defer
 
 from vigilo.connector.client import OneShotClient
+from vigilo.connector.interfaces import IBusHandler
 
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
@@ -27,6 +29,9 @@ class BusManager(object):
     """
     Classe contenant toutes les méthodes de gestion du bus
     """
+
+    implements(IBusHandler)
+
 
     def __init__(self):
         self.client = None
