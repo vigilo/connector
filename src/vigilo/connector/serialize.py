@@ -6,16 +6,10 @@
 function to convert text to dict
 """
 
-#from twisted.words.xish import domish
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
 
 from vigilo.common.gettext import translate
-
-#from vigilo.pubsub.xml import NS_AGGR, NS_EVENT, NS_PERF, NS_STATE, \
-#                              NS_DOWNTIME, NS_COMMAND
-#from vigilo.connector import MESSAGEONETOONE
-
 _ = translate(__name__)
 
 

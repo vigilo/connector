@@ -16,7 +16,6 @@ from configobj import ConfigObj
 from twisted.internet import defer
 
 from vigilo.connector.status import statuspublisher_factory
-#from vigilo.pubsub.xml import NS_PERF
 
 from helpers import ClientStub, wait, json
 
