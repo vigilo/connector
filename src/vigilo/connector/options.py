@@ -79,3 +79,21 @@ def getSettings(options, module):
     else:
         settings.load_module(module)
     return settings
+
+
+def parseSubscriptions(settings):
+    try:
+        subs_option = settings['bus'].as_list('subscriptions')
+    except KeyError:
+        subs_option = []
+
+    subscriptions = []
+    for subs_value in subs_option:
+        if subs_value.count(":") == 0:
+            subscriptions.append( (subs_value, None) )
+        elif subs_value.count(":") == 1:
+            subscriptions.append( subs_value.split(":") )
+        else:
+            raise ValueError("Can't parse bus/subscriptions value: %r"
+                             % subs_value)
+    return subscriptions

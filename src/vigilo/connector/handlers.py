@@ -60,6 +60,7 @@ class QueueSubscriber(BusHandler):
     def __init__(self, queue_name):
         BusHandler.__init__(self)
         self.queue_name = queue_name
+        self._bindings = []
         self.consumer = None
         self._channel = None
         self._queue = None
@@ -70,6 +71,7 @@ class QueueSubscriber(BusHandler):
     def connectionInitialized(self):
         self._channel = self.client.channel
         d = self._create()
+        d.addCallback(lambda _x: self._bind())
         d.addCallback(lambda _x: self._subscribe())
         return d
 
@@ -79,12 +81,26 @@ class QueueSubscriber(BusHandler):
         self.ready = defer.Deferred()
 
 
+    def bindToExchange(self, exchange, routing_key=None):
+        if routing_key is None:
+            routing_key = self.queue_name
+        self._bindings.append( (exchange, routing_key) )
+
+
     def _create(self):
         if not self._channel:
             return defer.succeed(None)
         d = self._channel.queue_declare(queue=self.queue_name,
                     durable=True, exclusive=False, auto_delete=False)
         return d
+
+    def _bind(self):
+        dl = []
+        for exchange, routing_key in self._bindings:
+            d = self.client.channel.queue_bind(queue=self.queue_name,
+                    exchange=exchange, routing_key=routing_key)
+            dl.append(d)
+        return defer.DeferredList(dl)
 
     def _subscribe(self):
         if not self._channel:
@@ -188,11 +204,13 @@ class MessageHandler(BusHandler):
         return defer.succeed(stats)
 
 
-    def subscribe(self, queue_name):
+    def subscribe(self, queue_name, bindings=None):
         # attention, pas d'injection de deps, faire le vrai boulot dans
         # registerProducer()
         subscriber = QueueSubscriber(queue_name)
         subscriber.setClient(self.client)
+        for exchange, routing_key in bindings:
+            subscriber.bindToExchange(exchange, routing_key)
         self.registerProducer(subscriber, False)
 
     def unsubscribe(self):

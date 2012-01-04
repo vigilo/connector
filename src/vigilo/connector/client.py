@@ -65,7 +65,6 @@ class VigiloClient(service.Service):
 
         self.handlers = []
         self.deferred = defer.Deferred()
-        self.queues = []
         self._packetQueue = [] # List of messages waiting to be sent.
         self.channel = None
 
