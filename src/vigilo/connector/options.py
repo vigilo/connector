@@ -86,6 +86,8 @@ def parseSubscriptions(settings):
         subs_option = settings['bus'].as_list('subscriptions')
     except KeyError:
         subs_option = []
+    if subs_option == ['']:
+        subs_option = []
 
     subscriptions = []
     for subs_value in subs_option:

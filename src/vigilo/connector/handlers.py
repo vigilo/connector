@@ -533,8 +533,16 @@ class BackupProvider(Service):
 
 
 def buspublisher_factory(settings, client=None):
-    # copy: on modifie la hashmap dans status.py
-    publications = settings.get('publications', {}).copy()
+    publications = {
+            "aggr": "correlation",
+            "delaggr": "correlation",
+            "correvent": "correlation",
+            }
+    try:
+        # copy: on modifie la hashmap dans status.py
+        publications.update(settings.get('publications', {}))
+    except KeyError:
+        pass
     batch_send_perf = int(settings["bus"].get("batch_send_perf", 1))
     publisher = BusPublisher(publications, batch_send_perf)
     if client is not None:

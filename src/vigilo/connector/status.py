@@ -33,7 +33,7 @@ class StatusPublisher(BusPublisher):
     implements(IBusHandler)
 
 
-    def __init__(self, hostname, servicename, frequency=60, node=None):
+    def __init__(self, hostname, servicename, frequency=60, exchange=None):
         """
         @param hostname: le nom d'hôte à utiliser pour le message Nagios
         @type  hostname: C{str}
@@ -42,9 +42,9 @@ class StatusPublisher(BusPublisher):
         @param frequency: la fréquence à laquelle envoyer les messages d'état,
             en secondes
         @type  frequency: C{int}
-        @param node: le noeud de publication à utiliser, si on ne veut pas
-            utiliser les noeuds par défaut du connecteur
-        @type  node: C{str}
+        @param exchange: l'exchange à utiliser, si on ne veut pas utiliser les
+            exchanges par défaut du connecteur
+        @type  exchange: C{str}
         """
         super(StatusPublisher, self).__init__()
         self.hostname = hostname
@@ -52,9 +52,9 @@ class StatusPublisher(BusPublisher):
         self.frequency = frequency
         self.providers = []
 
-        if node is not None:
-            self._publications["nagios"] = node
-            self._publications["perf"] = node
+        if exchange is not None:
+            self._publications["nagios"] = exchange
+            self._publications["perf"] = exchange
 
         self.task = task.LoopingCall(self.sendStatus)
         self.status = (0, _("OK: running"))
@@ -97,6 +97,7 @@ class StatusPublisher(BusPublisher):
                 "type": "nagios",
                 "timestamp": timestamp,
                 "cmdname": "PROCESS_SERVICE_CHECK_RESULT",
+                "routing_key": "Vigilo",
                 }
         msg_state["value"] = ("%(host)s;%(service)s;%(code)d;%(msg)s"
                               % { "host": self.hostname,
@@ -110,6 +111,7 @@ class StatusPublisher(BusPublisher):
                 "type": "perf",
                 "timestamp": timestamp,
                 "host": self.hostname,
+                "routing_key": "Vigilo",
                 }
         d = self._collectStats()
         # on envoie même si on est pas connecté pour avoir des graphes continus
@@ -161,7 +163,7 @@ def statuspublisher_factory(settings, servicename, client, providers=[]):
         servicename = os.path.basename(sys.argv[0])
 
     stats_publisher = StatusPublisher(hostname, servicename,
-                    node=settings["connector"].get("status_node", None))
+                exchange=settings["connector"].get("status_exchange", None))
 
     stats_publisher.setClient(client)
     for provider in providers:

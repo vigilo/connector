@@ -27,13 +27,7 @@ type = fanout
 [exchange:state]
 type = fanout
 
-[exchange:correvent]
-type = fanout
-
-[exchange:aggr]
-type = fanout
-
-[exchange:delaggr]
+[exchange:correlation]
 type = fanout
 
 [exchange:nagios]

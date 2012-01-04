@@ -122,10 +122,10 @@ class StatusPublisherTestCase(unittest.TestCase):
     @deferred(timeout=10)
     def test_force_node(self):
         """On force le nom du noeud pubsub à utiliser"""
-        self.settings["connector"]["status_node"] = "testnode"
+        self.settings["connector"]["status_exchange"] = "testnode"
+        self.settings["connector"]["status_service"] = "dummyservice"
         client = ClientStub("testhost", None, None)
-        sp = statuspublisher_factory(self.settings, "dummyservice", client,
-                                     [ProviderStub()])
+        sp = statuspublisher_factory(self.settings, client, [ProviderStub()])
         sp.isConnected = lambda: True
         client.stub_connect()
         sp.sendStatus()
