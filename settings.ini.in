@@ -1,20 +1,23 @@
 [bus]
-# Nom ou adresse IP du serveur AMQP à utiliser.
+; Nom ou adresse IP du serveur AMQP à utiliser.
 host = localhost
 
-# Nom d'utilisateur à utiliser pour se connecter au bus.
-user = connector
+; Nom d'utilisateur à utiliser pour se connecter au bus.
+user = vigilo-admin
 
-# Mot de passe associé
-password = connector
+; Mot de passe associé
+password = vigilo-admin
 
-# Chiffrement de la connexion
+; Chiffrement de la connexion
 use_ssl = False
 
-# Logguer le trafic lié au bus
+; Logguer le trafic lié au bus
 log_traffic = False
 
 
+;
+; Exchanges
+;
 [exchange:event]
 type = fanout
 
@@ -24,7 +27,13 @@ type = fanout
 [exchange:state]
 type = fanout
 
-[exchange:correlation]
+[exchange:correvent]
+type = fanout
+
+[exchange:aggr]
+type = fanout
+
+[exchange:delaggr]
 type = fanout
 
 [exchange:nagios]
@@ -39,25 +48,37 @@ type = fanout
 [exchange:computation-order]
 type = fanout
 
-
-[binding:nagios-localhost-event]
+;
+; Bindings
+;
+[binding:event-correlator]
 exchange = event
-queue = connector-nagios-localhost
-key = connector-nagios-localhost
+queue = correlator
 
-[binding:nagios-localhost-event2]
-exchange = event
+[binding:computation-order-correlator]
+exchange = computation-order
+queue = correlator
+
+[binding:command-vigiconf]
+exchange = command
+queue = connector-vigiconf
+key = vigiconf
+
+[binding:command-nagios-localhost]
+exchange = command
 queue = connector-nagios-localhost
-key = event
+key = nagios
 
 ; commandes Nagios pour le groupe Vigilo
-[binding:nagios-localhost-nagios-Vigilo]
+[binding:nagios-nagios-localhost-Vigilo]
 exchange = nagios
 queue = connector-nagios-localhost
 key = Vigilo
 
 
-
+;
+; Logging
+;
 [loggers]
 keys = root,twisted
 
