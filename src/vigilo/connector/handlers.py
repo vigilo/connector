@@ -209,6 +209,8 @@ class MessageHandler(BusHandler):
         # registerProducer()
         subscriber = QueueSubscriber(queue_name)
         subscriber.setClient(self.client)
+        if bindings is None:
+            bindings = []
         for exchange, routing_key in bindings:
             subscriber.bindToExchange(exchange, routing_key)
         self.registerProducer(subscriber, False)

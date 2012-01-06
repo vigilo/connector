@@ -20,7 +20,6 @@ class Options(usage.Options):
     d'un connecteur de Vigilo.
     """
     optParameters = [
-            ["name", "n", None, _("Choose the service name")],
             ["config", "c", None, _("Load this settings.ini file")],
         ]
 

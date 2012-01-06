@@ -152,15 +152,15 @@ class StatusPublisher(BusPublisher):
 
 
 
-def statuspublisher_factory(settings, servicename, client, providers=[]):
-    hostname = settings["connector"].get("hostname", None)
+def statuspublisher_factory(settings, client, providers=[]):
+    hostname = settings.get("connector", {}).get("hostname", None)
     if hostname is None:
         hostname = socket.gethostname()
         if "." in hostname: # on ne veut pas le FQDN
             hostname = hostname[:hostname.index(".")]
 
-    if servicename is None:
-        servicename = os.path.basename(sys.argv[0])
+    servicename = settings.get("connector", {}).get("status_service",
+                               os.path.basename(sys.argv[0]))
 
     stats_publisher = StatusPublisher(hostname, servicename,
                 exchange=settings["connector"].get("status_exchange", None))
