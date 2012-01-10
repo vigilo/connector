@@ -68,9 +68,13 @@ def msg2dict(elements):
         d["datasource"] = elements[3]
         d["value"] = elements[4]
 
-    elif msg_type == "command" and len(elements) >= 3:
+    elif msg_type == "nagios" and len(elements) >= 3:
         d["cmdname"] = elements[2]
-        d["value"] = "|".join(elements[3:])
+        d["value"] = ";".join(elements[3:])
+        #d["routing_key"] = "all"
+        if (d["cmdname"].startswith("PROCESS_")
+                and d["cmdname"].endswith("_CHECK_RESULT")):
+            d["host"] = elements[3]
 
     elif msg_type == "state" and len(elements) == 9:
         d["host"] = elements[2]

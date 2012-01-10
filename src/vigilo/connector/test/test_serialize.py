@@ -110,6 +110,20 @@ class SerializeTestCase(unittest.TestCase):
         self.assertEqual(expected, parseMessage(message))
 
 
+    def test_nagios(self):
+        """Conversion d'un message nagios"""
+        message = ("nagios|1239104006|PROCESS_HOST_CHECK_RESULT|"
+                   "server.example.com|OK|Test")
+        expected = {
+                "type": u"nagios",
+                "timestamp": u"1239104006",
+                "host": u"server.example.com",
+                "cmdname": u"PROCESS_HOST_CHECK_RESULT",
+                "value": u"server.example.com;OK;Test",
+                }
+        self.assertEqual(expected, parseMessage(message))
+
+
     def test_badinput2xml(self):
         """Sérialisation d'un texte invalide"""
         self.assertEqual(None, parseMessage(""))
