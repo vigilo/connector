@@ -31,10 +31,11 @@ type = fanout
 type = fanout
 
 [exchange:nagios]
-type = topic
+type = fanout
+;type = direct
 
 [exchange:command]
-type = topic
+type = direct
 
 [exchange:statistics]
 type = fanout
