@@ -42,7 +42,8 @@ class StatusPublisherTestCase(unittest.TestCase):
     def test_send_stats(self):
         """Relai d'un ensemble de statistiques"""
         client = ClientStub("testhost", None, None)
-        sp = statuspublisher_factory(self.settings, "testsvc", client)
+        self.settings["connector"]["status_service"] = "testsvc"
+        sp = statuspublisher_factory(self.settings, client)
         sp.isConnected = lambda: True
         client.stub_connect()
         stats = {"key1": "value1", "key2": "value2", "key3": "value3"}
@@ -68,8 +69,8 @@ class StatusPublisherTestCase(unittest.TestCase):
     def test_sendStatus(self):
         """Envoi de l'état (sendStatus)"""
         client = ClientStub("testhost", None, None)
-        sp = statuspublisher_factory(self.settings, "testservice", client,
-                                     [ProviderStub()])
+        self.settings["connector"]["status_service"] = "testservice"
+        sp = statuspublisher_factory(self.settings, client, [ProviderStub()])
 
         sp.isConnected = lambda: True
         client.stub_connect()
@@ -100,7 +101,8 @@ class StatusPublisherTestCase(unittest.TestCase):
         """On force le nom du service à utiliser"""
         client = ClientStub("testhost", None, None)
         self.settings["connector"]["hostname"] = "changedhost"
-        sp = statuspublisher_factory(self.settings, "changedsvc", client,
+        self.settings["connector"]["status_service"] = "changedsvc"
+        sp = statuspublisher_factory(self.settings, client,
                                      [ProviderStub()])
         sp.isConnected = lambda: True
         client.stub_connect()
