@@ -16,7 +16,7 @@ _ = translate(__name__)
 
 from vigilo.common.lock import grab_lock # après get_logger
 
-from vigilo.connector.amqp import AmqpFactory, PERSISTENT
+from vigilo.connector import amqp
 from vigilo.connector.interfaces import InterfaceNotProvided
 from vigilo.connector.interfaces import IBusHandler
 
@@ -68,7 +68,7 @@ class VigiloClient(service.Service):
         self._packetQueue = [] # List of messages waiting to be sent.
         self.channel = None
 
-        self.factory = AmqpFactory(parent=self, user=self.user,
+        self.factory = amqp.AmqpFactory(parent=self, user=self.user,
                 password=self.password, logTraffic=log_traffic)
         self.factory.maxDelay = max_delay
 
@@ -170,10 +170,13 @@ class VigiloClient(service.Service):
             return None
         return self.factory.p.queue(*args, **kwargs)
 
-    def send(self, exchange, routing_key, message):
+    def send(self, exchange, routing_key, message, persistent=True):
         if self.isConnected():
             msg = Content(message)
-            msg["delivery mode"] = PERSISTENT
+            if persistent:
+                msg["delivery mode"] = amqp.PERSISTENT
+            else:
+                msg["delivery mode"] = amqp.NON_PERSISTENT
             if self.log_traffic:
                 LOGGER.debug("PUBLISH to %s with key %s: %s"
                              % (exchange, routing_key, msg))

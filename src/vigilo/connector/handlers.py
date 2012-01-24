@@ -340,7 +340,8 @@ class BusPublisher(BusHandler):
             exchange = msg["type"]
 
         routing_key = msg.get("routing_key", msg["type"])
-        result = self.client.send(exchange, str(routing_key), msg_text)
+        persistent = msg.get("persistent", True)
+        result = self.client.send(exchange, str(routing_key), msg_text, persistent)
         return result
 
 
