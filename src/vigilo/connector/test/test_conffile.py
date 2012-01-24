@@ -18,9 +18,9 @@ import unittest
 from nose.twistedtools import reactor, deferred
 
 from twisted.internet import defer
-from mock import patch, Mock
+from mock import Mock
 
-from vigilo.connector.confdb import ConfDB, NoConfDBError
+from vigilo.connector.conffile import ConfDB, NoConfError
 
 
 
@@ -30,8 +30,7 @@ class ConfDBTest(unittest.TestCase):
     """
 
     @deferred(timeout=5)
-    @patch('signal.signal') # erreurs de threads
-    def setUp(self, signal):
+    def setUp(self):
         self.tmpdir = tempfile.mkdtemp(prefix="test-connector-")
         dbpath = os.path.join(self.tmpdir, "conf.db")
         self._create_db(dbpath)
@@ -60,7 +59,7 @@ class ConfDBTest(unittest.TestCase):
     @defer.inlineCallbacks
     def test_reload(self):
         """Reconnexion à la base"""
-        self.confdb.start_db()
+        self.confdb.reload()
         old_content = yield self.confdb._db.runQuery("SELECT idtest FROM test")
         # On change le fichier de la base de données
         dbpath = os.path.join(self.tmpdir, "conf.db")
@@ -85,19 +84,28 @@ class ConfDBTest(unittest.TestCase):
     @defer.inlineCallbacks
     def test_reload_nochange(self):
         """Pas de reconnexion à la base si elle n'a pas changé"""
-        self.confdb.start_db()
+        self.confdb.reload()
+        self.confdb._db.close = Mock()
+        self.confdb._db.start = Mock()
         yield self.confdb._db.runQuery("SELECT idtest FROM test")
         old_connection_threads = set(self.confdb._db.connections.keys())
         self.confdb.reload()
         yield self.confdb._db.runQuery("SELECT idtest FROM test")
         new_connection_threads = set(self.confdb._db.connections.keys())
+        self.assertFalse(self.confdb._db.close.called)
+        self.assertFalse(self.confdb._db.start.called)
+        print old_connection_threads, new_connection_threads
         self.assertTrue(old_connection_threads <= new_connection_threads)
 
 
     def test_nodb(self):
         """La base n'existe pas"""
         confdb = ConfDB(os.path.join(self.tmpdir, "nonexistant.db"))
-        self.assertRaises(NoConfDBError, confdb.start_db)
+        confdb._read_conf = Mock()
+        confdb._rebuild_cache = Mock()
+        confdb.reload()
+        self.assertFalse(confdb._read_conf.called)
+        self.assertFalse(confdb._rebuild_cache.called)
 
 
     def test_reload_nodb(self):
