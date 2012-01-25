@@ -21,9 +21,9 @@ BuildRequires:   python26-setuptools
 BuildRequires:   python26-babel
 
 Requires:   python26-distribute
-Requires:   vigilo-common vigilo-pubsub
-Requires:   python26-twisted-words
-Requires:   python26-wokkel
+Requires:   vigilo-common
+Requires:   python26-zope-interface
+Requires:   python26-txamqp
 
 
 %description

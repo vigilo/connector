@@ -10,6 +10,7 @@ from setuptools import setup, find_packages
 
 install_requires = [
     'setuptools',
+    'zope.interface',
     'vigilo-common',
     'vigilo-pubsub',
     'txAMQP',

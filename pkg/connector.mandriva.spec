@@ -16,15 +16,11 @@ BuildRequires:   python-babel
 
 Requires:   python >= 2.5
 Requires:   python-setuptools
-Requires:   vigilo-common vigilo-pubsub
-Requires:   python-twisted-words
-Requires:   python-wokkel
+Requires:   vigilo-common
+Requires:   python-txamqp
+Requires:   python-zope-interface
 ######### Dependance from python dependance tree ########
 Requires:   python-twisted
-Requires:   python-wokkel
-Requires:   python-zope-interface
-Requires:   python-configobj
-Requires:   python-babel
 
 
 %description

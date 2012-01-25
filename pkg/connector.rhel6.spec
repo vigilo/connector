@@ -15,9 +15,9 @@ BuildRequires:   python-setuptools
 BuildRequires:   python-babel
 
 Requires:   python-distribute
-Requires:   vigilo-common vigilo-pubsub
-Requires:   python-twisted-words
-Requires:   python-wokkel
+Requires:   vigilo-common
+Requires:   python-zope-interface
+Requires:   python-txamqp
 
 
 %description
