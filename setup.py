@@ -68,6 +68,7 @@ setup(name='vigilo-connector',
             'tests': tests_require,
         },
         package_dir={'': 'src'},
+        include_package_data=True,
         data_files=install_i18n("i18n", os.path.join(sys.prefix, 'share', 'locale'))
         )
 
