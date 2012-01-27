@@ -397,6 +397,7 @@ class OneShotClient(object):
         self.create_lockfile()
         # Création du client
         self.client.factory.logTraffic = log_traffic
+        self.client.factory.noisy = log_traffic
         self.client.startService()
         d = self.client.deferred
 

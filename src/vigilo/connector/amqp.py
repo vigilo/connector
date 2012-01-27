@@ -109,7 +109,7 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
 
 
     def clientConnectionLost(self, connector, reason):
-        log.msg("Client connection lost.")
+        #log.msg("Client connection lost.")
         self.p = None
         self.channel = None
         self.parent.channel = None
