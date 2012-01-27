@@ -135,7 +135,8 @@ class ConfDB(ConfFile):
             self._db = adbapi.ConnectionPool("sqlite3", self.path,
                                              check_same_thread=False)
             LOGGER.debug("Connected to the configuration database")
-        self._db.close()
+        else:
+            self._db.close()
         self._db.start()
 
 

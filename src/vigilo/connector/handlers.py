@@ -182,6 +182,7 @@ class MessageHandler(BusHandler):
 
 
     def processingSucceeded(self, _ignored, msg):
+        self._messages_forwarded += 1
         self.producer.ack(msg)
 
     def processingFailed(self, error):
