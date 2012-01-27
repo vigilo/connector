@@ -113,7 +113,7 @@ class BusManager(object):
             etype = conf[exchange].get("type", "fanout")
             LOGGER.info(_("Exchange %s (%s)"), ename, etype)
             yield self.client.channel.exchange_declare(
-                    exchange="vigilo.%s" % ename, type=etype, durable=True)
+                    exchange=ename, type=etype, durable=True)
 
         for binding in conf.sections:
             if not binding.startswith("binding:"):
@@ -122,12 +122,12 @@ class BusManager(object):
             queue = conf[binding].get("queue")
             key = conf[binding].get("key")
             LOGGER.info(_("Queue %s"), queue)
-            yield self.client.channel.queue_declare(queue="vigilo.%s" % queue,
+            yield self.client.channel.queue_declare(queue=queue,
                         durable=True, exclusive=False, auto_delete=False)
             LOGGER.info(_("Queue %s subscribed to exchange %s (key: %s)"),
                         queue, exchange, key)
-            yield self.client.channel.queue_bind(queue="vigilo.%s" % queue,
-                        exchange="vigilo.%s" % exchange, routing_key=key)
+            yield self.client.channel.queue_bind(queue=queue,
+                        exchange=exchange, routing_key=key)
 
 
 
