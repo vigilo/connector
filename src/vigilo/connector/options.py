@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
+"""
+Ce module contient la classe qui gère les options
+d'un connecteur pour le bus XMPP de Vigilo.
+"""
+
 import sys
 import os
+import pkg_resources
 
 from twisted.python import usage
 
@@ -8,18 +14,57 @@ from vigilo.common.gettext import translate
 _ = translate("vigilo.connector")
 
 class Options(usage.Options):
-
+    """
+    Une classe qui gère les options
+    d'un connecteur de Vigilo.
+    """
     optParameters = [
             ["name", "n", None, _("Choose the service name")],
             ["config", "c", None, _("Load this settings.ini file")],
         ]
 
+    def __init__(self, module):
+        """
+        Prépare les options pour le connecteur.
+
+        @param module: Le nom du module qui contient le connecteur
+            (eg. "vigilo.connector_nagios").
+        @type module: C{str}
+        """
+        self._module = module
+        super(Options, self).__init__()
+
     def opt_version(self):
-        """Display the version and exit"""
-        print 'Vigilo 2.0.0 (svn%s)' % ('$Rev: 5998 $'[6:-2])
-        sys.exit()
+        """Affiche la version du connecteur et quitte."""
+        module_name = '-'.join(self._module.split('.')[:2]).replace('_', '-')
+        dist = pkg_resources.get_distribution(module_name)
+        print '%s %s' % (module_name, dist.version)
+        sys.exit(0)
 
     def postOptions(self):
+        """Vérifie la cohérences des options passées au connecteur."""
         if (self["config"] is not None and
                 not os.path.exists(self["config"])):
             raise usage.UsageError(_("The configuration file does not exist"))
+
+def make_options(module):
+    """
+    Factory pour les options d'un connecteur XMPP de Vigilo.
+
+    @param module: Nom du module correspondant au connecteur
+        (eg. "vigilo.connector_nagios").
+    @type module: C{str}
+    @return: Une fonction qui génère les options pour le connecteur.
+    @rtype: C{callable}
+    """
+    def _inner(plugin):
+        """
+        Vraie fonction pour générer les options du module.
+
+        @param plugin: Le plugin twistd dont on génère les options.
+        @type plugin: C{object}
+        @return: Options du connecteur.
+        @rtype: L{Options}
+        """
+        return Options(module)
+    return _inner
