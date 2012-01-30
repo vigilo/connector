@@ -9,6 +9,8 @@ Gestionnaires de messages
 from __future__ import absolute_import
 
 import os
+import time
+from datetime import datetime
 from collections import deque
 from platform import python_version_tuple
 
@@ -329,6 +331,11 @@ class BusPublisher(BusHandler):
         self._messages_sent += 1
         if isinstance(msg, basestring):
             msg = json.loads(msg)
+        try:
+            if isinstance(msg["timestamp"], datetime):
+                msg["timestamp"] = time.mktime(msg["timestamp"].timetuple())
+        except (KeyError, TypeError):
+            pass
         # accumulation des messages de perf
         msg = self._accumulate_perf_msgs(msg)
         if msg is None:
