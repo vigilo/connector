@@ -78,6 +78,15 @@ class ChannelStub(object):
         return defer.succeed(None)
 
 
+    def basic_qos(self, prefetch_count=0, prefetch_size=0):
+        self.sent.append( {
+            "method": "basic_qos",
+            "prefetch_count": prefetch_count,
+            "prefetch_size": prefetch_size,
+            })
+        return defer.succeed(None)
+
+
 
 class ClientStub(VigiloClient):
 

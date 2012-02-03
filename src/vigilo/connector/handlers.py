@@ -107,8 +107,11 @@ class QueueSubscriber(BusHandler):
     def _subscribe(self):
         if not self._channel:
             return
-        d = self._channel.basic_consume(queue=self.queue_name,
-                                        consumer_tag=self.queue_name)
+        # On se laisse un buffer de 5 en mémoire, de toute façon il faut les
+        # acquitter donc en cas de plantage ils ne seront pas perdus
+        d = self._channel.basic_qos(prefetch_count=5)
+        d.addCallback(lambda _reply: self._channel.basic_consume(
+                      queue=self.queue_name, consumer_tag=self.queue_name))
         d.addCallback(lambda reply: self.client.getQueue(reply.consumer_tag))
         def store_queue(queue):
             self._queue = queue
