@@ -53,10 +53,10 @@ class SocketListener(Service):
 
     def __init__(self, socket_filename):
         """
-        Instancie un connecteur socket vers BUS XMPP.
+        Instancie un connecteur socket vers le bus.
 
         @param socket_filename: le nom du fichier pipe qui accueillra les
-                                messages XMPP
+                                messages
         @type  socket_filename: C{str}
         """
         self.socket_filename = socket_filename

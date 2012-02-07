@@ -137,6 +137,8 @@ class VigiloClient(service.Service):
         for h in self.handlers:
             if hasattr(h, "connectionLost"):
                 h.connectionLost(reason)
+        LOGGER.info(_('Lost connection to the bus (%s)'),
+                    reason.getErrorMessage())
 
 
     def connectionInitialized(self):

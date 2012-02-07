@@ -102,18 +102,12 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         return p
 
 
-    def clientConnectionFailed(self, connector, reason):
-        log.msg("Connection failed.")
-        protocol.ReconnectingClientFactory.clientConnectionLost(
-                self, connector, reason)
-
-
     def clientConnectionLost(self, connector, reason):
         #log.msg("Client connection lost.")
         self.p = None
         self.channel = None
         self.parent.channel = None
-        protocol.ReconnectingClientFactory.clientConnectionFailed(
+        protocol.ReconnectingClientFactory.clientConnectionLost(
                 self, connector, reason)
         self.parent.connectionLost(reason)
 

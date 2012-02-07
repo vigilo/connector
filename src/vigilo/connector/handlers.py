@@ -279,8 +279,6 @@ class BusPublisher(BusHandler):
             self.producer.pauseProducing()
         if reason is None:
             reason = Failure(Exception())
-        LOGGER.info(_('Lost connection to the XMPP bus (reason: %s)'),
-                    get_error_message(reason))
 
 
     def isConnected(self):
