@@ -163,13 +163,22 @@ class MessageHandler(BusHandler):
 
 
     def write(self, msg):
-        content = json.loads(msg.content.body)
-        if "messages" in content and content["messages"]:
-            d = self._processList(content["messages"])
+        try:
+            content = json.loads(msg.content.body)
+
+        except ValueError:
+            LOGGER.warning(_("Received message is not JSON-encoded: %r"),
+                           msg.content.body)
+            d = defer.succeed(None)
+
         else:
-            d = defer.maybeDeferred(self.processMessage, content)
-        d.addCallbacks(self.processingSucceeded, self.processingFailed,
-                       callbackArgs=(msg, ))
+            if "messages" in content and content["messages"]:
+                d = self._processList(content["messages"])
+            else:
+                d = defer.maybeDeferred(self.processMessage, content)
+            d.addCallbacks(self.processingSucceeded, self.processingFailed,
+                           callbackArgs=(msg, ))
+
         if self.keepProducing:
             d.addBoth(lambda _x: self.producer.resumeProducing())
         return d
