@@ -145,6 +145,19 @@ class QueueSubscriber(BusHandler):
     def ack(self, msg, multiple=False):
         return self._channel.basic_ack(msg.delivery_tag, multiple=multiple)
 
+    def nack(self, msg, multiple=False, requeue=True):
+        """
+        C{basic_nack()} semble être une extension spécifique RabbitMQ au
+        protocole, au moins à la version 0.8. On utilise donc
+        C{basic_reject()}.
+
+        Références:
+        - U{http://www.rabbitmq.com/amqp-0-9-1-quickref.html#basic.nack}
+        - U{http://www.rabbitmq.com/extensions.html#consuming}
+        """
+        #return self._channel.basic_nack(msg.delivery_tag, multiple=multiple, requeue=requeue)
+        return self._channel.basic_reject(msg.delivery_tag, requeue=requeue)
+
     def send(self, exchange, routing_key, message):
         return self.client.send(exchange, routing_key, message)
 
@@ -179,7 +192,7 @@ class MessageHandler(BusHandler):
             else:
                 d = defer.maybeDeferred(self.processMessage, content)
             d.addCallbacks(self.processingSucceeded, self.processingFailed,
-                           callbackArgs=(msg, ))
+                           callbackArgs=(msg, ), errbackArgs=(msg, ))
 
         if self.keepProducing:
             d.addBoth(lambda _x: self.producer.resumeProducing())
@@ -199,10 +212,11 @@ class MessageHandler(BusHandler):
 
     def processingSucceeded(self, _ignored, msg):
         self._messages_forwarded += 1
-        self.producer.ack(msg)
+        return self.producer.ack(msg)
 
-    def processingFailed(self, error):
-        LOGGER.error(error)
+    def processingFailed(self, error, msg):
+        LOGGER.warning(error.getErrorMessage())
+        return self.producer.nack(msg)
 
 
     def pauseProducing(self):
