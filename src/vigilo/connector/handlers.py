@@ -135,7 +135,9 @@ class QueueSubscriber(BusHandler):
         def eb(f):
             f.trap(txamqp.queue.Closed) # déconnexion pendant le get()
         d.addCallbacks(cb, eb)
-        return d
+        # On ne retourne pas le deferred ici pour éviter des recursion errors:
+        # resumeProducing -> write -> resumeProducing -> ...
+        #return d
 
 
     # Proxies
