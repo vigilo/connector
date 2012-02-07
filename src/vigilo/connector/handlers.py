@@ -352,7 +352,8 @@ class BusPublisher(BusHandler):
 
         routing_key = msg.get("routing_key", msg["type"])
         persistent = msg.get("persistent", True)
-        result = self.client.send(exchange, str(routing_key), msg_text, persistent)
+        result = self.client.send(exchange, str(routing_key), msg_text,
+                                  persistent, content_type="application/json")
         return result
 
 

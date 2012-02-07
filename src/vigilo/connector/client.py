@@ -160,8 +160,33 @@ class VigiloClient(service.Service):
     @defer.inlineCallbacks
     def _sendPacketQueue(self):
         while self._packetQueue:
-            e, k, m = self._packetQueue.pop(0)
-            yield self.send(e, k, m)
+            e, k, m, p, c = self._packetQueue.pop(0)
+            yield self.send(e, k, m, p, c)
+
+
+    def send(self, exchange, routing_key, message, persistent=True,
+             content_type=None):
+
+        if not self.isConnected():
+            self._packetQueue.append( (exchange, routing_key, message,
+                                       persistent, content_type) )
+            return defer.succeed(None)
+
+        msg = Content(message)
+        if persistent:
+            msg["delivery mode"] = amqp.PERSISTENT
+        else:
+            msg["delivery mode"] = amqp.NON_PERSISTENT
+        if content_type is not None:
+            msg["content_type"] = content_type
+        if self.log_traffic:
+            LOGGER.debug("PUBLISH to %s with key %s: %s"
+                         % (exchange, routing_key, msg))
+        d = self.channel.basic_publish(exchange=exchange,
+                        routing_key=routing_key, content=msg)
+        d.addErrback(self._sendFailed)
+        return d
+
 
     # Wrappers
 
@@ -169,24 +194,6 @@ class VigiloClient(service.Service):
         if not self.isConnected():
             return None
         return self.factory.p.queue(*args, **kwargs)
-
-    def send(self, exchange, routing_key, message, persistent=True):
-        if self.isConnected():
-            msg = Content(message)
-            if persistent:
-                msg["delivery mode"] = amqp.PERSISTENT
-            else:
-                msg["delivery mode"] = amqp.NON_PERSISTENT
-            if self.log_traffic:
-                LOGGER.debug("PUBLISH to %s with key %s: %s"
-                             % (exchange, routing_key, msg))
-            d = self.channel.basic_publish(exchange=exchange,
-                            routing_key=routing_key, content=msg)
-            d.addErrback(self._sendFailed)
-            return d
-        else:
-            self._packetQueue.append( (exchange, routing_key, message) )
-            return defer.succeed(None)
 
     def _sendFailed(self, fail):
         LOGGER.warning(fail)
