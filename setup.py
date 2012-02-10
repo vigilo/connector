@@ -12,7 +12,6 @@ install_requires = [
     'setuptools',
     'zope.interface',
     'vigilo-common',
-    'vigilo-pubsub',
     'txAMQP',
     'Twisted',
     'argparse',

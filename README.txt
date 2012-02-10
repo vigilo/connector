@@ -19,8 +19,11 @@ façon suivante::
 La bibliothèque Connector a besoin des modules python suivants :
 
 - setuptools (ou distribute)
+- argparse (si python < 2.6)
 - vigilo-common
-- vigilo-pubsub
+- zope.interface
+- Twisted
+- txAMQP
 
 
 Installation

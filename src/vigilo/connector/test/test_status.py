@@ -122,8 +122,8 @@ class StatusPublisherTestCase(unittest.TestCase):
         return d
 
     @deferred(timeout=10)
-    def test_force_node(self):
-        """On force le nom du noeud pubsub à utiliser"""
+    def test_force_exchange(self):
+        """On force le nom de l'exchange à utiliser"""
         self.settings["connector"]["status_exchange"] = "testnode"
         self.settings["connector"]["status_service"] = "dummyservice"
         client = ClientStub("testhost", None, None)
