@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Ce module contient la classe qui gère les options
-d'un connecteur pour le bus XMPP de Vigilo.
+d'un connecteur pour le bus de Vigilo.
 """
 
 import sys
@@ -50,7 +50,7 @@ class Options(usage.Options):
 
 def make_options(module):
     """
-    Factory pour les options d'un connecteur XMPP de Vigilo.
+    Factory pour les options d'un connecteur Vigilo.
 
     @param module: Nom du module correspondant au connecteur
         (eg. "vigilo.connector_nagios").

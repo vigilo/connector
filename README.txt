@@ -2,7 +2,7 @@ Connector
 =========
 
 Connector est une bibliothèque de Vigilo_ proposant des classes pour
-construire des connecteurs branchés sur le bus de messages XMPP.
+construire des connecteurs branchés sur le bus de messages.
 
 Pour les détails du fonctionnement de la bibliothèque Connector, se reporter à
 la `documentation officielle`_.

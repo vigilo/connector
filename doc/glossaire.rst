@@ -9,9 +9,9 @@ et donne une brève définition de chacun de ces termes.
    XML
        eXtensible Markup Language. Langage de balisage extensible.
 
-   XMPP
-       eXtensible Messaging and Presense Protocol. Protocole de messagerie
-       instantanée pour l'envoi de textes courts au format XML.
+   AMQP
+       Advanced Message Queuing Protocol. Protocole ouvert de messagerie
+       applicative. Voir `amqp.org <http://amqp.org>`_.
 
    RRD
        Round-Robin Database. Base de données circulaire permettant de stocker
