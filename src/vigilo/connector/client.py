@@ -207,18 +207,16 @@ class MultipleServerConnector(tcp.Connector):
     def __init__(self, hosts, factory, timeout=30, attempts=3,
                  reactor=None):
         """
-        @param host: le serveur XMPP
-        @type host: C{str}
-        @param port: le port du serveur
-        @type port C{int}
+        @param hosts: les noms des serveurs qui hébergent le bus.
+        @type  hosts: C{list} de C{str}
         @param factory: Une factory pour le connecteur Twisted.
-        @type factory: L{twisted.internet.interfaces.IProtocolFactory}
+        @type  factory: C{twisted.internet.interfaces.IProtocolFactory}
         @param timeout: Le timeout de connexion.
-        @type timeout: C{int}
+        @type  timeout: C{int}
         @param attempts: Le nombre de tentative de connexion.
-        @type: C{int}
+        @type  attempts: C{int}
         @param reactor: Une instance d'un réacteur de Twisted.
-        @type reactor: L{twisted.internet.reactor}
+        @type  reactor: C{twisted.internet.reactor}
         """
         tcp.Connector.__init__(self, None, None, factory, timeout, None,
                                reactor=reactor)

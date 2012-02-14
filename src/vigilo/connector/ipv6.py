@@ -14,9 +14,9 @@ class IPv6CapableUDPPort(Port):
     """
     Cette classe permet d'envoyer des datagrammes UDP en utilisant
     l'une des familles d'adresses suivantes :
-    - IPv4
-    - IPv6
-    - un nom d'hôte
+     - IPv4
+     - IPv6
+     - un nom d'hôte
 
     Pour cela, cette classe recrée un socket utilisant la famille
     d'adresses (AF_*) appropriée lorsque cela est nécessaire.

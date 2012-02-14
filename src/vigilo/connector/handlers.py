@@ -152,8 +152,8 @@ class QueueSubscriber(BusHandler):
         C{basic_reject()}.
 
         Références:
-        - U{http://www.rabbitmq.com/amqp-0-9-1-quickref.html#basic.nack}
-        - U{http://www.rabbitmq.com/extensions.html#consuming}
+         - U{http://www.rabbitmq.com/amqp-0-9-1-quickref.html#basic.nack}
+         - U{http://www.rabbitmq.com/extensions.html#consuming}
         """
         #return self._channel.basic_nack(msg.delivery_tag, multiple=multiple, requeue=requeue)
         return self._channel.basic_reject(msg.delivery_tag, requeue=requeue)
@@ -347,8 +347,7 @@ class BusPublisher(BusHandler):
     def sendMessage(self, msg):
         """
         Traite un message en l'envoyant sur le bus.
-        Ne sera pas lancé plus de L{max_send_simult} fois sans attendre les
-        réponses.
+
         @param msg: message à traiter
         @type  msg: C{str} ou C{twisted.words.xish.domish.Element}
         @return: le C{Deferred} avec la réponse, ou C{None} si cela n'a pas
