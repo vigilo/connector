@@ -11,19 +11,22 @@ import unittest
 from nose.twistedtools import reactor, deferred
 
 import mock
-from twisted.internet import protocol
+from twisted.internet import protocol, tcp
 from configobj import ConfigObj
 
-from vigilo.connector.client import MultipleServerConnector
+from vigilo.connector.client import MultipleServerMixin
 #from vigilo.connector.client import MultipleServersXmlStreamFactory
 from vigilo.connector.client import client_factory, oneshotclient_factory
 
+class MultipleServerConnector(MultipleServerMixin, tcp.Connector):
+    pass
 
 class MSCTestCase(unittest.TestCase):
     """Teste L{MultipleServerConnector}"""
 
     def test_pickServer_first(self):
-        c = MultipleServerConnector([("test1", 5222), ("test2", 5222)], None)
+        c = MultipleServerConnector(None, None, None, 30, None, reactor=reactor)
+        c.setMultipleParams([("test1", 5222), ("test2", 5222)], tcp.Connector)
         c.pickServer()
         self.assertEqual(c.host, "test1")
 
@@ -31,8 +34,8 @@ class MSCTestCase(unittest.TestCase):
         f = protocol.ReconnectingClientFactory()
         # reconnexion manuelle
         f.continueTrying = False
-        c = MultipleServerConnector([("test1", 5222), ("test2", 5222)], f,
-                                    attempts=3, reactor=reactor)
+        c = MultipleServerConnector(None, None, f, 30, None, reactor=reactor)
+        c.setMultipleParams([("test1", 5222), ("test2", 5222)], tcp.Connector)
 
         for attemptsLeft in range(3, 0, -1):
             self.assertEqual(c._attemptsLeft, attemptsLeft)

@@ -2,7 +2,7 @@
 # Copyright (C) 2010-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
-from twisted.internet import reactor, defer, tcp
+from twisted.internet import reactor, defer, tcp, ssl
 from twisted.application import service
 
 from txamqp.content import Content
@@ -21,7 +21,7 @@ from vigilo.connector.interfaces import InterfaceNotProvided
 from vigilo.connector.interfaces import IBusHandler
 
 
-def split_host_port(hostdef):
+def split_host_port(hostdef, use_ssl=False):
     """
     Découpe une définition hostname:port en couple (hostname, port)
     @todo: Support IPv6
@@ -32,8 +32,53 @@ def split_host_port(hostdef):
         port = int(port)
     else:
         host = hostdef
-        port = 5672
+        if use_ssl:
+            port = 5671
+        else:
+            port = 5672
     return host, port
+
+
+
+class MultipleServerMixin:
+
+    def setMultipleParams(self, hosts, parentClass):
+        """
+        @param hosts: les serveurs auxquels se connecter
+        @type  hosts: C{str}
+        """
+        self.hosts = hosts
+        self.parentClass = parentClass
+        self.attempts = 3
+        self._attemptsLeft = 3
+        self._usableHosts = None
+
+    def pickServer(self):
+        if not self._usableHosts:
+            self._usableHosts = self.hosts[:]
+        self.host, self.port = self._usableHosts[0]
+        self.addr = (self.host, self.port)
+        LOGGER.info("Connecting to %s:%s", self.host, self.port)
+
+    def connectionFailed(self, reason):
+        assert self._attemptsLeft is not None
+        self._attemptsLeft -= 1
+        if self._attemptsLeft == 0:
+            LOGGER.warning(_("Server %(oldserver)s did not answer after "
+                    "%(attempts)d attempts"),
+                    {"oldserver": self.host, "attempts": self.attempts})
+            self._usableHosts.remove((self.host, self.port))
+            self.resetAttempts()
+            if hasattr(self.factory, "resetDelay"):
+                self.factory.resetDelay()
+        return self.parentClass.connectionFailed(self, reason)
+
+    def resetAttempts(self):
+        self._attemptsLeft = self.attempts
+
+    def _makeTransport(self):
+        self.pickServer()
+        return self.parentClass._makeTransport(self)
 
 
 
@@ -97,16 +142,43 @@ class VigiloClient(service.Service):
         return dl
 
 
+    def _getConnector(self, hosts):
+        if self.use_ssl:
+            return self._getConnectorSSL(hosts)
+        else:
+            return self._getConnectorTCP(hosts)
+
+    def _getConnectorTCP(self, hosts):
+        class MultipleServerConnector(MultipleServerMixin, tcp.Connector):
+            pass
+        c = MultipleServerConnector(None, None, self.factory, 30, None,
+                                    reactor=reactor)
+        c.setMultipleParams(hosts, tcp.Connector)
+        return c
+
+    def _getConnectorSSL(self, hosts):
+        class MultipleServerConnector(MultipleServerMixin, ssl.Connector):
+            pass
+        context = ssl.ClientContextFactory()
+        c = MultipleServerConnector(None, None, self.factory, context, 30,
+                                    None, reactor=reactor)
+        c.setMultipleParams(hosts, ssl.Connector)
+        return c
+
+
     def _getConnection(self):
         if isinstance(self.host, list):
-            hosts = [ split_host_port(h) for h in self.host ]
-            c = MultipleServerConnector(hosts, self.factory,
-                                        reactor=reactor)
+            hosts = [ split_host_port(h, self.use_ssl) for h in self.host ]
+            c = self._getConnector(hosts)
             c.connect()
             return c
         else:
-            host, port = split_host_port(self.host)
-            return reactor.connectTCP(host, port, self.factory)
+            host, port = split_host_port(self.host, self.use_ssl)
+            if self.use_ssl:
+                context = ssl.ClientContextFactory()
+                return reactor.connectSSL(host, port, self.factory, context)
+            else:
+                return reactor.connectTCP(host, port, self.factory)
 
 
     def initializationFailed(self, reason):
@@ -200,56 +272,6 @@ class VigiloClient(service.Service):
     def _sendFailed(self, fail):
         LOGGER.warning(fail)
         return fail
-
-
-
-class MultipleServerConnector(tcp.Connector):
-    def __init__(self, hosts, factory, timeout=30, attempts=3,
-                 reactor=None):
-        """
-        @param hosts: les noms des serveurs qui hébergent le bus.
-        @type  hosts: C{list} de C{str}
-        @param factory: Une factory pour le connecteur Twisted.
-        @type  factory: C{twisted.internet.interfaces.IProtocolFactory}
-        @param timeout: Le timeout de connexion.
-        @type  timeout: C{int}
-        @param attempts: Le nombre de tentative de connexion.
-        @type  attempts: C{int}
-        @param reactor: Une instance d'un réacteur de Twisted.
-        @type  reactor: C{twisted.internet.reactor}
-        """
-        tcp.Connector.__init__(self, None, None, factory, timeout, None,
-                               reactor=reactor)
-        self.hosts = hosts
-        self.attempts = attempts
-        self._attemptsLeft = attempts
-        self._usableHosts = None
-
-    def pickServer(self):
-        if not self._usableHosts:
-            self._usableHosts = self.hosts[:]
-        self.host, self.port = self._usableHosts[0]
-        LOGGER.info("Connecting to %s:%s", self.host, self.port)
-
-    def connectionFailed(self, reason):
-        assert self._attemptsLeft is not None
-        self._attemptsLeft -= 1
-        if self._attemptsLeft == 0:
-            LOGGER.warning(_("Server %(oldserver)s did not answer after "
-                    "%(attempts)d attempts"),
-                    {"oldserver": self.host, "attempts": self.attempts})
-            self._usableHosts.remove((self.host, self.port))
-            self.resetAttempts()
-            if hasattr(self.factory, "resetDelay"):
-                self.factory.resetDelay()
-        return tcp.Connector.connectionFailed(self, reason)
-
-    def resetAttempts(self):
-        self._attemptsLeft = self.attempts
-
-    def _makeTransport(self):
-        self.pickServer()
-        return tcp.Connector._makeTransport(self)
 
 
 
