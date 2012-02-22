@@ -1,3 +1,18 @@
+Création du compte sur le bus
+-----------------------------
+Le connecteur FTP nécessite qu'un compte soit créé sur la machine hébergeant
+le bus. Les comptes doivent être créés sur la machine qui héberge le serveur
+rabbitmq, à l'aide de la commande::
+
+    # rabbitmqctl add_user nom_d_utilisateur mot_de_passe
+
+
+Configuration
+=============
+
+Le module |name| est fourni avec un fichier de configuration situé
+par défaut dans « /etc/vigilo/|name|/settings.ini ».
+
 Ce fichier est composé de différentes sections permettant de paramétrer des
 aspects divers du module, chacune de ces sections peut contenir un ensemble de
 valeurs sous la forme ``clé = valeur``. Les lignes commençant par « ; » ou
