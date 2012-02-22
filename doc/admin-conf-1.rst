@@ -37,15 +37,16 @@ Les sections utilisées par le connecteur et leur rôle sont détaillées
 ci-dessous:
 
 bus
-    Contient les options relatives à la configuration de l'accès au bus
-    :term:`XMPP`.
+    Contient les options relatives à la configuration de l'accès au bus de
+    messages.
 
 connector
     Contient les options de configuration génériques d'un connecteur de Vigilo.
 
 publications
-    Contient une liste d'associations entre les types de messages :term:`XML`
-    et les nœuds :term:`XMPP` vers lesquels les messages sont transmis.
+    Contient une liste d'associations entre les types de messages envoyés
+    et les nœuds de publication (:term:`exchange`) vers lesquels ces
+    messages sont transmis.
 
 loggers, handlers, formatters, logger_*, handler_*, formatter_*
     Contient la configuration du mécanisme de journalisation des événements
