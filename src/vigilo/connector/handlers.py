@@ -30,6 +30,7 @@ import txamqp
 
 from vigilo.connector.interfaces import IBusHandler, IBusProducer
 from vigilo.connector.store import DbRetry
+from vigilo.connector.amqp import getErrorMessage
 
 from vigilo.common.gettext import translate
 _ = translate(__name__)
@@ -526,8 +527,8 @@ class BackupProvider(Service):
 
     def _send_failed(self, e, msg):
         """errback: remet le message en base"""
-        errmsg = _('Unable to forward the message (%(reason)s).')
-        LOGGER.error(errmsg % {
+        errmsg = _('Requeuing message (%(reason)s).')
+        LOGGER.info(errmsg % {
             "reason": get_error_message(e.value),
         })
         self.queue.append(msg)

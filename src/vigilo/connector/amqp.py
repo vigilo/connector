@@ -5,7 +5,7 @@
 from pkg_resources import resource_filename
 
 from twisted.internet import protocol
-from twisted.python import log
+from twisted.python import log, failure
 
 from txamqp.protocol import AMQClient
 from txamqp.client import TwistedDelegate
@@ -19,6 +19,18 @@ _ = translate(__name__)
 NON_PERSISTENT = 1
 PERSISTENT = 2
 
+
+def getErrorMessage(error):
+    """
+    Retourne le message renvoyé par le serveur dans une exception
+    C{txamqp.client.Closed}
+    """
+    if isinstance(error, failure.Failure):
+        error = error.value
+    try:
+        return error.args[0].fields[1]
+    except (KeyError, AttributeError):
+        return str(error)
 
 
 class AmqpProtocol(AMQClient):
@@ -34,8 +46,7 @@ class AmqpProtocol(AMQClient):
         # Authenticate.
         deferred = self.start({"LOGIN": self.factory.user,
                                "PASSWORD": self.factory.password})
-        deferred.addCallback(self._authenticated)
-        deferred.addErrback(self._authentication_failed)
+        deferred.addCallbacks(self._authenticated, self._authentication_failed)
 
 
     def _authenticated(self, ignore):
@@ -66,7 +77,7 @@ class AmqpProtocol(AMQClient):
 
 
     def _authentication_failed(self, error):
-        log.msg("AMQP authentication failed: %s" % error)
+        log.msg("AMQP authentication failed: %s" % getErrorMessage(error))
 
 
 

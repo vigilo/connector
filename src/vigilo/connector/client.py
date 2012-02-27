@@ -270,7 +270,8 @@ class VigiloClient(service.Service):
         return self.factory.p.queue(*args, **kwargs)
 
     def _sendFailed(self, fail):
-        LOGGER.warning(fail)
+        errmsg = _('Sending failed: %(reason)s')
+        LOGGER.warning(errmsg % amqp.getErrorMessage(fail))
         return fail
 
 
