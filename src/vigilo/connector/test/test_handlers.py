@@ -18,6 +18,7 @@ from mock import Mock
 from twisted.internet import defer
 
 from vigilo.connector.handlers import BackupProvider, BusPublisher
+from vigilo.connector.handlers import QueueSubscriber
 
 from helpers import ClientStub, wait, json, ConsumerStub
 
@@ -206,3 +207,38 @@ class BusPublisherTestCase(unittest.TestCase):
         self.bp.connectionLost(None)
         self.assertTrue(producer.pauseProducing.called)
 
+
+
+class QueueSubscriberTestCase(unittest.TestCase):
+
+
+    def setUp(self):
+        self.qs = QueueSubscriber("dummy_queue")
+        client = ClientStub("testhostname", None, None)
+        self.qs.setClient(client)
+
+
+    @deferred(timeout=30)
+    def test_resume_after_disconnect(self):
+        """La production doit reprendre après une déconnexion"""
+        self.qs.consumer = Mock()
+        self.qs.consumer.write.side_effect = lambda msg: self.qs.resumeProducing()
+        self.qs.client.stub_connect()
+        self.qs.resumeProducing()
+        print "déconnexion"
+        self.qs._queue.close()
+        self.qs.connectionLost(None)
+        print "reconnexion"
+        self.qs.connectionInitialized()
+        print "réception d'un message"
+        self.qs.client.stub_receive("dummy message")
+
+        def check(r):
+            print "vérification"
+            print self.qs.consumer.write.call_args_list
+            self.assertTrue(self.qs.consumer.write.called,
+                    "la fonction write() n'a pas été appelée")
+            self.assertEqual("dummy message",
+                    self.qs.consumer.write.call_args_list[0][0][0])
+        self.qs.ready.addCallback(check)
+        return self.qs.ready

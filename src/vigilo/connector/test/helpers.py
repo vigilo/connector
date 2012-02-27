@@ -5,9 +5,8 @@
 from collections import deque
 
 from twisted.internet import reactor, defer
-#from twisted.words.protocols.jabber.jid import JID
-#from wokkel.test.helpers import XmlStreamStub as WXSS
 from nose.plugins.skip import SkipTest
+from txamqp.queue import TimeoutDeferredQueue
 from vigilo.connector.client import VigiloClient
 
 # pylint: disable-msg=W0611
@@ -24,6 +23,10 @@ def wait(seconds, result=None):
     reactor.callLater(seconds, d.callback, result)
     return d
 
+
+class ReplyStub(object):
+    def __init__(self, consumer_tag):
+        self.consumer_tag = consumer_tag
 
 
 class ChannelStub(object):
@@ -56,7 +59,7 @@ class ChannelStub(object):
             "exclusive": exclusive,
             "auto_delete": auto_delete,
             })
-        self.queues[queue] = defer.DeferredQueue()
+        self.queues[queue] = TimeoutDeferredQueue()
         return defer.succeed(None)
 
 
@@ -66,7 +69,8 @@ class ChannelStub(object):
             "queue": queue,
             "consumer_tag": consumer_tag,
             })
-        return defer.succeed(None)
+        reply = ReplyStub(consumer_tag)
+        return defer.succeed(reply)
 
 
     def basic_ack(self, delivery_tag, multiple):

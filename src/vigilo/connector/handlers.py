@@ -69,6 +69,7 @@ class QueueSubscriber(BusHandler):
         self._queue = None
         self._do_consume = True
         self.ready = defer.Deferred()
+        self._production_interrupted = False
 
 
     def connectionInitialized(self):
@@ -76,7 +77,10 @@ class QueueSubscriber(BusHandler):
         d = self._create()
         d.addCallback(lambda _x: self._bind())
         d.addCallback(lambda _x: self._subscribe())
-        return d
+        if self._production_interrupted:
+            self._production_interrupted = False
+            d.addCallback(lambda _x: self.resumeProducing())
+        d.addCallback(self.ready.callback)
 
     def connectionLost(self, reason):
         self._channel = None
@@ -118,14 +122,17 @@ class QueueSubscriber(BusHandler):
             self._queue = queue
             return queue
         d.addCallback(store_queue)
-        d.addCallback(self.ready.callback)
         return d
 
 
     def resumeProducing(self):
         if not self._queue:
-            return defer.fail(Exception(
-                        _("Can't resume producing: not connected yet")))
+            if self.ready.called:
+                return defer.fail(Exception(
+                            _("Can't resume producing: not connected yet")))
+            else:
+                self.ready.addCallback(lambda _x: self.resumeProducing())
+                return
         d = self._queue.get()
         def cb(msg):
             if self.client.log_traffic:
@@ -135,6 +142,7 @@ class QueueSubscriber(BusHandler):
             return self.consumer.write(msg)
         def eb(f):
             f.trap(txamqp.queue.Closed) # déconnexion pendant le get()
+            self._production_interrupted = True
         d.addCallbacks(cb, eb)
         # On ne retourne pas le deferred ici pour éviter des recursion errors:
         # resumeProducing -> write -> resumeProducing -> ...
@@ -240,11 +248,11 @@ class MessageHandler(BusHandler):
         # attention, pas d'injection de deps, faire le vrai boulot dans
         # registerProducer()
         subscriber = QueueSubscriber(queue_name)
-        subscriber.setClient(self.client)
         if bindings is None:
             bindings = []
         for exchange, routing_key in bindings:
             subscriber.bindToExchange(exchange, routing_key)
+        subscriber.setClient(self.client)
         self.registerProducer(subscriber, False)
 
     def unsubscribe(self):
