@@ -41,7 +41,7 @@ class ChannelStub(object):
         pass
 
 
-    def basic_publish(self, exchange, routing_key, content):
+    def basic_publish(self, exchange, routing_key, content, immediate=False):
         self.sent.append( {
             "method": "basic_publish",
             "exchange": exchange,

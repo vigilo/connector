@@ -249,15 +249,18 @@ class VigiloClient(service.Service):
         msg = Content(message)
         if persistent:
             msg["delivery-mode"] = amqp.PERSISTENT
+            immediate = False
         else:
             msg["delivery-mode"] = amqp.NON_PERSISTENT
+            immediate = True
         if content_type is not None:
             msg["content-type"] = content_type
         if self.log_traffic:
             LOGGER.debug("PUBLISH to %s with key %s: %s"
                          % (exchange, routing_key, msg))
-        d = self.channel.basic_publish(exchange=exchange,
-                        routing_key=routing_key, content=msg)
+        d = self.channel.basic_publish(
+                exchange=exchange, routing_key=routing_key,
+                content=msg, immediate=immediate)
         d.addErrback(self._sendFailed)
         return d
 

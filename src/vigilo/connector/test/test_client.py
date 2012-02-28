@@ -11,12 +11,13 @@ import unittest
 from nose.twistedtools import reactor, deferred
 
 import mock
-from twisted.internet import protocol, tcp
+from twisted.internet import protocol, tcp, defer
 from configobj import ConfigObj
 
 from vigilo.connector.client import MultipleServerMixin
 #from vigilo.connector.client import MultipleServersXmlStreamFactory
 from vigilo.connector.client import client_factory, oneshotclient_factory
+from vigilo.connector.client import VigiloClient
 
 class MultipleServerConnector(MultipleServerMixin, tcp.Connector):
     pass
@@ -122,3 +123,45 @@ class OSCTestCase(unittest.TestCase):
         self.assertEqual(mockedConnectTCP.call_count, 1)
         self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5333))
 
+
+
+class VigiloClientTestCase(unittest.TestCase):
+
+
+    @deferred(timeout=5)
+    def test_send(self):
+        c = VigiloClient(None, None, None)
+        c.channel = mock.Mock()
+        c.channel.basic_publish.side_effect = lambda *a, **kw: defer.succeed(None)
+        d = c.send("exch", "key", "msg")
+        def check(r):
+            self.assertTrue(c.channel.basic_publish.called)
+            #print c.channel.basic_publish.call_args_list
+            args = c.channel.basic_publish.call_args_list[0][1]
+            print args
+            self.assertTrue("delivery-mode" in args["content"].properties)
+            self.assertEqual(args["content"].properties["delivery-mode"], 2)
+            self.assertEqual(args["content"].body, "msg")
+            self.assertEqual(args["routing_key"], "key")
+            self.assertEqual(args["exchange"], "exch")
+            self.assertEqual(args["immediate"], False)
+        d.addCallback(check)
+        return d
+
+
+    @deferred(timeout=5)
+    def test_send_non_persistent(self):
+        c = VigiloClient(None, None, None)
+        c.channel = mock.Mock()
+        c.channel.basic_publish.side_effect = lambda *a, **kw: defer.succeed(None)
+        d = c.send("exch", "key", "msg", persistent=False)
+        def check(r):
+            self.assertTrue(c.channel.basic_publish.called)
+            #print c.channel.basic_publish.call_args_list
+            args = c.channel.basic_publish.call_args_list[0][1]
+            print args
+            self.assertTrue("delivery-mode" in args["content"].properties)
+            self.assertEqual(args["content"].properties["delivery-mode"], 1)
+            self.assertEqual(args["immediate"], True)
+        d.addCallback(check)
+        return d
