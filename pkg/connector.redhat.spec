@@ -44,7 +44,7 @@ make install_pkg \
 	PYTHON=%{__python}
 
 # Splitted Twisted
-sed -i -e 's/^Twisted$/Twisted_Words/' $RPM_BUILD_ROOT%{_prefix}/lib*/python*/site-packages/vigilo*.egg-info/requires.txt
+sed -i -e 's/^Twisted$/Twisted_Core/' $RPM_BUILD_ROOT%{_prefix}/lib*/python*/site-packages/vigilo*.egg-info/requires.txt
 
 %find_lang %{name}
 
