@@ -284,7 +284,6 @@ class BusPublisher(BusHandler):
         self._publications = publications
         self._initialized = False
         # Stats
-        self._messages_forwarded = 0
         self._messages_sent = 0
         # Accumulation des messages de perf
         self.batch_send_perf = batch_send_perf
@@ -325,7 +324,6 @@ class BusPublisher(BusHandler):
     def getStats(self):
         """Récupère des métriques de fonctionnement du connecteur"""
         stats = {
-            "forwarded": self._messages_forwarded,
             "sent": self._messages_sent,
             }
         return defer.succeed(stats)
