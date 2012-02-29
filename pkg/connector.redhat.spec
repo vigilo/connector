@@ -24,6 +24,7 @@ Requires:   python26-distribute
 Requires:   vigilo-common
 Requires:   python26-zope-interface
 Requires:   python26-txamqp
+Requires:   python26-argparse
 
 
 %description

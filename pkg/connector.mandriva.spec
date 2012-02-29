@@ -19,6 +19,7 @@ Requires:   python-setuptools
 Requires:   vigilo-common
 Requires:   python-txamqp
 Requires:   python-zope-interface
+Requires:   python-argparse
 ######### Dependance from python dependance tree ########
 Requires:   python-twisted
 
