@@ -80,7 +80,11 @@ class QueueSubscriber(BusHandler):
         if self._production_interrupted:
             self._production_interrupted = False
             d.addCallback(lambda _x: self.resumeProducing())
-        d.addCallback(self.ready.callback)
+        def on_error(fail):
+            errmsg = _('Could not initialize the queue: %(reason)s')
+            LOGGER.warning(errmsg % {"reason": getErrorMessage(fail)})
+            self.client.disconnect()
+        d.addCallbacks(self.ready.callback, on_error)
 
     def connectionLost(self, reason):
         self._channel = None

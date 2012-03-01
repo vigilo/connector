@@ -274,9 +274,11 @@ class VigiloClient(service.Service):
 
     def _sendFailed(self, fail):
         errmsg = _('Sending failed: %(reason)s')
-        LOGGER.warning(errmsg % amqp.getErrorMessage(fail))
+        LOGGER.warning(errmsg % {"reason": amqp.getErrorMessage(fail)})
         return fail
 
+    def disconnect(self):
+        self.factory.p.transport.loseConnection()
 
 
 def client_factory(settings):
