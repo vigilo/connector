@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2011-10-03 10:34+0200\n"
+"PO-Revision-Date: 2012-03-02 10:01+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -18,17 +18,17 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/client.py:66
+#: src/vigilo/connector/client.py:98
 msgid "'require_compression' cannot be True when 'require_tls' is also True."
 msgstr ""
 "'require_compression' ne peut valoir True lorsque 'require_tls' vaut \"\n"
 "\"également True."
 
-#: src/vigilo/connector/client.py:107 src/vigilo/connector/client.py:456
+#: src/vigilo/connector/client.py:139 src/vigilo/connector/client.py:509
 msgid "Some error occurred while negotiating TLS encryption"
 msgstr "Une erreur est survenue lors de la négociation du chiffrement par TLS"
 
-#: src/vigilo/connector/client.py:109 src/vigilo/connector/client.py:458
+#: src/vigilo/connector/client.py:141 src/vigilo/connector/client.py:511
 msgid ""
 "The server requires TLS encryption. Use the 'require_tls' option to "
 "enable TLS encryption."
@@ -36,21 +36,21 @@ msgstr ""
 "Le serveur requiert un chiffrement par TLS. Utilisez l'option "
 "'require_tls' pour activer le chiffrement."
 
-#: src/vigilo/connector/client.py:112 src/vigilo/connector/client.py:461
+#: src/vigilo/connector/client.py:144 src/vigilo/connector/client.py:514
 msgid "TLS encryption was required, but pyOpenSSL is not installed"
 msgstr "Le chiffrement par TLS est requis, mais pyOpenSSL n'est pas installé"
 
-#: src/vigilo/connector/client.py:117
+#: src/vigilo/connector/client.py:149
 #, python-format
 msgid "Authentication failure: %s"
 msgstr "Échec de l'authentification : %s"
 
-#: src/vigilo/connector/client.py:136 src/vigilo/connector/client.py:483
+#: src/vigilo/connector/client.py:168 src/vigilo/connector/client.py:536
 #, python-format
 msgid "The server does not support the '%s' feature"
 msgstr "Le serveur ne supporte pas la fonctionnalité '%s'."
 
-#: src/vigilo/connector/client.py:223
+#: src/vigilo/connector/client.py:259
 msgid ""
 "The \"watched_topics\" option has now been renamed into "
 "\"subscriptions\". Please update your configuration file."
@@ -58,17 +58,17 @@ msgstr ""
 "L'option \"watched_topics\" a été renommée en \"subscriptions\". Veuillez"
 " mettre à jour votre fichier de configuration."
 
-#: src/vigilo/connector/client.py:259
+#: src/vigilo/connector/client.py:309
 #, python-format
 msgid "Server %(oldserver)s did not answer after %(attempts)d attempts"
 msgstr "Le serveur %(oldserver)s n'a pas répondu après %(attempts)d tentatives"
 
-#: src/vigilo/connector/client.py:386
+#: src/vigilo/connector/client.py:439
 #, python-format
 msgid "Creating lock file in %s"
 msgstr "Création d'un fichier de verrou dans %s"
 
-#: src/vigilo/connector/client.py:396
+#: src/vigilo/connector/client.py:449
 #, python-format
 msgid ""
 "Found a lock file, but the following exception was raised when trying to "
@@ -77,14 +77,14 @@ msgstr ""
 "Un fichier de verrou a été trouvé, mais l'exception suivante a été levée "
 "lors de la tentative d'accès : %s. Abandon..."
 
-#: src/vigilo/connector/client.py:404
+#: src/vigilo/connector/client.py:457
 #, python-format
 msgid ""
 "Another instance of this connector is already running (PID: %s). "
 "Exiting..."
 msgstr "Une autre instance de ce connecteur est déjà lancée (PID : %s). Sortie..."
 
-#: src/vigilo/connector/client.py:412
+#: src/vigilo/connector/client.py:465
 #, python-format
 msgid ""
 "Found a lock file, but no process is running with this PID (%s). Removing"
@@ -93,7 +93,7 @@ msgstr ""
 "Un fichier de verrou a été trouvé, mais aucun processus n'est lancé avec "
 "ce PID (%s). Suppression du verrou..."
 
-#: src/vigilo/connector/client.py:428
+#: src/vigilo/connector/client.py:481
 #, python-format
 msgid ""
 "The following exception was raised when trying to create the lock file: "
@@ -102,35 +102,35 @@ msgstr ""
 "L'exception suivante a été levée durant la tentative de création du "
 "fichier de verrou : %s. Abandon..."
 
-#: src/vigilo/connector/client.py:437
+#: src/vigilo/connector/client.py:490
 #, python-format
 msgid "Lock file successfully created in %s"
 msgstr "Fichier de verrou créé avec succès dans %s"
 
-#: src/vigilo/connector/client.py:448
+#: src/vigilo/connector/client.py:501
 #, python-format
 msgid "Removing lock file (%s)"
 msgstr "Suppression du fichier de verrou (%s)"
 
-#: src/vigilo/connector/client.py:466
+#: src/vigilo/connector/client.py:519
 msgid "Timeout"
 msgstr "Délai dépassé"
 
-#: src/vigilo/connector/client.py:469
+#: src/vigilo/connector/client.py:522
 #, python-format
 msgid "Authentication failed: %s"
 msgstr "Échec de l'authentification : %s"
 
-#: src/vigilo/connector/client.py:498
+#: src/vigilo/connector/client.py:551
 #, python-format
 msgid "Error: %(message)s (%(type)r)"
 msgstr "Erreur : %(message)s (%(type)r)"
 
-#: src/vigilo/connector/client.py:504
+#: src/vigilo/connector/client.py:557
 msgid "Exiting with no error"
 msgstr "Sortie sans erreur"
 
-#: src/vigilo/connector/client.py:572
+#: src/vigilo/connector/client.py:631
 msgid "No handler registered for this one-shot XMPP client"
 msgstr ""
 "Aucune fonction de traitement n'a été enregistrée pour ce client XMPP "
@@ -176,31 +176,26 @@ msgstr "Connexion perdue au bus XMPP (raison : %s)"
 
 #: src/vigilo/connector/forwarder.py:190
 #, python-format
-msgid "Unable to forward the message (%(reason)s)"
-msgstr "Impossible de transmettre le message (%(reason)s)"
+msgid "Unable to forward the message (%(reason)s)."
+msgstr "Impossible de transmettre le message (%(reason)s)."
 
-#: src/vigilo/connector/forwarder.py:196
-msgid ". it has been stored for later retransmission"
-msgstr ". Il a été sauvé pour une transmission ultérieure"
+#: src/vigilo/connector/forwarder.py:199
+msgid "It has been stored for later retransmission."
+msgstr "Il a été sauvé pour une retransmission ultérieure."
 
-#: src/vigilo/connector/forwarder.py:209
-#, python-format
-msgid "Queue size too high (%s) ! Pausing reception"
-msgstr "La taille de la file est trop élevée (%s) ! Mise en pause de la réception."
-
-#: src/vigilo/connector/forwarder.py:276
+#: src/vigilo/connector/forwarder.py:279
 #, python-format
 msgid "Batch sent, waiting for %d replies from the bus"
 msgstr "Groupe de message envoyé, en attente de %d confirmations du bus"
 
-#: src/vigilo/connector/forwarder.py:293
+#: src/vigilo/connector/forwarder.py:296
 #, python-format
 msgid "Error trying to save a message to the backup database: %s"
 msgstr ""
 "Erreur lors de l'enregistrement du message en base de données de "
 "sauvegarde : %s"
 
-#: src/vigilo/connector/forwarder.py:485
+#: src/vigilo/connector/forwarder.py:489
 #, python-format
 msgid "No destination node configured for messages of type '%s'. Skipping."
 msgstr "Aucun nœud cible configuré pour les messages de type '%s'. Message ignoré."
@@ -240,15 +235,15 @@ msgstr "La file est pleine, le message XML entrant a été ignoré! (%s)"
 msgid "socket not connected"
 msgstr "socket non connecté"
 
-#: src/vigilo/connector/options.py:13
+#: src/vigilo/connector/options.py:22
 msgid "Choose the service name"
 msgstr "Choisir le nom du service"
 
-#: src/vigilo/connector/options.py:14
+#: src/vigilo/connector/options.py:23
 msgid "Load this settings.ini file"
 msgstr "Utiliser ce fichier settings.ini"
 
-#: src/vigilo/connector/options.py:25
+#: src/vigilo/connector/options.py:48
 msgid "The configuration file does not exist"
 msgstr "Le fichier de configuration n'existe pas"
 
@@ -272,6 +267,10 @@ msgstr ""
 #, python-format
 msgid "Priority conflict, resetting priorities (%s)"
 msgstr "Conflit de priorité détecté. Réinitialisation des priorités (%s)"
+
+#: src/vigilo/connector/presence.py:264
+msgid "Pausing data production"
+msgstr "Mise en pause de la production de données"
 
 #: src/vigilo/connector/queuetonodefw.py:86
 msgid "Received request to shutdown"

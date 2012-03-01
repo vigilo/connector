@@ -26,7 +26,7 @@ from vigilo.connector import MESSAGEONETOONE
 from vigilo.connector.store import DbRetry
 from vigilo.common.gettext import translate
 _ = translate(__name__)
-from vigilo.common.logging import get_logger
+from vigilo.common.logging import get_logger, get_error_message
 LOGGER = get_logger(__name__)
 
 
@@ -187,14 +187,19 @@ class PubSubForwarder(PubSubClient):
 
     def _send_failed(self, e, msg):
         """errback: remet le message en base"""
-        errmsg = _('Unable to forward the message (%(reason)s)')
+        errmsg = _('Unable to forward the message (%(reason)s).')
         if isinstance(e.value, error.StanzaError) and \
                 e.value.condition == "not-acceptable":
-            LOGGER.error(errmsg % {"reason": e.getErrorMessage()})
+            LOGGER.error(errmsg % {
+                "reason": get_error_message(e.value),
+            })
             return # pas de sauvegarde, sinon on boucle
+
         if self.retry is not None:
-            errmsg += _('. it has been stored for later retransmission')
-        LOGGER.error(errmsg % {"reason": e.getErrorMessage()})
+            errmsg += u" " + _('It has been stored for later retransmission.')
+        LOGGER.error(errmsg % {
+            "reason": get_error_message(e.value),
+        })
         if self.retry is not None:
             self.retry.put(msg)
 
@@ -289,7 +294,7 @@ class PubSubForwarder(PubSubClient):
             return
         def eb(f):
             LOGGER.error(_("Error trying to save a message to the backup "
-                           "database: %s"), f.getErrorMessage())
+                           "database: %s"), get_error_message(f.value))
         saved = []
         while len(self.queue) > 0:
             self._messages_forwarded += 1

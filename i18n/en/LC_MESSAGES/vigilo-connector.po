@@ -1,15 +1,15 @@
 # English translations for vigilo-connector.
-# Copyright (C) 2011 ORGANIZATION
+# Copyright (C) 2012 ORGANIZATION
 # This file is distributed under the same license as the vigilo-connector
 # project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2011.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2012.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: vigilo-connector 2.0.7\n"
+"Project-Id-Version: vigilo-connector 2.0.15\n"
 "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
-"POT-Creation-Date: 2011-10-03 10:34+0200\n"
-"PO-Revision-Date: 2011-10-03 10:34+0200\n"
+"POT-Creation-Date: 2012-03-02 10:01+0100\n"
+"PO-Revision-Date: 2012-03-02 10:01+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: en <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -18,15 +18,15 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/client.py:66
+#: src/vigilo/connector/client.py:98
 msgid "'require_compression' cannot be True when 'require_tls' is also True."
 msgstr "'require_compression' cannot be True when 'require_tls' is also True."
 
-#: src/vigilo/connector/client.py:107 src/vigilo/connector/client.py:456
+#: src/vigilo/connector/client.py:139 src/vigilo/connector/client.py:509
 msgid "Some error occurred while negotiating TLS encryption"
 msgstr "Some error occurred while negotiating TLS encryption"
 
-#: src/vigilo/connector/client.py:109 src/vigilo/connector/client.py:458
+#: src/vigilo/connector/client.py:141 src/vigilo/connector/client.py:511
 msgid ""
 "The server requires TLS encryption. Use the 'require_tls' option to "
 "enable TLS encryption."
@@ -34,21 +34,21 @@ msgstr ""
 "The server requires TLS encryption. Use the 'require_tls' option to "
 "enable TLS encryption."
 
-#: src/vigilo/connector/client.py:112 src/vigilo/connector/client.py:461
+#: src/vigilo/connector/client.py:144 src/vigilo/connector/client.py:514
 msgid "TLS encryption was required, but pyOpenSSL is not installed"
 msgstr "TLS encryption was required, but pyOpenSSL is not installed"
 
-#: src/vigilo/connector/client.py:117
+#: src/vigilo/connector/client.py:149
 #, python-format
 msgid "Authentication failure: %s"
 msgstr "Authentication failure: %s"
 
-#: src/vigilo/connector/client.py:136 src/vigilo/connector/client.py:483
+#: src/vigilo/connector/client.py:168 src/vigilo/connector/client.py:536
 #, python-format
 msgid "The server does not support the '%s' feature"
 msgstr "The server does not support the '%s' feature"
 
-#: src/vigilo/connector/client.py:223
+#: src/vigilo/connector/client.py:259
 msgid ""
 "The \"watched_topics\" option has now been renamed into "
 "\"subscriptions\". Please update your configuration file."
@@ -56,17 +56,17 @@ msgstr ""
 "The \"watched_topics\" option has now been renamed into "
 "\"subscriptions\". Please update your configuration file."
 
-#: src/vigilo/connector/client.py:259
+#: src/vigilo/connector/client.py:309
 #, python-format
 msgid "Server %(oldserver)s did not answer after %(attempts)d attempts"
 msgstr "Server %(oldserver)s did not answer after %(attempts)d attempts"
 
-#: src/vigilo/connector/client.py:386
+#: src/vigilo/connector/client.py:439
 #, python-format
 msgid "Creating lock file in %s"
 msgstr "Creating lock file in %s"
 
-#: src/vigilo/connector/client.py:396
+#: src/vigilo/connector/client.py:449
 #, python-format
 msgid ""
 "Found a lock file, but the following exception was raised when trying to "
@@ -75,7 +75,7 @@ msgstr ""
 "Found a lock file, but the following exception was raised when trying to "
 "open it: %s. Cowardly exiting..."
 
-#: src/vigilo/connector/client.py:404
+#: src/vigilo/connector/client.py:457
 #, python-format
 msgid ""
 "Another instance of this connector is already running (PID: %s). "
@@ -84,7 +84,7 @@ msgstr ""
 "Another instance of this connector is already running (PID: %s). "
 "Exiting..."
 
-#: src/vigilo/connector/client.py:412
+#: src/vigilo/connector/client.py:465
 #, python-format
 msgid ""
 "Found a lock file, but no process is running with this PID (%s). Removing"
@@ -93,7 +93,7 @@ msgstr ""
 "Found a lock file, but no process is running with this PID (%s). Removing"
 " it..."
 
-#: src/vigilo/connector/client.py:428
+#: src/vigilo/connector/client.py:481
 #, python-format
 msgid ""
 "The following exception was raised when trying to create the lock file: "
@@ -102,35 +102,35 @@ msgstr ""
 "The following exception was raised when trying to create the lock file: "
 "%s. Cowardly exiting..."
 
-#: src/vigilo/connector/client.py:437
+#: src/vigilo/connector/client.py:490
 #, python-format
 msgid "Lock file successfully created in %s"
 msgstr "Lock file successfully created in %s"
 
-#: src/vigilo/connector/client.py:448
+#: src/vigilo/connector/client.py:501
 #, python-format
 msgid "Removing lock file (%s)"
 msgstr "Removing lock file (%s)"
 
-#: src/vigilo/connector/client.py:466
+#: src/vigilo/connector/client.py:519
 msgid "Timeout"
 msgstr "Timeout"
 
-#: src/vigilo/connector/client.py:469
+#: src/vigilo/connector/client.py:522
 #, python-format
 msgid "Authentication failed: %s"
 msgstr "Authentication failed: %s"
 
-#: src/vigilo/connector/client.py:498
+#: src/vigilo/connector/client.py:551
 #, python-format
 msgid "Error: %(message)s (%(type)r)"
 msgstr "Error: %(message)s (%(type)r)"
 
-#: src/vigilo/connector/client.py:504
+#: src/vigilo/connector/client.py:557
 msgid "Exiting with no error"
 msgstr "Exiting with no error"
 
-#: src/vigilo/connector/client.py:572
+#: src/vigilo/connector/client.py:631
 msgid "No handler registered for this one-shot XMPP client"
 msgstr "No handler registered for this one-shot XMPP client"
 
@@ -174,29 +174,24 @@ msgstr "Lost connection to the XMPP bus (reason: %s)"
 
 #: src/vigilo/connector/forwarder.py:190
 #, python-format
-msgid "Unable to forward the message (%(reason)s)"
-msgstr "Unable to forward the message (%(reason)s)"
+msgid "Unable to forward the message (%(reason)s)."
+msgstr "Unable to forward the message (%(reason)s)."
 
-#: src/vigilo/connector/forwarder.py:196
-msgid ". it has been stored for later retransmission"
-msgstr ". it has been stored for later retransmission"
+#: src/vigilo/connector/forwarder.py:199
+msgid "It has been stored for later retransmission."
+msgstr "It has been stored for later retransmission."
 
-#: src/vigilo/connector/forwarder.py:209
-#, python-format
-msgid "Queue size too high (%s) ! Pausing reception"
-msgstr "Queue size too high (%s) ! Pausing reception"
-
-#: src/vigilo/connector/forwarder.py:276
+#: src/vigilo/connector/forwarder.py:279
 #, python-format
 msgid "Batch sent, waiting for %d replies from the bus"
 msgstr "Batch sent, waiting for %d replies from the bus"
 
-#: src/vigilo/connector/forwarder.py:293
+#: src/vigilo/connector/forwarder.py:296
 #, python-format
 msgid "Error trying to save a message to the backup database: %s"
 msgstr "Error trying to save a message to the backup database: %s"
 
-#: src/vigilo/connector/forwarder.py:485
+#: src/vigilo/connector/forwarder.py:489
 #, python-format
 msgid "No destination node configured for messages of type '%s'. Skipping."
 msgstr "No destination node configured for messages of type '%s'. Skipping."
@@ -234,15 +229,15 @@ msgstr "The queue is full, dropping incoming XML message! (%s)"
 msgid "socket not connected"
 msgstr "socket not connected"
 
-#: src/vigilo/connector/options.py:13
+#: src/vigilo/connector/options.py:22
 msgid "Choose the service name"
 msgstr "Choose the service name"
 
-#: src/vigilo/connector/options.py:14
+#: src/vigilo/connector/options.py:23
 msgid "Load this settings.ini file"
 msgstr "Load this settings.ini file"
 
-#: src/vigilo/connector/options.py:25
+#: src/vigilo/connector/options.py:48
 msgid "The configuration file does not exist"
 msgstr "The configuration file does not exist"
 
@@ -266,6 +261,10 @@ msgstr ""
 #, python-format
 msgid "Priority conflict, resetting priorities (%s)"
 msgstr "Priority conflict, resetting priorities (%s)"
+
+#: src/vigilo/connector/presence.py:264
+msgid "Pausing data production"
+msgstr "Pausing data production"
 
 #: src/vigilo/connector/queuetonodefw.py:86
 msgid "Received request to shutdown"
