@@ -29,7 +29,7 @@ def getErrorMessage(error):
         error = error.value
     try:
         return error.args[0].fields[1]
-    except (KeyError, AttributeError):
+    except (KeyError, AttributeError, IndexError):
         return str(error)
 
 
