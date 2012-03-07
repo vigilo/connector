@@ -69,7 +69,7 @@ class VCTestCase(unittest.TestCase):
         vc = client_factory(self.settings)
         vc._getConnection()
         self.assertEqual(mockedConnectTCP.call_count, 1)
-        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5672))
+        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5670))
 
     #@mock.patch("twisted.internet.reactor.stop")
     #@mock.patch("twisted.internet.reactor.run")
@@ -109,7 +109,7 @@ class OSCTestCase(unittest.TestCase):
         osc.create_lockfile.return_value = False
         osc.run()
         self.assertEqual(mockedConnectTCP.call_count, 1)
-        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5672))
+        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5670))
 
     @mock.patch("twisted.internet.reactor.stop")
     @mock.patch("twisted.internet.reactor.run")

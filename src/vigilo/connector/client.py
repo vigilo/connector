@@ -35,7 +35,7 @@ def split_host_port(hostdef, use_ssl=False):
         if use_ssl:
             port = 5671
         else:
-            port = 5672
+            port = 5670
     return host, port
 
 
