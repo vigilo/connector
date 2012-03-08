@@ -14,6 +14,7 @@ from txamqp import spec
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
+from vigilo.common.logging import get_error_message
 
 
 NON_PERSISTENT = 1
@@ -28,9 +29,13 @@ def getErrorMessage(error):
     if isinstance(error, failure.Failure):
         error = error.value
     try:
-        return error.args[0].fields[1]
-    except (KeyError, AttributeError, IndexError):
-        return str(error)
+        try:
+            return unicode(error.args[0].fields[1])
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return str(error.args[0].fields[1].decode('utf-8'))
+    except (KeyError, AttributeError, IndexError,
+            UnicodeEncodeError, UnicodeDecodeError):
+        return get_error_message(error)
 
 
 class AmqpProtocol(AMQClient):
