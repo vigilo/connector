@@ -49,18 +49,35 @@ class BusHandler(object):
         self.client = None
 
     def setClient(self, client):
+        """Affecte l'instance du client AMQP.
+
+        @param client: instance du client AMQP
+        @type  client: L{vigilo.connector.client.VigiloClient}
+        """
         self.client = client
         self.client.addHandler(self)
 
 
 
 class QueueSubscriber(BusHandler):
-    """Abonnement à une file d'attente"""
+    """Abonnement à une file d'attente
+
+    @ivar queue_name: nom de la file d'attente AMQP
+    @type queue_name: C{str}
+    @ivar consumer: destinataire des messages reçus
+    @type consumer: instance de L{MessageHandler}
+    @ivar ready: I{Deferred} pour l'abonnement à la file d'attente
+    @type ready: C{Deferred}
+    """
 
     implements(IBusProducer, IBusHandler)
 
 
     def __init__(self, queue_name):
+        """
+        @param queue_name: nom de la file d'attente AMQP
+        @type  queue_name: C{str}
+        """
         BusHandler.__init__(self)
         self.queue_name = queue_name
         self._bindings = []
@@ -73,6 +90,15 @@ class QueueSubscriber(BusHandler):
 
 
     def connectionInitialized(self):
+        """Opérations à réaliser à la connexion au bus:
+        - on déclare la file d'attente
+        - on abonne la file d'attente aux I{exchanges} désirés
+        - on prépare la récupération des messages de la file
+
+        Si on a été déconnecté et qu'on était en train de dépiler les messages,
+        on reprend le dépilement. Sinon, on attend que la méthode
+        L{resumeProducing} soit appelée.
+        """
         self._channel = self.client.channel
         d = self._create()
         d.addCallback(lambda _x: self._bind())
@@ -81,24 +107,37 @@ class QueueSubscriber(BusHandler):
             self._production_interrupted = False
             d.addCallback(lambda _x: self.resumeProducing())
         def on_error(fail):
+            """Sur un échec d'initialisation, on se déconnecte."""
             errmsg = _('Could not initialize the queue: %(reason)s')
             LOGGER.warning(errmsg % {"reason": getErrorMessage(fail)})
             self.client.disconnect()
         d.addCallbacks(self.ready.callback, on_error)
 
     def connectionLost(self, reason):
+        """
+        Perte de connexion au bus, on réinitialise les variables internes
+        """
         self._channel = None
         self._queue = None
         self.ready = defer.Deferred()
 
 
     def bindToExchange(self, exchange, routing_key=None):
+        """
+        Permet de demander l'abonnement de la file d'attente à un I{exchange}
+        AMQP. Cet abonnement ne sera véritablement réalisé qu'à la connexion au
+        bus.
+        """
         if routing_key is None:
             routing_key = self.queue_name
         self._bindings.append( (exchange, routing_key) )
 
 
     def _create(self):
+        """
+        Déclare la file d'attente auprès du bus. Si la file existe déjà, elle
+        est réutilisée de manière transparente.
+        """
         if not self._channel:
             return defer.succeed(None)
         d = self._channel.queue_declare(queue=self.queue_name,
@@ -106,6 +145,9 @@ class QueueSubscriber(BusHandler):
         return d
 
     def _bind(self):
+        """
+        Abonne une file d'attente à un I{exchange} AMQP du bus
+        """
         dl = []
         for exchange, routing_key in self._bindings:
             d = self.client.channel.queue_bind(queue=self.queue_name,
@@ -114,6 +156,10 @@ class QueueSubscriber(BusHandler):
         return defer.DeferredList(dl)
 
     def _subscribe(self):
+        """
+        Prépare le dépilement des messages de la file, mais ne commence pas à
+        dépiler tout de suite (pour cela, appeler L{resumeProducing}).
+        """
         if not self._channel:
             return
         # On se laisse un buffer de 5 en mémoire, de toute façon il faut les
@@ -130,6 +176,10 @@ class QueueSubscriber(BusHandler):
 
 
     def resumeProducing(self):
+        """
+        Dépile un (seul) message de la file d'attente. Appeler une deuxième
+        fois pour dépiler un autre message (mode PullProducer).
+        """
         if not self._queue:
             if self.ready.called:
                 return defer.fail(Exception(
@@ -140,6 +190,8 @@ class QueueSubscriber(BusHandler):
         d = self._queue.get()
         def cb(msg):
             if self.client.log_traffic:
+                # Unused variable:
+                # pylint: disable-msg=W0612
                 qname, msgid, unknown, exch, rkey = msg.fields
                 LOGGER.debug("RECEIVED from %s on %s with key %s: %s"
                              % (exch, qname, rkey, msg.content.body))
@@ -156,6 +208,11 @@ class QueueSubscriber(BusHandler):
     # Proxies
 
     def ack(self, msg, multiple=False):
+        """
+        Acquitter un message du bus
+        @param msg: message à acquitter
+        @type  msg: C{txamqp.message.Message}
+        """
         return self._channel.basic_ack(msg.delivery_tag, multiple=multiple)
 
     def nack(self, msg, multiple=False, requeue=True):
@@ -168,16 +225,31 @@ class QueueSubscriber(BusHandler):
          - U{http://www.rabbitmq.com/amqp-0-9-1-quickref.html#basic.nack}
          - U{http://www.rabbitmq.com/extensions.html#consuming}
         """
-        #return self._channel.basic_nack(msg.delivery_tag, multiple=multiple, requeue=requeue)
+        #return self._channel.basic_nack(msg.delivery_tag, multiple=multiple,
+        #                                requeue=requeue)
         return self._channel.basic_reject(msg.delivery_tag, requeue=requeue)
 
     def send(self, exchange, routing_key, message):
+        """
+        Envoyer un message sur le bus
+        @param exchange: nom de l'I{exchange} où publier
+        @type  exchange: C{str}
+        @param routing_key: clé de routage
+        @type  routing_key: C{str}
+        @param message: message à publier
+        @type  message: C{str}
+        """
         return self.client.send(exchange, routing_key, message)
 
 
 
 class MessageHandler(BusHandler):
-    """Gère la réception des messages. Peut aussi agir comme un IPushProducer"""
+    """
+    Gère la réception des messages. Peut aussi agir comme un IPushProducer.
+
+    @ivar producer: instance de L{QueueSubscriber} qui fournit les messages.
+    @type producer: L{QueueSubscriber}
+    """
 
     implements(IConsumer, IPushProducer, IBusHandler)
 
@@ -191,6 +263,16 @@ class MessageHandler(BusHandler):
 
 
     def write(self, msg):
+        """
+        Méthode à appeler pour traiter un message en provenance du bus.
+
+        Si le traitement se passe bien (pas d'I{errback}), le message sera
+        acquitté, sinon il sera rejeté, puis le message suivant sera demandé au
+        bus.
+
+        @param msg: message à traiter
+        @type  msg: C{txamqp.message.Message}
+        """
         try:
             content = json.loads(msg.content.body)
 
@@ -220,22 +302,41 @@ class MessageHandler(BusHandler):
 
 
     def processMessage(self, msg):
+        """
+        Méthode à réimplémenter pour traiter véritablement un message.
+        @param msg: message à traiter
+        @type  msg: C{txamqp.message.Message}
+        """
         raise NotImplementedError()
 
 
     def processingSucceeded(self, _ignored, msg):
+        """
+        Appelée quand un message est traité correctement : le message est
+        acquitté.
+        """
         self._messages_forwarded += 1
         return self.producer.ack(msg)
 
     def processingFailed(self, error, msg):
+        """
+        Appelée quand le traitement d'un message a échoué : le message est
+        rejeté.
+        """
         LOGGER.warning(error.getErrorMessage())
         return self.producer.nack(msg)
 
 
     def pauseProducing(self):
+        """Permet d'arrêter le dépilement des messages."""
         self.keepProducing = False
 
     def resumeProducing(self):
+        """
+        Permet de rémarrer ou de reprendre le dépilement des messages. Un seul
+        appel suffit, le message suivant sera automatiquement demandé après
+        traitement.
+        """
         self.keepProducing = True
         self.producer.resumeProducing()
 
@@ -249,6 +350,15 @@ class MessageHandler(BusHandler):
 
 
     def subscribe(self, queue_name, bindings=None):
+        """
+        Spéficie la file d'attente AMQP à dépiler, avec optionnellements des
+        abonnements à réaliser.
+
+        @param queue_name: nom de la file d'attente
+        @type  queue_name: C{str}
+        @param bindings: abonnements de la file d'attente. Il s'agit d'une liste de couples C{(exchange, routing_key)}.
+        @type  bindings: C{list}
+        """
         # attention, pas d'injection de deps, faire le vrai boulot dans
         # registerProducer()
         subscriber = QueueSubscriber(queue_name)
@@ -260,9 +370,18 @@ class MessageHandler(BusHandler):
         self.registerProducer(subscriber, False)
 
     def unsubscribe(self):
+        """Supprime la connexion à la file d'attente AMQP."""
         return self.unregisterProducer()
 
     def registerProducer(self, producer, streaming):
+        """
+        Enregistre l'instance du L{QueueSubscriber} comme producteur.
+        @param producer: instance de L{QueueSubscriber}
+        @type  producer: L{QueueSubscriber}
+        @param streaming: mode de production (C{PullProducer} ou
+            C{PushProducer}). Ici, on n'accepte que les C{PullProducer}s.
+        @type  streaming: C{boolean}
+        """
         #assert streaming == False # on ne prend que des PullProducers
         self.producer = producer
         self.producer.consumer = self
@@ -270,12 +389,19 @@ class MessageHandler(BusHandler):
                 lambda _x: self.producer.resumeProducing())
 
     def unregisterProducer(self):
+        """@see: L{unsubscribe}"""
         self.producer = None
 
 
 
 class BusPublisher(BusHandler):
-    """Gère la publication de messages"""
+    """
+    Gère la publication de messages
+
+    @ivar producer: le producteur de données à destination du bus
+    @ivar batch_send_perf: doit-on accumuler les messages de perf ?
+    @type batch_send_perf: C{bool}
+    """
 
     implements(IConsumer, IBusHandler)
 
@@ -334,6 +460,7 @@ class BusPublisher(BusHandler):
 
 
     def registerProducer(self, producer, streaming):
+        """Enregistre le producteur des messages"""
         self.producer = producer
         self._is_streaming = streaming
         self.producer.consumer = self
@@ -341,13 +468,18 @@ class BusPublisher(BusHandler):
             self.producer.resumeProducing()
 
     def unregisterProducer(self):
+        """Débranche le producteur des messages"""
         self.producer.pauseProducing()
         self.producer = None
 
 
     def write(self, data):
+        """
+        Méthode appelée par le producteur pour envoyer un message sur le bus.
+        """
         d = self.sendMessage(data)
         def doneSending(result):
+            """Si on a un PullProducer, on demande le message suivant"""
             if self.producer is not None and not self._is_streaming:
                 self.producer.resumeProducing()
             return result
@@ -360,7 +492,7 @@ class BusPublisher(BusHandler):
         Traite un message en l'envoyant sur le bus.
 
         @param msg: message à traiter
-        @type  msg: C{str} ou C{twisted.words.xish.domish.Element}
+        @type  msg: C{str} ou C{dict}
         @return: le C{Deferred} avec la réponse, ou C{None} si cela n'a pas
             lieu d'être (message envoyé en push)
         """
@@ -391,6 +523,11 @@ class BusPublisher(BusHandler):
 
 
     def _accumulate_perf_msgs(self, msg):
+        """
+        Accumule les messages de performance dans un plus gros message, pour
+        limiter le nombre de messages circulant sur le bus (et donc aussi les
+        acquittements correspondants)
+        """
         if self.batch_send_perf <= 1 or msg["type"] != "perf":
             return msg # on est pas concerné
         self._batch_perf_queue.append(msg)
@@ -410,6 +547,20 @@ class BackupProvider(Service):
     Ajoute à un PushProducer la possibilité d'être mis en pause. Les données
     vont alors dans une file d'attente mémoire qui est sauvegardée sur le
     disque dans une base.
+
+    @ivar producer: source de messages
+    @ivar consumer: destination des messages
+    @ivar paused: etat de la production
+    @type paused: C{bool}
+    @ivar queue: file d'attente mémoire
+    @type queue: C{deque}
+    @ivar max_queue_size: taille maximum de la file d'attente mémoire
+    @type max_queue_size: C{int}
+    @ivar retry: base de données de stockage
+    @type retry: L{DbRetry}
+    @ivar stat_names: nom des données de performances produites à destination de
+        Vigilo
+    @type stat_names: C{dict}
     """
 
     implements(IPushProducer, IConsumer)
@@ -447,6 +598,7 @@ class BackupProvider(Service):
 
 
     def startService(self):
+        """Executé au démarrage du connecteur"""
         d = self.retry.initdb()
         if self.producer is not None:
             d.addCallback(lambda _x: self.producer.startService())
@@ -454,6 +606,7 @@ class BackupProvider(Service):
 
 
     def stopService(self):
+        """Executé à l'arrêt du connecteur"""
         if self.producer is not None:
             d = self.producer.stopService()
         else:
@@ -464,11 +617,17 @@ class BackupProvider(Service):
 
 
     def registerProducer(self, producer, streaming):
+        """
+        Enregistre le producteur des messages, qui doit être un PushProducer.
+        Si c'était un PullProducer, cette classe ne serait pas nécessaire,
+        puisqu'il suffirait de ne pas appeler C{resumeProducing}.
+        """
         assert streaming == True # Ça n'a pas de sens avec un PullProducer
         self.producer = producer
         self.producer.consumer = self
 
     def unregisterProducer(self):
+        """Supprime le producteur"""
         #self.producer.pauseProducing() # A priori il sait pas faire
         self.producer = None
 
@@ -490,11 +649,16 @@ class BackupProvider(Service):
 
 
     def write(self, data):
+        """Méthode appelée par le producteur pour transférer un message."""
         self.queue.append(data)
         self.processQueue()
 
 
     def pauseProducing(self):
+        """
+        Met en pause la production vers le consommateur. Les messages en entrée
+        seront stockés en base de données à partir de maintenant.
+        """
         self.paused = True
         d = self._saveToDb()
         d.addCallback(lambda _x: self.retry.flush())
@@ -502,6 +666,10 @@ class BackupProvider(Service):
 
 
     def resumeProducing(self):
+        """
+        Débute ou reprend la production vers le consommateur. Les messages
+        seront pris en priorité depuis le backup.
+        """
         self.paused = False
         if self.retry.initialized.called:
             d = self.processQueue()
@@ -517,6 +685,10 @@ class BackupProvider(Service):
 
     @defer.inlineCallbacks
     def processQueue(self):
+        """
+        Traite les messages en attente, en donnant la priorité à la base de
+        backup (L{retry}).
+        """
         if self._processing_queue:
             return
         if self.paused:
@@ -545,7 +717,7 @@ class BackupProvider(Service):
 
 
     def _saveToDb(self):
-        """Sauvegarde tous les messages de la file dans la base de backup"""
+        """Sauvegarde tous les messages de la file dans la base de backup."""
         def eb(f):
             LOGGER.error(_("Error trying to save a message to the backup "
                            "database: %s"), get_error_message(f.value))
@@ -560,7 +732,7 @@ class BackupProvider(Service):
     def _getNextMsg(self):
         """
         Récupère le prochain message à traiter, en commençant par essayer dans
-        la base de backup
+        la base de backup (L{retry}).
         """
         d = self.retry.pop()
         def get_from_queue(msg):
@@ -581,6 +753,13 @@ class BackupProvider(Service):
 
 
 def buspublisher_factory(settings, client=None):
+    """Instanciation d'un L{BusPublisher}.
+
+    @param settings: fichier de configuration
+    @type  settings: C{vigilo.common.conf.settings}
+    @param client: client du bus
+    @type  client: L{vigilo.connector.client.VigiloClient}
+    """
     publications = {
             "aggr": "correlation",
             "delaggr": "correlation",
@@ -599,6 +778,12 @@ def buspublisher_factory(settings, client=None):
 
 
 def backupprovider_factory(settings, producer=None):
+    """Instanciation d'un L{BackupProvider}.
+
+    @param settings: fichier de configuration
+    @type  settings: C{vigilo.common.conf.settings}
+    @param producer: producteur de données
+    """
     # Max queue size
     try:
         max_queue_size = int(settings["connector"]["max_queue_size"])

@@ -41,6 +41,8 @@ def split_host_port(hostdef, use_ssl=False):
 
 
 class MultipleServerMixin:
+    # attribute defined outside __init__
+    # pylint: disable-msg=W0201
 
     def setMultipleParams(self, hosts, parentClass):
         """
@@ -54,6 +56,7 @@ class MultipleServerMixin:
         self._usableHosts = None
 
     def pickServer(self):
+        """Choisit un serveur dans la liste des serveurs utilisables."""
         if not self._usableHosts:
             self._usableHosts = self.hosts[:]
         self.host, self.port = self._usableHosts[0]
@@ -61,6 +64,7 @@ class MultipleServerMixin:
         LOGGER.info("Connecting to %s:%s", self.host, self.port)
 
     def connectionFailed(self, reason):
+        """Echec de la connexion, on marque le serveur comme inutilisable."""
         assert self._attemptsLeft is not None
         self._attemptsLeft -= 1
         if self._attemptsLeft == 0:
@@ -77,6 +81,9 @@ class MultipleServerMixin:
         self._attemptsLeft = self.attempts
 
     def _makeTransport(self):
+        """Choisit un serveur avant de créer le transport"""
+        # Access to a protected member of a client class
+        # pylint: disable-msg=W0212
         self.pickServer()
         return self.parentClass._makeTransport(self)
 
@@ -119,6 +126,10 @@ class VigiloClient(service.Service):
 
 
     def startService(self):
+        """
+        Exécuté au démarrage du connecteur. On essaye de se connecter et on
+        lance tous les I{handlers} enregistrés.
+        """
         service.Service.startService(self)
         self._connection = self._getConnection()
         # Notify all child services
@@ -130,6 +141,10 @@ class VigiloClient(service.Service):
 
 
     def stopService(self):
+        """
+        Exécuté à l'arrêt du connecteur. On transmet l'info à tous les
+        I{handlers} enregistrés et on se déconnecte.
+        """
         service.Service.stopService(self)
         # Notify all child services
         dl = []
@@ -143,12 +158,17 @@ class VigiloClient(service.Service):
 
 
     def _getConnector(self, hosts):
+        """
+        Récupère l'instance du C{Connector} à utiliser en fonction de
+        l'activation de SSL choisie.
+        """
         if self.use_ssl:
             return self._getConnectorSSL(hosts)
         else:
             return self._getConnectorTCP(hosts)
 
     def _getConnectorTCP(self, hosts):
+        """Retourne une instance du C{Connector} sans SSL"""
         class MultipleServerConnector(MultipleServerMixin, tcp.Connector):
             pass
         c = MultipleServerConnector(None, None, self.factory, 30, None,
@@ -157,6 +177,7 @@ class VigiloClient(service.Service):
         return c
 
     def _getConnectorSSL(self, hosts):
+        """Retourne une instance du C{Connector} avec SSL"""
         class MultipleServerConnector(MultipleServerMixin, ssl.Connector):
             pass
         context = ssl.ClientContextFactory()
@@ -167,6 +188,7 @@ class VigiloClient(service.Service):
 
 
     def _getConnection(self):
+        """Connexion au serveur."""
         if isinstance(self.host, list):
             hosts = [ split_host_port(h, self.use_ssl) for h in self.host ]
             c = self._getConnector(hosts)
@@ -187,10 +209,18 @@ class VigiloClient(service.Service):
 
 
     def isConnected(self):
+        """
+        @return: état de la connexion au serveur
+        @rtype:  C{boolean}
+        """
         return (self.channel is not None)
 
 
     def addHandler(self, handler):
+        """
+        Ajoute un I{handler}, qui sera notifié des changements d'état de la
+        connexion.
+        """
         if not IBusHandler.providedBy(handler):
             raise InterfaceNotProvided(IBusHandler, handler)
         self.handlers.append(handler)
@@ -200,11 +230,13 @@ class VigiloClient(service.Service):
             handler.connectionInitialized()
 
     def removeHandler(self, handler):
+        """Supprime un I{handler}."""
         handler.client = None
         self.handlers.remove(handler)
 
 
     def connectionLost(self, reason):
+        """Perte de la connexion, on transmet l'info aux I{handlers}."""
         # Notify all child services
         for h in self.handlers:
             if hasattr(h, "connectionLost"):
@@ -233,6 +265,7 @@ class VigiloClient(service.Service):
 
     @defer.inlineCallbacks
     def _sendPacketQueue(self):
+        """Envoie les messages en attente."""
         while self._packetQueue:
             e, k, m, p, c = self._packetQueue.pop(0)
             yield self.send(e, k, m, p, c)
@@ -240,6 +273,22 @@ class VigiloClient(service.Service):
 
     def send(self, exchange, routing_key, message, persistent=True,
              content_type=None):
+        """
+        Envoie un message sur le bus. Si la connexion n'est pas encore établie,
+        le message est sauvegardé et sera expédié à la prochaine connexion.
+
+        @param exchange: nom de l'I{exchange} où publier
+        @type  exchange: C{str}
+        @param routing_key: clé de routage
+        @type  routing_key: C{str}
+        @param message: message à publier
+        @type  message: C{str}
+        @param persistent: le message doit-il être conservé en cas
+            d'indisponibilité du destinatire (par défaut: oui)
+        @type  persistent: C{boolean}
+        @param content_type: type MIME du contenu du message
+        @type  content_type: C{str}
+        """
 
         if not self.isConnected():
             self._packetQueue.append( (exchange, routing_key, message,
@@ -268,6 +317,7 @@ class VigiloClient(service.Service):
     # Wrappers
 
     def getQueue(self, *args, **kwargs):
+        """Récupère l'instance de la file d'attente"""
         if not self.isConnected():
             return None
         return self.factory.p.queue(*args, **kwargs)
@@ -278,10 +328,16 @@ class VigiloClient(service.Service):
         return fail
 
     def disconnect(self):
+        """Déconnexion du bus"""
         self.factory.p.transport.loseConnection()
 
 
 def client_factory(settings):
+    """Instanciation d'un client du bus.
+
+    @param settings: fichier de configuration
+    @type  settings: C{vigilo.common.conf.settings}
+    """
     # adresse du bus
     host = settings['bus'].get('host')
     if host is not None:
@@ -354,6 +410,10 @@ class OneShotClient(object):
 
 
     def create_lockfile(self):
+        """
+        Gère un verrou fichier pour que le connecteur ne soit exécuté qu'une
+        fois.
+        """
         if self.lock_file is None:
             return
         self._logger.debug(_("Creating lock file in %s"), self.lock_file)
@@ -461,6 +521,11 @@ class OneShotClient(object):
 
 
 def oneshotclient_factory(settings):
+    """Instanciation d'un client du bus à usage unique.
+
+    @param settings: fichier de configuration
+    @type  settings: C{vigilo.common.conf.settings}
+    """
     try:
         use_ssl = settings['bus'].as_bool('use_ssl')
     except KeyError:

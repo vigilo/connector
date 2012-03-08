@@ -17,7 +17,7 @@ try:
 except ImportError:
     import simplejson as json
 
-from twisted.internet import defer, task
+from twisted.internet import task
 from twisted.application.service import Service
 from twisted.enterprise import adbapi
 

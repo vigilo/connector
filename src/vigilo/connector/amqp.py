@@ -46,8 +46,6 @@ class AmqpProtocol(AMQClient):
 
     def connectionMade(self):
         AMQClient.connectionMade(self)
-        # Flag that this protocol is not connected yet.
-        self.connected = False
         # Authenticate.
         deferred = self.start({"LOGIN": self.factory.user,
                                "PASSWORD": self.factory.password})
@@ -106,15 +104,17 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
 
 
     def buildProtocol(self, addr):
+        """
+        Redéfini pour gérer la variable logTraffic et pour stocker le protocole
+        créé.
+
+        @param addr: un objet qui implémente
+            C{twisted.internet.interfaces.IAddress}
+        """
         p = self.protocol(self.delegate, self.vhost, self.spec)
         p.factory = self # Tell the protocol about this factory.
         p.logTraffic = self.logTraffic
-
         self.p = p # Store the protocol.
-
-        # Reset the reconnection delay since we're connected now.
-        self.resetDelay()
-
         return p
 
 
@@ -135,6 +135,9 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         """
         self.channel = channel
         self.parent.channel = channel
+        # Reset the reconnection delay since we're connected now.
+        self.resetDelay()
+
         self.parent.connectionInitialized()
 
 

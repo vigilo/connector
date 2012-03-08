@@ -64,15 +64,21 @@ class StatusPublisher(BusPublisher):
 
 
     def registerProvider(self, provider):
+        """Enregistre un fournisseur de statistiques."""
         assert hasattr(provider, "getStats"), \
                "%r does not have a getStats method" % provider
         self.providers.append(provider)
 
     def unregisterProvider(self, provider):
+        """Supprime un fournisseur de statistiques."""
         self.providers.remove(provider)
 
 
     def connectionInitialized(self):
+        """
+        À la connexion au bus, on commence à collecter et à envoyer les
+        statistiques.
+        """
         super(StatusPublisher, self).connectionInitialized()
         def start_task():
             if not self.task.running:
@@ -90,6 +96,7 @@ class StatusPublisher(BusPublisher):
 
 
     def sendStatus(self):
+        """Envoi de l'état et des statistiques sur le bus."""
         timestamp = int(time.time())
 
         # État Nagios
@@ -124,6 +131,11 @@ class StatusPublisher(BusPublisher):
 
 
     def _collectStats(self):
+        """
+        Collecte les statistiques des fournisseurs dans un même dictionnaire
+        @return: C{Deferred} contenant le dictionnaire des statistiques
+        @rtype: C{Deferred}
+        """
         dl = []
         for provider in self.providers:
             dl.append(provider.getStats())
@@ -153,6 +165,16 @@ class StatusPublisher(BusPublisher):
 
 
 def statuspublisher_factory(settings, client, providers=[]):
+    """
+    Construit une instance de L{StatusPublisher}
+
+    @param settings: fichier de configuration
+    @type  settings: C{vigilo.common.conf.settings}
+    @param client: client du bus
+    @type  client: L{vigilo.connector.client.VigiloClient}
+    @param providers: liste de fournisseurs de statistiques
+    @type  providers: C{list}
+    """
     hostname = settings.get("connector", {}).get("hostname", None)
     if hostname is None:
         hostname = socket.gethostname()

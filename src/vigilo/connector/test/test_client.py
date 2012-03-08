@@ -34,7 +34,7 @@ class MSCTestCase(unittest.TestCase):
     def test_change_host(self):
         f = protocol.ReconnectingClientFactory()
         # reconnexion manuelle
-        f.continueTrying = False
+        f.stopTrying()
         c = MultipleServerConnector(None, None, f, 30, None, reactor=reactor)
         c.setMultipleParams([("test1", 5222), ("test2", 5222)], tcp.Connector)
 
@@ -132,7 +132,8 @@ class VigiloClientTestCase(unittest.TestCase):
     def test_send(self):
         c = VigiloClient(None, None, None)
         c.channel = mock.Mock()
-        c.channel.basic_publish.side_effect = lambda *a, **kw: defer.succeed(None)
+        c.channel.basic_publish.side_effect = \
+                lambda *a, **kw: defer.succeed(None)
         d = c.send("exch", "key", "msg")
         def check(r):
             self.assertTrue(c.channel.basic_publish.called)
@@ -153,7 +154,8 @@ class VigiloClientTestCase(unittest.TestCase):
     def test_send_non_persistent(self):
         c = VigiloClient(None, None, None)
         c.channel = mock.Mock()
-        c.channel.basic_publish.side_effect = lambda *a, **kw: defer.succeed(None)
+        c.channel.basic_publish.side_effect = \
+                lambda *a, **kw: defer.succeed(None)
         d = c.send("exch", "key", "msg", persistent=False)
         def check(r):
             self.assertTrue(c.channel.basic_publish.called)

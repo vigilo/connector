@@ -20,7 +20,7 @@ from nose.twistedtools import reactor, deferred
 from twisted.internet import defer
 from mock import Mock
 
-from vigilo.connector.conffile import ConfDB, NoConfError
+from vigilo.connector.conffile import ConfDB
 
 
 
