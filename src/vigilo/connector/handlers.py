@@ -14,11 +14,6 @@ from datetime import datetime
 from collections import deque
 from platform import python_version_tuple
 
-try:
-    import json
-except ImportError:
-    import simplejson as json
-
 from zope.interface import implements
 
 from twisted.internet import defer
@@ -28,6 +23,7 @@ from twisted.python.failure import Failure
 
 import txamqp
 
+from vigilo.connector import json
 from vigilo.connector.interfaces import IBusHandler, IBusProducer
 from vigilo.connector.store import DbRetry
 from vigilo.connector.amqp import getErrorMessage

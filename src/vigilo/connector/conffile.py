@@ -12,10 +12,7 @@ from __future__ import with_statement
 import os
 import signal
 
-try:
-    import json
-except ImportError:
-    import simplejson as json
+from vigilo.connector import json
 
 from twisted.internet import task
 from twisted.application.service import Service

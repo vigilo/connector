@@ -7,13 +7,8 @@ from collections import deque
 from twisted.internet import reactor, defer
 from nose.plugins.skip import SkipTest
 from txamqp.queue import TimeoutDeferredQueue
+from vigilo.connector import json
 from vigilo.connector.client import VigiloClient
-
-# pylint: disable-msg=W0611
-try:
-    import json
-except ImportError:
-    import simplejson as json
 
 
 # http://stackoverflow.com/questions/776631/using-twisteds-twisted-web-classes-how-do-i-flush-my-outgoing-buffers

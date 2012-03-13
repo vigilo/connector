@@ -15,7 +15,6 @@ import sqlite3
 from collections import deque
 
 from twisted.internet import defer, task, reactor
-from twisted.words.xish import domish
 from twisted.enterprise import adbapi
 
 from vigilo.common.logging import get_logger
@@ -23,12 +22,14 @@ LOGGER = get_logger(__name__)
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
+from vigilo.connector import json
+
 
 
 class DbRetry(object):
     """
     Implémente une base de données locale qui peut-être utilisée pour stocker
-    des messages XML lorsque le destinataire final n'est pas joignable.
+    des messages lorsque le destinataire final n'est pas joignable.
     """
 
 
@@ -116,8 +117,8 @@ class DbRetry(object):
         def get_from_buffer_in():
             while len(self.buffer_in) > 0:
                 msg = self.buffer_in.popleft()
-                if isinstance(msg, domish.Element):
-                    msg = msg.toXml()
+                if isinstance(msg, dict):
+                    msg = json.dumps(msg)
                 yield (msg, )
         if self.buffer_in:
             txn.executemany("INSERT INTO %s VALUES (null, ?)" % self._table,
@@ -278,8 +279,8 @@ class DbRetry(object):
         def get_from_buffer_in():
             while len(self.buffer_in) > 0:
                 msg = self.buffer_in.popleft()
-                if isinstance(msg, domish.Element):
-                    msg = msg.toXml()
+                if isinstance(msg, dict):
+                    msg = json.dumps(msg)
                 yield (msg, )
         try:
             txn.executemany("INSERT INTO %s VALUES (null, ?)" % self._table,

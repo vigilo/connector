@@ -5,3 +5,8 @@
 """ generic vigilo connector """
 
 
+try:
+    import json
+except ImportError:
+    import simplejson as json
+
