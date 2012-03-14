@@ -174,7 +174,7 @@ def parse_args():
                     parents=[common_args_parser],
                     help=N_("Create an AMQP exchange on the server."))
     parser_ce.set_defaults(func="create_exchange")
-    parser_ce.add_argument('-t', '--type', default="direct",
+    parser_ce.add_argument('-t', '--type', default="fanout",
                     help=N_("Exchange type"))
     parser_ce.add_argument('exchange', help=N_("Exchange name"))
 
