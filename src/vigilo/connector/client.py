@@ -456,9 +456,14 @@ class OneShotClient(object):
 
     def _stop(self, _ignored=None):
         """Arrête proprement le connecteur"""
-        d = self.client.stopService()
-        d.addBoth(lambda _x: reactor.stop())
-        return d
+        from vigilo.connector.handlers import BusHandler
+        class ReactorStopper(BusHandler):
+            """Arrête le reactor quand le bus est vraiment déconnecté"""
+            def connectionLost(self, reason):
+                reactor.stop()
+        stopper = ReactorStopper()
+        stopper.setClient(self.client)
+        return self.client.stopService()
 
 
     def setHandler(self, func, *args, **kwargs):

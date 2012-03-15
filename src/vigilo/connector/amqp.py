@@ -150,5 +150,4 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         d = self.channel.channel_close()
         d.addCallback(lambda _r: self.p.channel(0))
         d.addCallback(lambda ch: ch.connection_close())
-        d.addCallback(lambda _r: self.p.close("quit"))
         return d
