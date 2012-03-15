@@ -72,12 +72,12 @@ class MultipleServerMixin:
                 msg = ("Something went wrong, %s:%s is not in "
                        "'usableHosts' (%r)",
                        self.host, self.port, self._usableHosts)
-                LOGGER.error(msg)
-                raise RuntimeError(msg)
-            LOGGER.warning(_("Server %(oldserver)s did not answer after "
-                    "%(attempts)d attempts"),
-                    {"oldserver": self.host, "attempts": self.attempts})
-            self._usableHosts.remove((self.host, self.port))
+                LOGGER.warning(msg)
+            else:
+                LOGGER.warning(_("Server %(oldserver)s did not answer after "
+                        "%(attempts)d attempts"),
+                        {"oldserver": self.host, "attempts": self.attempts})
+                self._usableHosts.remove((self.host, self.port))
             self.resetAttempts()
             if hasattr(self.factory, "resetDelay"):
                 self.factory.resetDelay()

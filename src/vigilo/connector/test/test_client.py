@@ -49,11 +49,13 @@ class MSCTestCase(unittest.TestCase):
             self.assertEqual(c._attemptsLeft, attemptsLeft)
             c.connect()
             c.connectionFailed(None)
+            self.rcf.stopTrying()
             self.assertEqual(c.host, "test1")
 
         self.assertEqual(c._attemptsLeft, 3)
         c.connect()
         c.connectionFailed(None)
+        self.rcf.stopTrying()
         self.assertEqual(c.host, "test2")
 
 
