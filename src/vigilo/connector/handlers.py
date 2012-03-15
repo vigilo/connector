@@ -265,7 +265,7 @@ class MessageHandler(BusHandler):
         self.producer = None
         self.keepProducing = True
         # Stats
-        self._messages_forwarded = 0
+        self._messages_received = 0
 
 
     def write(self, msg):
@@ -321,7 +321,7 @@ class MessageHandler(BusHandler):
         Appelée quand un message est traité correctement : le message est
         acquitté.
         """
-        self._messages_forwarded += 1
+        self._messages_received += 1
         return self.producer.ack(msg)
 
     def processingFailed(self, error, msg):
@@ -350,7 +350,7 @@ class MessageHandler(BusHandler):
     def getStats(self):
         """Récupère des métriques de fonctionnement du connecteur"""
         stats = {
-            "forwarded": self._messages_forwarded,
+            "received": self._messages_received,
             }
         return defer.succeed(stats)
 
