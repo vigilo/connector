@@ -53,6 +53,14 @@ class BusHandler(object):
         self.client = client
         self.client.addHandler(self)
 
+    def connectionInitialized(self):
+        """Opérations à réaliser à la connexion au bus."""
+        pass
+
+    def connectionLost(self, reason):
+        """Opérations à réaliser à la perte de connexion au bus"""
+        pass
+
 
 
 class QueueSubscriber(BusHandler):
@@ -95,6 +103,7 @@ class QueueSubscriber(BusHandler):
         on reprend le dépilement. Sinon, on attend que la méthode
         L{resumeProducing} soit appelée.
         """
+        super(QueueSubscriber, self).connectionInitialized()
         self._channel = self.client.channel
         d = self._create()
         d.addCallback(lambda _x: self._bind())
@@ -113,6 +122,7 @@ class QueueSubscriber(BusHandler):
         """
         Perte de connexion au bus, on réinitialise les variables internes
         """
+        super(QueueSubscriber, self).connectionLost(reason)
         self._channel = None
         self._queue = None
         self.ready = defer.Deferred()
@@ -421,6 +431,7 @@ class BusPublisher(BusHandler):
         Lancée à la connexion (ou re-connexion).
         Redéfinie pour pouvoir vider les messages en attente.
         """
+        super(BusPublisher, self).connectionInitialized()
         self._initialized = True
         # les stats sont des COUNTERs, on peut réinitialiser
         self._messages_sent = 0
@@ -433,6 +444,7 @@ class BusPublisher(BusHandler):
         Lancée à la perte de la connexion au bus. Permet d'arrêter d'envoyer
         les messages en attente.
         """
+        super(BusPublisher, self).connectionLost(reason)
         self._initialized = False
         if self.producer is not None:
             self.producer.pauseProducing()
