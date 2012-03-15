@@ -68,6 +68,12 @@ class MultipleServerMixin:
         assert self._attemptsLeft is not None
         self._attemptsLeft -= 1
         if self._attemptsLeft == 0:
+            if (self.host, self.port) not in self._usableHosts:
+                msg = ("Something went wrong, %s:%s is not in "
+                       "'usableHosts' (%r)",
+                       self.host, self.port, self._usableHosts)
+                LOGGER.error(msg)
+                raise RuntimeError(msg)
             LOGGER.warning(_("Server %(oldserver)s did not answer after "
                     "%(attempts)d attempts"),
                     {"oldserver": self.host, "attempts": self.attempts})
