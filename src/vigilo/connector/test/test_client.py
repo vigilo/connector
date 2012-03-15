@@ -25,17 +25,24 @@ class MultipleServerConnector(MultipleServerMixin, tcp.Connector):
 class MSCTestCase(unittest.TestCase):
     """Teste L{MultipleServerConnector}"""
 
+    def setUp(self):
+        self.rcf = protocol.ReconnectingClientFactory()
+
+    def tearDown(self):
+        self.rcf.stopTrying()
+
     def test_pickServer_first(self):
-        c = MultipleServerConnector(None, None, None, 30, None, reactor=reactor)
+        c = MultipleServerConnector(None, None, None, 30, None,
+                                    reactor=reactor)
         c.setMultipleParams([("test1", 5222), ("test2", 5222)], tcp.Connector)
         c.pickServer()
         self.assertEqual(c.host, "test1")
 
     def test_change_host(self):
-        f = protocol.ReconnectingClientFactory()
         # reconnexion manuelle
-        f.stopTrying()
-        c = MultipleServerConnector(None, None, f, 30, None, reactor=reactor)
+        self.rcf.stopTrying()
+        c = MultipleServerConnector(None, None, self.rcf, 30, None,
+                                    reactor=reactor)
         c.setMultipleParams([("test1", 5222), ("test2", 5222)], tcp.Connector)
 
         for attemptsLeft in range(3, 0, -1):
