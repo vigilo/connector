@@ -719,7 +719,7 @@ class BackupProvider(Service):
         """errback: remet le message en base"""
         errmsg = _('Requeuing message (%(reason)s).')
         LOGGER.info(errmsg % {
-            "reason": get_error_message(e.value),
+            "reason": get_error_message(e),
         })
         self.queue.append(msg)
 
