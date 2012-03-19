@@ -105,7 +105,7 @@ class BackupProviderTestCase(unittest.TestCase):
             next_msg = yield self.bp._getNextMsg()
             self.assertEqual(next_msg, msg)
 
-    @deferred(timeout=10)
+    @deferred(timeout=30)
     @defer.inlineCallbacks
     def test_save_to_db(self):
         self.bp.paused = True

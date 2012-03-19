@@ -11,6 +11,9 @@ from txamqp.protocol import AMQClient
 from txamqp.client import TwistedDelegate
 from txamqp import spec
 
+from vigilo.common.logging import get_logger
+LOGGER = get_logger(__name__)
+
 from vigilo.common.gettext import translate
 _ = translate(__name__)
 
@@ -28,11 +31,13 @@ def getErrorMessage(error):
     """
     if isinstance(error, failure.Failure):
         error = error.value
+    if isinstance(error, Exception):
+        error = error.args[0]
     try:
         try:
-            return unicode(error.args[0].fields[1])
+            return unicode(error.fields[1])
         except (UnicodeEncodeError, UnicodeDecodeError):
-            return str(error.args[0].fields[1].decode('utf-8'))
+            return error.fields[1].decode('utf-8')
     except (KeyError, AttributeError, IndexError,
             UnicodeEncodeError, UnicodeDecodeError):
         return get_error_message(error)
@@ -52,18 +57,20 @@ class AmqpProtocol(AMQClient):
         deferred.addCallbacks(self._authenticated, self._authentication_failed)
 
 
-    def _authenticated(self, ignore):
+    def _authenticated(self, ignore, channum=1):
         """Called when the connection has been authenticated."""
         # Get a channel.
-        d = self.channel(1)
+        d = self.channel(channum)
         d.addCallback(self._got_channel)
         d.addErrback(self._got_channel_failed)
+        return d
 
 
     def _got_channel(self, channel):
         d = channel.channel_open()
         d.addCallback(self._channel_open, channel)
         d.addErrback(self._channel_open_failed)
+        return d
 
 
     def _channel_open(self, _ignore, channel):
@@ -72,15 +79,21 @@ class AmqpProtocol(AMQClient):
 
 
     def _channel_open_failed(self, error):
-        log.msg("Channel open failed: %s" % error)
+        LOGGER.warning(_("Channel open failed: %s"), getErrorMessage(error))
 
 
     def _got_channel_failed(self, error):
-        log.msg("Error getting channel: %s" % error)
+        LOGGER.warning(_("Error getting channel: %s"), getErrorMessage(error))
 
 
     def _authentication_failed(self, error):
-        log.msg("AMQP authentication failed: %s" % getErrorMessage(error))
+        LOGGER.warning(_("AMQP authentication failed: %s"),
+                       getErrorMessage(error))
+
+    def channelFailed(self, channel, reason):
+        LOGGER.warning(_("Channel %d was unexpectedly closed, disconnecting. "
+                         "Reason: %s"), channel.id, getErrorMessage(reason))
+        self.transport.loseConnection()
 
 
 

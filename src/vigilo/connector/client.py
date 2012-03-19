@@ -243,6 +243,7 @@ class VigiloClient(service.Service):
 
     def connectionLost(self, reason):
         """Perte de la connexion, on transmet l'info aux I{handlers}."""
+        self.deferred = defer.Deferred()
         # Notify all child services
         for h in self.handlers:
             if hasattr(h, "connectionLost"):

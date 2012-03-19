@@ -137,7 +137,7 @@ class OSCTestCase(unittest.TestCase):
 class VigiloClientTestCase(unittest.TestCase):
 
 
-    @deferred(timeout=5)
+    @deferred(timeout=30)
     def test_send(self):
         c = VigiloClient(None, None, None)
         c.channel = mock.Mock()
@@ -159,7 +159,7 @@ class VigiloClientTestCase(unittest.TestCase):
         return d
 
 
-    @deferred(timeout=5)
+    @deferred(timeout=30)
     def test_send_non_persistent(self):
         c = VigiloClient(None, None, None)
         c.channel = mock.Mock()

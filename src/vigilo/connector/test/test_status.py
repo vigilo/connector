@@ -38,7 +38,7 @@ class StatusPublisherTestCase(unittest.TestCase):
         if "." in self.localhn: # on ne veut pas le FQDN
             self.localhn = self.localhn[:self.localhn.index(".")]
 
-    @deferred(timeout=10)
+    @deferred(timeout=30)
     def test_send_stats(self):
         """Relai d'un ensemble de statistiques"""
         client = ClientStub("testhost", None, None)
@@ -65,7 +65,7 @@ class StatusPublisherTestCase(unittest.TestCase):
         d.addCallback(check)
         return d
 
-    @deferred(timeout=10)
+    @deferred(timeout=30)
     def test_sendStatus(self):
         """Envoi de l'état (sendStatus)"""
         client = ClientStub("testhost", None, None)
@@ -96,7 +96,7 @@ class StatusPublisherTestCase(unittest.TestCase):
         d.addCallback(check)
         return d
 
-    @deferred(timeout=10)
+    @deferred(timeout=30)
     def test_servicename(self):
         """On force le nom du service à utiliser"""
         client = ClientStub("testhost", None, None)
@@ -121,7 +121,7 @@ class StatusPublisherTestCase(unittest.TestCase):
         d.addCallback(check)
         return d
 
-    @deferred(timeout=10)
+    @deferred(timeout=30)
     def test_force_exchange(self):
         """On force le nom de l'exchange à utiliser"""
         self.settings["connector"]["status_exchange"] = "testnode"
