@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2012-03-02 16:30+0100\n"
+"PO-Revision-Date: 2012-03-27 11:34+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -18,211 +18,240 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/client.py:67
+#: src/vigilo/connector/amqp.py:82
+#, python-format
+msgid "Channel open failed: %s"
+msgstr "L'ouverture du canal a échoué : %s"
+
+#: src/vigilo/connector/amqp.py:86
+#, python-format
+msgid "Error getting channel: %s"
+msgstr "Erreur à la récupération du canal : %s"
+
+#: src/vigilo/connector/amqp.py:90
+#, python-format
+msgid "AMQP authentication failed: %s"
+msgstr "Échec de l'authentification AMQP : %s"
+
+#: src/vigilo/connector/amqp.py:94
+#, python-format
+msgid "Channel %(id)d was unexpectedly closed, disconnecting. Reason: %(reason)s"
+msgstr ""
+"Le canal %(id)d a été fermé de manière inattendue, déconnexion. Raison : "
+"%(reason)s"
+
+#: src/vigilo/connector/client.py:77
 #, python-format
 msgid "Server %(oldserver)s did not answer after %(attempts)d attempts"
-msgstr ""
+msgstr "Le serveur %(oldserver)s n'a pas répondu après %(attempts)d tentatives"
 
-#: src/vigilo/connector/client.py:212
+#: src/vigilo/connector/client.py:251
 #, python-format
 msgid "Lost connection to the bus (%s)"
-msgstr ""
+msgstr "Connexion au bus perdue (%s)"
 
-#: src/vigilo/connector/client.py:273
-#, fuzzy, python-format
-#| msgid "Requeuing message (%(reason)s)"
+#: src/vigilo/connector/client.py:333
+#, python-format
 msgid "Sending failed: %(reason)s"
-msgstr "Remise en attente du message (%(reason)s)"
+msgstr "L'envoi a échoué : %(reason)s"
 
-#: src/vigilo/connector/client.py:354
+#: src/vigilo/connector/client.py:426
 #, python-format
 msgid "Creating lock file in %s"
 msgstr "Création d'un fichier de verrou dans %s"
 
-#: src/vigilo/connector/client.py:357
+#: src/vigilo/connector/client.py:429
 #, python-format
 msgid "Lock file successfully created in %s"
 msgstr "Fichier de verrou créé avec succès dans %s"
 
-#: src/vigilo/connector/client.py:362
+#: src/vigilo/connector/client.py:434
 msgid "Error: lockfile found, another instance may be running."
 msgstr ""
+"Erreur : le fichier de verrou a été trouvé, une autre instance est "
+"peut-être en fonctionnement."
 
-#: src/vigilo/connector/client.py:375
+#: src/vigilo/connector/client.py:447
 #, python-format
 msgid "Error %(code)s: %(message)s"
 msgstr "Erreur %(code)s : %(message)s"
 
-#: src/vigilo/connector/client.py:382
+#: src/vigilo/connector/client.py:454
 #, python-format
 msgid "Error: %s"
-msgstr ""
+msgstr "Erreur : %s"
 
-#: src/vigilo/connector/client.py:388
+#: src/vigilo/connector/client.py:460
 msgid "Timeout"
 msgstr "Délai dépassé"
 
-#: src/vigilo/connector/client.py:442
+#: src/vigilo/connector/client.py:519
 msgid "No handler registered for this one-shot client"
 msgstr "Aucune fonction de traitement n'a été enregistrée pour ce client jetable"
 
-#: src/vigilo/connector/conffile.py:79
+#: src/vigilo/connector/conffile.py:76
 msgid "Received signal to reload the configuration"
-msgstr ""
+msgstr "Signal de rechargement de la configuration reçu"
 
-#: src/vigilo/connector/conffile.py:92
+#: src/vigilo/connector/conffile.py:89
 msgid "No configuration yet!"
-msgstr ""
+msgstr "Pas encore de configuration !"
 
 #: src/vigilo/connector/configure.py:57
 #, python-format
 msgid "Creating queue %s"
-msgstr ""
+msgstr "Création de la file d'attente %s"
 
 #: src/vigilo/connector/configure.py:63
 #, python-format
 msgid "Deleting queue %s"
-msgstr ""
+msgstr "Suppression de la file d'attente %s"
 
 #: src/vigilo/connector/configure.py:68
 #, python-format
-msgid "Creating exchange %s of type %s"
-msgstr ""
+msgid "Creating exchange %(exchange)s of type %(type)s"
+msgstr "Création de l'exchange %(exchange)s de type %(type)s"
 
 #: src/vigilo/connector/configure.py:75
 #, python-format
 msgid "Deleting exchange %s"
-msgstr ""
+msgstr "Suppression de l'exchange %s"
 
 #: src/vigilo/connector/configure.py:83
 #, python-format
-msgid "Subscribing queue %s to exchange %s (key: %s)"
+msgid "Subscribing queue %(queue)s to exchange %(exchange)s (key: %(key)s)"
 msgstr ""
+"Abonnement de la file d'attente %(queue)s à l'exchange %(exchange)s (clé "
+": %(key)s)"
 
-#: src/vigilo/connector/configure.py:93
+#: src/vigilo/connector/configure.py:94
 #, python-format
-msgid "Unsubscribing queue %s from exchange %s (key: %s)"
+msgid "Unsubscribing queue %(queue)s from exchange %(exchange)s (key: %(key)s)"
 msgstr ""
+"Désabonnement de la file d'attente %(queue)s à l'exchange %(exchange)s "
+"(clé : %(key)s)"
 
-#: src/vigilo/connector/configure.py:104 src/vigilo/connector/configure.py:105
+#: src/vigilo/connector/configure.py:106 src/vigilo/connector/configure.py:107
 #, python-format
 msgid "Can't find file '%s'"
-msgstr ""
+msgstr "Fichier '%s' introuvable"
 
-#: src/vigilo/connector/configure.py:114
+#: src/vigilo/connector/configure.py:116
 #, python-format
-msgid "Exchange %s (%s)"
-msgstr ""
-
-#: src/vigilo/connector/configure.py:124
-#, python-format
-msgid "Queue %s"
-msgstr ""
+msgid "Exchange %(name)s (%(type)s)"
+msgstr "Exchange %(name)s (%(type)s)"
 
 #: src/vigilo/connector/configure.py:127
 #, python-format
-msgid "Queue %s subscribed to exchange %s (key: %s)"
-msgstr ""
+msgid "Queue %s"
+msgstr "File d'attente %s"
 
-#: src/vigilo/connector/configure.py:141
-msgid "Server address"
-msgstr ""
-
-#: src/vigilo/connector/configure.py:143
-msgid "Bus user"
-msgstr ""
+#: src/vigilo/connector/configure.py:130
+#, python-format
+msgid "Queue %(queue)s subscribed to exchange %(exchange)s (key: %(key)s)"
+msgstr "File d'attente %(queue)s abonnée à l'exchange %(exchange)s (clé : %(key)s)"
 
 #: src/vigilo/connector/configure.py:145
-msgid "Bus password"
-msgstr ""
+msgid "Server address"
+msgstr "Adresse du serveur"
 
 #: src/vigilo/connector/configure.py:147
+msgid "Bus user"
+msgstr "Utilisateur du bus"
+
+#: src/vigilo/connector/configure.py:149
+msgid "Bus password"
+msgstr "Mot de passe du bus"
+
+#: src/vigilo/connector/configure.py:151
 msgid "Show debugging information."
-msgstr ""
+msgstr "Afficher les informations de déboguage."
 
-#: src/vigilo/connector/configure.py:152
+#: src/vigilo/connector/configure.py:156
 msgid "Vigilo bus configurator"
-msgstr ""
+msgstr "Configurateur du bus Vigilo"
 
-#: src/vigilo/connector/configure.py:153
+#: src/vigilo/connector/configure.py:157
 msgid "Subcommands"
-msgstr ""
+msgstr "Sous-commandes"
 
-#: src/vigilo/connector/configure.py:159
+#: src/vigilo/connector/configure.py:163
 msgid "Create an AMQP queue on the server."
-msgstr ""
+msgstr "Créé une file d'attente AMQP sur le serveur."
 
-#: src/vigilo/connector/configure.py:161 src/vigilo/connector/configure.py:169
-#: src/vigilo/connector/configure.py:195 src/vigilo/connector/configure.py:205
+#: src/vigilo/connector/configure.py:165 src/vigilo/connector/configure.py:173
+#: src/vigilo/connector/configure.py:199 src/vigilo/connector/configure.py:209
 msgid "Queue name"
-msgstr ""
+msgstr "Nom de la file d'attente"
 
-#: src/vigilo/connector/configure.py:167
+#: src/vigilo/connector/configure.py:171
 msgid "Delete an AMQP queue on the server."
-msgstr ""
+msgstr "Supprime une file d'attente AMQP sur le serveur."
 
-#: src/vigilo/connector/configure.py:175
+#: src/vigilo/connector/configure.py:179
 msgid "Create an AMQP exchange on the server."
-msgstr ""
+msgstr "Créé un exchange AMQP sur le serveur."
 
-#: src/vigilo/connector/configure.py:178
+#: src/vigilo/connector/configure.py:182
 msgid "Exchange type"
-msgstr ""
+msgstr "Type de l'exchange"
 
-#: src/vigilo/connector/configure.py:179 src/vigilo/connector/configure.py:187
-#: src/vigilo/connector/configure.py:196 src/vigilo/connector/configure.py:206
+#: src/vigilo/connector/configure.py:183 src/vigilo/connector/configure.py:191
+#: src/vigilo/connector/configure.py:200 src/vigilo/connector/configure.py:210
 msgid "Exchange name"
-msgstr ""
+msgstr "Nom de l'exchange"
 
-#: src/vigilo/connector/configure.py:185
+#: src/vigilo/connector/configure.py:189
 msgid "Delete an AMQP exchange on the server."
-msgstr ""
+msgstr "Supprime un exchange AMQP sur le serveur."
 
-#: src/vigilo/connector/configure.py:193
+#: src/vigilo/connector/configure.py:197
 msgid "Subscribe a queue to an exchange."
-msgstr ""
+msgstr "Abonne une file d'attente à un exchange."
 
-#: src/vigilo/connector/configure.py:197 src/vigilo/connector/configure.py:207
+#: src/vigilo/connector/configure.py:201 src/vigilo/connector/configure.py:211
 msgid "Routing key"
-msgstr ""
+msgstr "Clé de routage"
 
-#: src/vigilo/connector/configure.py:203
+#: src/vigilo/connector/configure.py:207
 msgid "Unsubscribe a queue from an exchange."
-msgstr ""
+msgstr "Désabonne une file d'attente d'un exchange."
 
-#: src/vigilo/connector/configure.py:213
+#: src/vigilo/connector/configure.py:217
 msgid "Reads the configuration from an INI file."
-msgstr ""
+msgstr "Lit la configuration dans un fichier INI."
 
-#: src/vigilo/connector/configure.py:215
-#, fuzzy
-#| msgid "The configuration file does not exist"
+#: src/vigilo/connector/configure.py:219
 msgid "Configuration file"
-msgstr "Le fichier de configuration n'existe pas"
+msgstr "Fichier de configuration"
 
-#: src/vigilo/connector/handlers.py:132
+#: src/vigilo/connector/handlers.py:116
+#, python-format
+msgid "Could not initialize the queue: %(reason)s"
+msgstr "Ne peut pas initialiser la file d'attente : %(reason)s"
+
+#: src/vigilo/connector/handlers.py:192
 msgid "Can't resume producing: not connected yet"
-msgstr ""
+msgstr "Impossible de reprendre la production : pas encore connecté"
 
-#: src/vigilo/connector/handlers.py:194
+#: src/vigilo/connector/handlers.py:286
 #, python-format
 msgid "Received message is not JSON-encoded: %r"
-msgstr ""
+msgstr "Le message reçu n'est pas encodé en JSON : %r"
 
-#: src/vigilo/connector/handlers.py:538
-#, fuzzy, python-format
-#| msgid "Requeuing message (%(reason)s)"
+#: src/vigilo/connector/handlers.py:720
+#, python-format
 msgid "Requeuing message (%(reason)s)."
-msgstr "Remise en attente du message (%(reason)s)"
+msgstr "Remise en attente du message (%(reason)s)."
 
-#: src/vigilo/connector/handlers.py:548
+#: src/vigilo/connector/handlers.py:730
 #, python-format
 msgid "Error trying to save a message to the backup database: %s"
 msgstr ""
 "Erreur lors de l'enregistrement du message en base de données de "
 "sauvegarde : %s"
 
-#: src/vigilo/connector/handlers.py:606
+#: src/vigilo/connector/handlers.py:792
 #, python-format
 msgid ""
 "Can't understand the max_queue_size option, it should be an integer (or 0"
@@ -231,19 +260,19 @@ msgstr ""
 "Impossible de lire l'option max_queue_size. Un nombre entier (ou 0 pour "
 "supprimer la limite) doit être renseigné. Valeur actuelle : %s"
 
-#: src/vigilo/connector/handlers.py:614
+#: src/vigilo/connector/handlers.py:800
 msgid "The max_queue_size option is only available on Python >= 2.6. Ignoring."
 msgstr "L'option max_queue_size n'est disponible que pour Python >= 2.6. Ignorée."
 
-#: src/vigilo/connector/handlers.py:622 src/vigilo/connector/socket.py:112
+#: src/vigilo/connector/handlers.py:808 src/vigilo/connector/socket.py:112
 #, python-format
 msgid "Directory not found: '%(dir)s'"
 msgstr "Dossier non trouvé : '%(dir)s'"
 
-#: src/vigilo/connector/handlers.py:627 src/vigilo/connector/socket.py:119
+#: src/vigilo/connector/handlers.py:813 src/vigilo/connector/socket.py:119
 #, python-format
 msgid "Wrong permissions on directory: '%(dir)s'"
-msgstr ""
+msgstr "Permissions incorrectes sur le répertoire : '%(dir)s'"
 
 #: src/vigilo/connector/options.py:23
 msgid "Load this settings.ini file"
@@ -254,10 +283,9 @@ msgid "The configuration file does not exist"
 msgstr "Le fichier de configuration n'existe pas"
 
 #: src/vigilo/connector/serialize.py:36
-#, fuzzy, python-format
-#| msgid "Unknown/malformed message type: '%s'"
+#, python-format
 msgid "Got malformed message: %s"
-msgstr "Type de message inconnu ou message mal-formé: '%s'"
+msgstr "Message mal-formé: %s"
 
 #: src/vigilo/connector/serialize.py:47 src/vigilo/connector/serialize.py:89
 #, python-format
@@ -273,72 +301,18 @@ msgstr "Ligne illisible : %s"
 msgid "OK: running"
 msgstr "OK: en fonctionnement"
 
-#: src/vigilo/connector/status.py:147
+#: src/vigilo/connector/status.py:159
 #, python-format
 msgid "Stats for %(service)s: %(name)s = %(value)s"
 msgstr "Statistiques pour %(service)s : %(name)s = %(value)s"
 
-#: src/vigilo/connector/store.py:189 src/vigilo/connector/store.py:288
+#: src/vigilo/connector/store.py:190 src/vigilo/connector/store.py:289
 #, python-format
 msgid "Could not fill the output buffer: %s"
 msgstr "Impossible de remplir le tampon en sortie : %s"
 
-#: src/vigilo/connector/store.py:231
+#: src/vigilo/connector/store.py:232
 #, python-format
 msgid "Could not VACUUM the database: %s"
 msgstr "Impossible de purger la base de données (VACUUM) : %s"
-
-#~ msgid "'require_compression' cannot be True when 'require_tls' is also True."
-#~ msgstr ""
-#~ "'require_compression' ne peut valoir True "
-#~ "lorsque 'require_tls' vaut \"\n"
-#~ "\"également True."
-
-#~ msgid "Some error occurred while negotiating TLS encryption"
-#~ msgstr "Une erreur est survenue lors de la négociation du chiffrement par TLS"
-
-#~ msgid ""
-#~ "The server requires TLS encryption. Use"
-#~ " the 'require_tls' option to enable "
-#~ "TLS encryption."
-#~ msgstr ""
-#~ "Le serveur requiert un chiffrement par"
-#~ " TLS. Utilisez l'option 'require_tls' pour"
-#~ " activer le chiffrement."
-
-#~ msgid "TLS encryption was required, but pyOpenSSL is not installed"
-#~ msgstr "Le chiffrement par TLS est requis, mais pyOpenSSL n'est pas installé"
-
-#~ msgid ""
-#~ "The \"watched_topics\" option has now "
-#~ "been renamed into \"subscriptions\". Please"
-#~ " update your configuration file."
-#~ msgstr ""
-
-#~ msgid "Exiting with no error"
-#~ msgstr "Sortie sans erreur"
-
-#~ msgid "No handler registered for this one-shot XMPP client"
-#~ msgstr ""
-
-#~ msgid "Unable to forward the message (%(reason)s)."
-#~ msgstr "Impossible de transmettre le message (%(reason)s)."
-
-#~ msgid "It has been stored for later retransmission."
-#~ msgstr "Il a été sauvé pour une retransmission ultérieure."
-
-#~ msgid "Choose the service name"
-#~ msgstr "Choisir le nom du service"
-
-#~ msgid "Priority conflict, resetting priorities (%s)"
-#~ msgstr "Conflit de priorité détecté. Réinitialisation des priorités (%s)"
-
-#~ msgid "Pausing data production"
-#~ msgstr "Mise en pause de la production de données"
-
-#~ msgid "Received request to shutdown"
-#~ msgstr "Réception d'une demande d'arrêt"
-
-#~ msgid "Item is None in consumeQueue, this should never happen!"
-#~ msgstr "Objet None reçu dans consumeQueue, ça ne devrait jamais arriver !"
 

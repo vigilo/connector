@@ -91,8 +91,9 @@ class AmqpProtocol(AMQClient):
                        getErrorMessage(error))
 
     def channelFailed(self, channel, reason):
-        LOGGER.warning(_("Channel %d was unexpectedly closed, disconnecting. "
-                         "Reason: %s"), channel.id, getErrorMessage(reason))
+        LOGGER.warning(_("Channel %(id)d was unexpectedly closed, disconnecting. "
+                         "Reason: %(reason)s"),
+                       {"id": channel.id, "reason": getErrorMessage(reason)})
         self.transport.loseConnection()
 
 

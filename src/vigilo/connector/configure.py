@@ -65,8 +65,8 @@ class BusManager(object):
         return d
 
     def create_exchange(self, args):
-        LOGGER.info(_("Creating exchange %s of type %s"),
-                    args.exchange, args.type)
+        LOGGER.info(_("Creating exchange %(exchange)s of type %(type)s"),
+                    {"exchange": args.exchange, "type": args.type})
         d = self.client.channel.exchange_declare(exchange=args.exchange,
                 type=args.type, durable=True)
         return d
@@ -80,8 +80,9 @@ class BusManager(object):
         key = args.key
         if not key:
             key = args.queue
-        LOGGER.info(_("Subscribing queue %s to exchange %s (key: %s)"),
-                    args.queue, args.exchange, key)
+        LOGGER.info(_("Subscribing queue %(queue)s to exchange %(exchange)s "
+                      "(key: %(key)s)"),
+                    {"queue": args.queue, "exchange": args.exchange, "key": key})
         d = self.client.channel.queue_bind(queue=args.queue,
                 exchange=args.exchange, routing_key=key)
         return d
@@ -90,8 +91,9 @@ class BusManager(object):
         key = args.key
         if not key:
             key = args.queue
-        LOGGER.info(_("Unsubscribing queue %s from exchange %s (key: %s)"),
-                    args.queue, args.exchange, key)
+        LOGGER.info(_("Unsubscribing queue %(queue)s from exchange "
+                      "%(exchange)s (key: %(key)s)"),
+                    {"queue": args.queue, "exchange": args.exchange, "key": key})
         d = self.client.channel.queue_unbind(queue=args.queue,
                 exchange=args.exchange, routing_key=key)
         return d
@@ -111,7 +113,8 @@ class BusManager(object):
                 continue
             ename = exchange[len("exchange:"):]
             etype = conf[exchange].get("type", "fanout")
-            LOGGER.info(_("Exchange %s (%s)"), ename, etype)
+            LOGGER.info(_("Exchange %(name)s (%(type)s)"),
+                        {"name": ename, "type": etype})
             yield self.client.channel.exchange_declare(
                     exchange=ename, type=etype, durable=True)
 
@@ -124,8 +127,9 @@ class BusManager(object):
             LOGGER.info(_("Queue %s"), queue)
             yield self.client.channel.queue_declare(queue=queue,
                         durable=True, exclusive=False, auto_delete=False)
-            LOGGER.info(_("Queue %s subscribed to exchange %s (key: %s)"),
-                        queue, exchange, key)
+            LOGGER.info(_("Queue %(queue)s subscribed to exchange "
+                          "%(exchange)s (key: %(key)s)"),
+                        {"queue": queue, "exchange": exchange, "key": key})
             yield self.client.channel.queue_bind(queue=queue,
                         exchange=exchange, routing_key=key)
 

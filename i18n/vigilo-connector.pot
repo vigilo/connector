@@ -7,9 +7,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: vigilo-connector 2.0.15\n"
+"Project-Id-Version: vigilo-connector 2.1.1\n"
 "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
-"POT-Creation-Date: 2012-03-02 16:30+0100\n"
+"POT-Creation-Date: 2012-03-27 11:34+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,58 +18,78 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/client.py:67
+#: src/vigilo/connector/amqp.py:82
+#, python-format
+msgid "Channel open failed: %s"
+msgstr ""
+
+#: src/vigilo/connector/amqp.py:86
+#, python-format
+msgid "Error getting channel: %s"
+msgstr ""
+
+#: src/vigilo/connector/amqp.py:90
+#, python-format
+msgid "AMQP authentication failed: %s"
+msgstr ""
+
+#: src/vigilo/connector/amqp.py:94
+#, python-format
+msgid "Channel %(id)d was unexpectedly closed, disconnecting. Reason: %(reason)s"
+msgstr ""
+
+#: src/vigilo/connector/client.py:77
 #, python-format
 msgid "Server %(oldserver)s did not answer after %(attempts)d attempts"
 msgstr ""
 
-#: src/vigilo/connector/client.py:212
+#: src/vigilo/connector/client.py:251
 #, python-format
 msgid "Lost connection to the bus (%s)"
 msgstr ""
 
-#: src/vigilo/connector/client.py:273
+#: src/vigilo/connector/client.py:333
 #, python-format
 msgid "Sending failed: %(reason)s"
 msgstr ""
 
-#: src/vigilo/connector/client.py:354
+#: src/vigilo/connector/client.py:426
 #, python-format
 msgid "Creating lock file in %s"
 msgstr ""
 
-#: src/vigilo/connector/client.py:357
+#: src/vigilo/connector/client.py:429
 #, python-format
 msgid "Lock file successfully created in %s"
 msgstr ""
 
-#: src/vigilo/connector/client.py:362
+#: src/vigilo/connector/client.py:434
 msgid "Error: lockfile found, another instance may be running."
 msgstr ""
 
-#: src/vigilo/connector/client.py:375
+#: src/vigilo/connector/client.py:447
 #, python-format
 msgid "Error %(code)s: %(message)s"
 msgstr ""
 
-#: src/vigilo/connector/client.py:382
+#: src/vigilo/connector/client.py:454
 #, python-format
 msgid "Error: %s"
 msgstr ""
 
-#: src/vigilo/connector/client.py:388
+#: src/vigilo/connector/client.py:460
 msgid "Timeout"
 msgstr ""
 
-#: src/vigilo/connector/client.py:442
+#: src/vigilo/connector/client.py:519
 msgid "No handler registered for this one-shot client"
 msgstr ""
 
-#: src/vigilo/connector/conffile.py:79
+#: src/vigilo/connector/conffile.py:76
 msgid "Received signal to reload the configuration"
 msgstr ""
 
-#: src/vigilo/connector/conffile.py:92
+#: src/vigilo/connector/conffile.py:89
 msgid "No configuration yet!"
 msgstr ""
 
@@ -85,7 +105,7 @@ msgstr ""
 
 #: src/vigilo/connector/configure.py:68
 #, python-format
-msgid "Creating exchange %s of type %s"
+msgid "Creating exchange %(exchange)s of type %(type)s"
 msgstr ""
 
 #: src/vigilo/connector/configure.py:75
@@ -95,144 +115,149 @@ msgstr ""
 
 #: src/vigilo/connector/configure.py:83
 #, python-format
-msgid "Subscribing queue %s to exchange %s (key: %s)"
+msgid "Subscribing queue %(queue)s to exchange %(exchange)s (key: %(key)s)"
 msgstr ""
 
-#: src/vigilo/connector/configure.py:93
+#: src/vigilo/connector/configure.py:94
 #, python-format
-msgid "Unsubscribing queue %s from exchange %s (key: %s)"
+msgid "Unsubscribing queue %(queue)s from exchange %(exchange)s (key: %(key)s)"
 msgstr ""
 
-#: src/vigilo/connector/configure.py:104 src/vigilo/connector/configure.py:105
+#: src/vigilo/connector/configure.py:106 src/vigilo/connector/configure.py:107
 #, python-format
 msgid "Can't find file '%s'"
 msgstr ""
 
-#: src/vigilo/connector/configure.py:114
+#: src/vigilo/connector/configure.py:116
 #, python-format
-msgid "Exchange %s (%s)"
-msgstr ""
-
-#: src/vigilo/connector/configure.py:124
-#, python-format
-msgid "Queue %s"
+msgid "Exchange %(name)s (%(type)s)"
 msgstr ""
 
 #: src/vigilo/connector/configure.py:127
 #, python-format
-msgid "Queue %s subscribed to exchange %s (key: %s)"
+msgid "Queue %s"
 msgstr ""
 
-#: src/vigilo/connector/configure.py:141
-msgid "Server address"
-msgstr ""
-
-#: src/vigilo/connector/configure.py:143
-msgid "Bus user"
+#: src/vigilo/connector/configure.py:130
+#, python-format
+msgid "Queue %(queue)s subscribed to exchange %(exchange)s (key: %(key)s)"
 msgstr ""
 
 #: src/vigilo/connector/configure.py:145
-msgid "Bus password"
+msgid "Server address"
 msgstr ""
 
 #: src/vigilo/connector/configure.py:147
+msgid "Bus user"
+msgstr ""
+
+#: src/vigilo/connector/configure.py:149
+msgid "Bus password"
+msgstr ""
+
+#: src/vigilo/connector/configure.py:151
 msgid "Show debugging information."
 msgstr ""
 
-#: src/vigilo/connector/configure.py:152
+#: src/vigilo/connector/configure.py:156
 msgid "Vigilo bus configurator"
 msgstr ""
 
-#: src/vigilo/connector/configure.py:153
+#: src/vigilo/connector/configure.py:157
 msgid "Subcommands"
 msgstr ""
 
-#: src/vigilo/connector/configure.py:159
+#: src/vigilo/connector/configure.py:163
 msgid "Create an AMQP queue on the server."
 msgstr ""
 
-#: src/vigilo/connector/configure.py:161 src/vigilo/connector/configure.py:169
-#: src/vigilo/connector/configure.py:195 src/vigilo/connector/configure.py:205
+#: src/vigilo/connector/configure.py:165 src/vigilo/connector/configure.py:173
+#: src/vigilo/connector/configure.py:199 src/vigilo/connector/configure.py:209
 msgid "Queue name"
 msgstr ""
 
-#: src/vigilo/connector/configure.py:167
+#: src/vigilo/connector/configure.py:171
 msgid "Delete an AMQP queue on the server."
 msgstr ""
 
-#: src/vigilo/connector/configure.py:175
+#: src/vigilo/connector/configure.py:179
 msgid "Create an AMQP exchange on the server."
 msgstr ""
 
-#: src/vigilo/connector/configure.py:178
+#: src/vigilo/connector/configure.py:182
 msgid "Exchange type"
 msgstr ""
 
-#: src/vigilo/connector/configure.py:179 src/vigilo/connector/configure.py:187
-#: src/vigilo/connector/configure.py:196 src/vigilo/connector/configure.py:206
+#: src/vigilo/connector/configure.py:183 src/vigilo/connector/configure.py:191
+#: src/vigilo/connector/configure.py:200 src/vigilo/connector/configure.py:210
 msgid "Exchange name"
 msgstr ""
 
-#: src/vigilo/connector/configure.py:185
+#: src/vigilo/connector/configure.py:189
 msgid "Delete an AMQP exchange on the server."
 msgstr ""
 
-#: src/vigilo/connector/configure.py:193
+#: src/vigilo/connector/configure.py:197
 msgid "Subscribe a queue to an exchange."
 msgstr ""
 
-#: src/vigilo/connector/configure.py:197 src/vigilo/connector/configure.py:207
+#: src/vigilo/connector/configure.py:201 src/vigilo/connector/configure.py:211
 msgid "Routing key"
 msgstr ""
 
-#: src/vigilo/connector/configure.py:203
+#: src/vigilo/connector/configure.py:207
 msgid "Unsubscribe a queue from an exchange."
 msgstr ""
 
-#: src/vigilo/connector/configure.py:213
+#: src/vigilo/connector/configure.py:217
 msgid "Reads the configuration from an INI file."
 msgstr ""
 
-#: src/vigilo/connector/configure.py:215
+#: src/vigilo/connector/configure.py:219
 msgid "Configuration file"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:132
+#: src/vigilo/connector/handlers.py:116
+#, python-format
+msgid "Could not initialize the queue: %(reason)s"
+msgstr ""
+
+#: src/vigilo/connector/handlers.py:192
 msgid "Can't resume producing: not connected yet"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:194
+#: src/vigilo/connector/handlers.py:286
 #, python-format
 msgid "Received message is not JSON-encoded: %r"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:538
+#: src/vigilo/connector/handlers.py:720
 #, python-format
 msgid "Requeuing message (%(reason)s)."
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:548
+#: src/vigilo/connector/handlers.py:730
 #, python-format
 msgid "Error trying to save a message to the backup database: %s"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:606
+#: src/vigilo/connector/handlers.py:792
 #, python-format
 msgid ""
 "Can't understand the max_queue_size option, it should be an integer (or 0 for"
 " no limit). Current value: %s"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:614
+#: src/vigilo/connector/handlers.py:800
 msgid "The max_queue_size option is only available on Python >= 2.6. Ignoring."
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:622 src/vigilo/connector/socket.py:112
+#: src/vigilo/connector/handlers.py:808 src/vigilo/connector/socket.py:112
 #, python-format
 msgid "Directory not found: '%(dir)s'"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:627 src/vigilo/connector/socket.py:119
+#: src/vigilo/connector/handlers.py:813 src/vigilo/connector/socket.py:119
 #, python-format
 msgid "Wrong permissions on directory: '%(dir)s'"
 msgstr ""
@@ -264,17 +289,17 @@ msgstr ""
 msgid "OK: running"
 msgstr ""
 
-#: src/vigilo/connector/status.py:147
+#: src/vigilo/connector/status.py:159
 #, python-format
 msgid "Stats for %(service)s: %(name)s = %(value)s"
 msgstr ""
 
-#: src/vigilo/connector/store.py:189 src/vigilo/connector/store.py:288
+#: src/vigilo/connector/store.py:190 src/vigilo/connector/store.py:289
 #, python-format
 msgid "Could not fill the output buffer: %s"
 msgstr ""
 
-#: src/vigilo/connector/store.py:231
+#: src/vigilo/connector/store.py:232
 #, python-format
 msgid "Could not VACUUM the database: %s"
 msgstr ""
