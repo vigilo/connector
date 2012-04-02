@@ -7,7 +7,6 @@ from collections import deque
 from twisted.internet import reactor, defer
 from nose.plugins.skip import SkipTest
 from txamqp.queue import TimeoutDeferredQueue
-from vigilo.connector import json
 from vigilo.connector.client import VigiloClient
 
 
@@ -37,6 +36,8 @@ class ChannelStub(object):
 
 
     def basic_publish(self, exchange, routing_key, content, immediate=False):
+        # pylint: disable-msg=W0613
+        # W0613: Unused argument 'immediate'
         self.sent.append( {
             "method": "basic_publish",
             "exchange": exchange,
@@ -107,8 +108,8 @@ class ClientStub(VigiloClient):
         return defer.succeed(None)
 
 
-    def getQueue(self, name):
-        return self.channel.queues[name]
+    def getQueue(self, *args, **kwargs):
+        return self.channel.queues[args[0]]
 
 
 

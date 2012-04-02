@@ -6,7 +6,12 @@
 Contient des extensions pour les classes de Twisted
 afin d'améliorer le support pour IPv6.
 """
-import socket, warnings
+
+from __future__ import absolute_import
+
+import socket # pylint: disable-msg=W0403
+# W0403: Relative import 'socket', corrigé par le __future__.absolute_import
+import warnings
 from twisted.internet.udp import Port
 from twisted.internet import udp, error
 
@@ -21,6 +26,8 @@ class IPv6CapableUDPPort(Port):
     Pour cela, cette classe recrée un socket utilisant la famille
     d'adresses (AF_*) appropriée lorsque cela est nécessaire.
     """
+    # pylint: disable-msg=W0223
+    # W0223: Method 'writeSomeData' is abstract but is not overridden
 
     def write(self, datagram, addr=None):
         """Write a datagram.

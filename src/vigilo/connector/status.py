@@ -11,7 +11,8 @@ from __future__ import absolute_import
 import os
 import sys
 import time
-import socket
+import socket # pylint: disable-msg=W0403
+# W0403: Relative import 'socket', corrigé par le __future__.absolute_import
 
 from zope.interface import implements
 from twisted.internet import reactor, task, defer
@@ -164,7 +165,7 @@ class StatusPublisher(BusPublisher):
 
 
 
-def statuspublisher_factory(settings, client, providers=[]):
+def statuspublisher_factory(settings, client, providers=None):
     """
     Construit une instance de L{StatusPublisher}
 
@@ -188,6 +189,8 @@ def statuspublisher_factory(settings, client, providers=[]):
                 exchange=settings["connector"].get("status_exchange", None))
 
     stats_publisher.setClient(client)
+    if providers is None:
+        providers = []
     for provider in providers:
         stats_publisher.registerProvider(provider)
 

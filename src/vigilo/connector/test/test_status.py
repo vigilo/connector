@@ -1,23 +1,30 @@
 # -*- coding: utf-8 -*-
-# pylint: disable-msg=C0111,W0613
 # Copyright (C) 2006-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
+
+# pylint: disable-msg=C0111,W0613,R0904,W0212
+# - C0111: Missing docstring
+# - W0613: Unused argument
+# - R0904: Too many public methods
+# - W0212: Access to a protected member of a client class
 
 import unittest
 import socket
 
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
-# produites par ce module !!!
+# produites par ce module.
 #from twisted.trial import unittest
-from nose.twistedtools import reactor, deferred
+from nose.twistedtools import reactor  # pylint: disable-msg=W0611
+from nose.twistedtools import deferred
 
 from configobj import ConfigObj
 
 from twisted.internet import defer
 
 from vigilo.connector.status import statuspublisher_factory
+from vigilo.connector import json
 
-from helpers import ClientStub, wait, json
+from vigilo.connector.test.helpers import ClientStub, wait
 
 
 

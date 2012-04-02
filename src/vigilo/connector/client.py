@@ -137,7 +137,7 @@ class VigiloClient(service.Service):
         lance tous les I{handlers} enregistrés.
         """
         service.Service.startService(self)
-        self._connection = self._getConnection()
+        self._getConnection()
         # Notify all child services
         dl = []
         for h in self.handlers:

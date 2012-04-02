@@ -233,6 +233,8 @@ class QueueSubscriber(BusHandler):
         """
         #return self._channel.basic_nack(msg.delivery_tag, multiple=multiple,
         #                                requeue=requeue)
+        # pylint: disable-msg=W0613
+        # W0613: Unused argument 'multiple'
         return self._channel.basic_reject(msg.delivery_tag, requeue=requeue)
 
     def send(self, exchange, routing_key, message):
@@ -388,7 +390,7 @@ class MessageHandler(BusHandler):
             C{PushProducer}). Ici, on n'accepte que les C{PullProducer}s.
         @type  streaming: C{boolean}
         """
-        #assert streaming == False # on ne prend que des PullProducers
+        assert streaming == False # on ne prend que des PullProducers
         self.producer = producer
         self.producer.consumer = self
         self.producer.ready.addCallback(
@@ -412,11 +414,13 @@ class BusPublisher(BusHandler):
     implements(IConsumer, IBusHandler)
 
 
-    def __init__(self, publications={}, batch_send_perf=1):
+    def __init__(self, publications=None, batch_send_perf=1):
         BusHandler.__init__(self)
         self.name = self.__class__.__name__
         self.producer = None
         self._is_streaming = True
+        if publications is None:
+            publications = {}
         self._publications = publications
         self._initialized = False
         # Stats
@@ -710,7 +714,8 @@ class BackupProvider(Service):
                 break
             try:
                 yield self.consumer.write(msg)
-            except Exception, e:
+            except Exception, e: # pylint: disable-msg=W0703
+                # W0703: Catch "Exception"
                 self._send_failed(e, msg)
         self._processing_queue = False
 

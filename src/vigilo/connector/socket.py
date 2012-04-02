@@ -25,6 +25,8 @@ from vigilo.connector.serialize import parseMessage
 
 class VigiloLineReceiver(LineReceiver):
     """ Protocol used for each line received from the socket"""
+    # pylint: disable-msg=W0223
+    # W0223: Method 'writeSomeData' is abstract but is not overridden
 
     delimiter = '\n'
 

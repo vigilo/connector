@@ -154,9 +154,9 @@ class DbRetry(object):
         @return: Le prochain message, dans un C{Deferred}
         @rtype: C{Deferred}
         """
-        def get_from_buffer(r): # pylint: disable-msg=W0612
+        def get_from_buffer(_r): # pylint: disable-msg=W0612
             try:
-                index, msg = self.buffer_out.popleft()
+                msg = self.buffer_out.popleft()[1]
             except IndexError:
                 return None # pas de message dans le buffer
             else:
@@ -236,6 +236,7 @@ class DbRetry(object):
         d.addErrback(eb)
         def log(r):
             LOGGER.debug("VACUUM is done")
+            return r
         d.addBoth(log)
         return d
 

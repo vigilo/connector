@@ -67,6 +67,8 @@ def make_options(module):
         @return: Options du connecteur.
         @rtype: L{Options}
         """
+        # pylint: disable-msg=W0613
+        # W0613: Unused argument 'plugin'
         return Options(module)
     return _inner
 

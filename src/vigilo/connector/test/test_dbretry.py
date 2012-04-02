@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
-# pylint: disable-msg=R0904,C0111,W0613,W0212,W0612
 # Copyright (C) 2006-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
+
+# pylint: disable-msg=C0111,W0613,R0904,W0212
+# - C0111: Missing docstring
+# - W0613: Unused argument
+# - R0904: Too many public methods
+# - W0212: Access to a protected member of a client class
 
 """
 Teste la sauvegarde et la récupération d'un message en utilisant
@@ -15,9 +20,10 @@ import unittest
 from mock import Mock
 
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
-# produites par ce module !!!
+# produites par ce module.
 #from twisted.trial import unittest
-from nose.twistedtools import reactor, deferred
+from nose.twistedtools import reactor  # pylint: disable-msg=W0611
+from nose.twistedtools import deferred
 
 from twisted.internet import defer
 from vigilo.connector.store import DbRetry
@@ -91,7 +97,7 @@ class TestDbRetry(unittest.TestCase):
         xml = '<abc foo="bar">def</abc>'
         yield self.db.put(xml)
         self.assertEqual(len(self.db.buffer_in), 1)
-        for i in range(self.db._buffer_in_max):
+        for _i in range(self.db._buffer_in_max):
             yield self.db.put(xml)
         self.assertEqual(len(self.db.buffer_in), 0)
         backup_size = yield self.db.qsize()
@@ -105,10 +111,10 @@ class TestDbRetry(unittest.TestCase):
         """
         xml = '<abc foo="bar">def</abc>'
         msg_count = (self.db._buffer_in_max + 1) * 2
-        for i in range(msg_count):
+        for _i in range(msg_count):
             yield self.db.put(xml)
         self.assertEqual(len(self.db.buffer_out), 0)
-        got_xml = yield self.db.get()
+        yield self.db.get()
         self.assertEqual(len(self.db.buffer_out), msg_count - 1) # il y a un message en moins, c'est 'got_xml'
         backup_size = yield self.db.qsize()
         self.assertEqual(backup_size, len(self.db.buffer_out))
@@ -121,7 +127,7 @@ class TestDbRetry(unittest.TestCase):
         """
         xml = '<abc foo="bar">def</abc>'
         msg_count = (self.db._buffer_in_max + 1)
-        for i in range(msg_count):
+        for _i in range(msg_count):
             self.db.buffer_in.append(xml)
             self.db.buffer_out.append((None, xml))
         yield self.db.flush()

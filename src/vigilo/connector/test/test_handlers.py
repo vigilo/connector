@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
-# pylint: disable-msg=W0212,R0903,R0904,C0111,W0613
 # Copyright (C) 2006-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
+
+# pylint: disable-msg=C0111,W0613,R0904,W0212
+# - C0111: Missing docstring
+# - W0613: Unused argument
+# - R0904: Too many public methods
+# - W0212: Access to a protected member of a client class
 
 import os, os.path
 import tempfile
@@ -9,9 +14,11 @@ import shutil
 import unittest
 
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
-# produites par ce module !!!
+# produites par ce module.
 #from twisted.trial import unittest
-from nose.twistedtools import reactor, deferred
+from nose.twistedtools import reactor  # pylint: disable-msg=W0611
+# W0611: unused import. On veut celui de nose et non celui de twisted
+from nose.twistedtools import deferred
 
 from mock import Mock
 
@@ -19,8 +26,9 @@ from twisted.internet import defer
 
 from vigilo.connector.handlers import BackupProvider, BusPublisher
 from vigilo.connector.handlers import QueueSubscriber
+from vigilo.connector import json
 
-from helpers import ClientStub, wait, json, ConsumerStub
+from vigilo.connector.test.helpers import ClientStub, wait, ConsumerStub
 
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
@@ -110,7 +118,7 @@ class BackupProviderTestCase(unittest.TestCase):
     def test_save_to_db(self):
         self.bp.paused = True
         count = 42
-        for i in range(count):
+        for _i in range(count):
             msg = {"type": "perf", "value": "dummy"}
             self.bp.queue.append(msg)
         yield self.bp._saveToDb()
@@ -128,7 +136,7 @@ class BackupProviderTestCase(unittest.TestCase):
         yield self.bp.resumeProducing()
         # On envoie des messages
         print "envoi 1"
-        for i in range(10):
+        for _i in range(10):
             self.bp.queue.append(msg)
         yield self.bp.processQueue()
         self.assertEqual(len(self.bp.queue), 0)
@@ -136,7 +144,7 @@ class BackupProviderTestCase(unittest.TestCase):
         yield self.bp.pauseProducing()
         # On envoie des messages (-> backup)
         print "envoi 2"
-        for i in range(20):
+        for _i in range(20):
             self.bp.queue.append(msg)
         yield self.bp.processQueue()
         self.assertEqual(len(self.bp.queue), 0)
@@ -182,7 +190,7 @@ class BusPublisherTestCase(unittest.TestCase):
         self.bp.client.stub_connect()
         output = self.bp.client.channel.sent
         # on traite n-1 message, ce qui ne doit rien envoyer sur le bus
-        for i in range(count - 1):
+        for _i in range(count - 1):
             yield self.bp.write(msg)
         self.assertEqual(output, [])
         # on en envoie un de plus, ce qui doit envoyer un message accumulé

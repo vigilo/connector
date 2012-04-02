@@ -5,7 +5,7 @@
 from pkg_resources import resource_filename
 
 from twisted.internet import protocol
-from twisted.python import log, failure
+from twisted.python import failure
 
 from txamqp.protocol import AMQClient
 from txamqp.client import TwistedDelegate
@@ -49,15 +49,21 @@ class AmqpProtocol(AMQClient):
     lost.
     """
 
+    def __init__(self, *args, **kwargs):
+        AMQClient.__init__(self, *args, **kwargs)
+        self.factory = None
+        self.logTraffic = False
+
     def connectionMade(self):
         AMQClient.connectionMade(self)
         # Authenticate.
+        assert self.factory is not None
         deferred = self.start({"LOGIN": self.factory.user,
                                "PASSWORD": self.factory.password})
         deferred.addCallbacks(self._authenticated, self._authentication_failed)
 
 
-    def _authenticated(self, ignore, channum=1):
+    def _authenticated(self, _ignore, channum=1):
         """Called when the connection has been authenticated."""
         # Get a channel.
         d = self.channel(channum)

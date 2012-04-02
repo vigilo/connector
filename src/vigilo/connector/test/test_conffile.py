@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 # vim: set et sw=4 ts=4 ai:
-# pylint: disable-msg=R0904,C0111,W0613,W0212
 # Copyright (C) 2006-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
+
+# pylint: disable-msg=C0111,W0613,R0904,W0212
+# - C0111: Missing docstring
+# - W0613: Unused argument
+# - R0904: Too many public methods
+# - W0212: Access to a protected member of a client class
 
 from __future__ import absolute_import
 
@@ -13,9 +18,11 @@ import sqlite3
 import unittest
 
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
-# produites par ce module !!!
+# produites par ce module.
 #from twisted.trial import unittest
-from nose.twistedtools import reactor, deferred
+from nose.twistedtools import reactor  # pylint: disable-msg=W0611
+from nose.twistedtools import deferred
+
 
 from twisted.internet import defer
 from mock import Mock

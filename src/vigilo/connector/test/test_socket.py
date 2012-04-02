@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
-# pylint: disable-msg=C0111,W0613,R0904
 # Copyright (C) 2006-2011 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
+
+# pylint: disable-msg=C0111,W0613,R0904,W0212
+# - C0111: Missing docstring
+# - W0613: Unused argument
+# - R0904: Too many public methods
+# - W0212: Access to a protected member of a client class
 
 import os, os.path
 import tempfile
@@ -11,13 +16,14 @@ import unittest
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
 # produites par ce module !!!
 #from twisted.trial import unittest
-from nose.twistedtools import reactor, deferred
+from nose.twistedtools import reactor  # pylint: disable-msg=W0611
+from nose.twistedtools import deferred
 
 from twisted.internet import defer
 
 from vigilo.connector.socket import SocketListener
 
-from helpers import ConsumerStub
+from vigilo.connector.test.helpers import ConsumerStub
 
 from vigilo.common.logging import get_logger
 LOGGER = get_logger(__name__)
@@ -27,6 +33,8 @@ LOGGER = get_logger(__name__)
 from twisted.internet.protocol import ClientFactory
 from twisted.protocols.basic import LineOnlyReceiver
 class SendingHandler(LineOnlyReceiver):
+    # pylint: disable-msg=W0223
+    # W0223: Method 'lineReceived' is abstract but is not overridden
     delimiter = "\n"
     def connectionMade(self):
         self.sendLine(self.factory.message)
