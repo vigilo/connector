@@ -36,7 +36,7 @@ class ConfDBTest(unittest.TestCase):
     Gestion du protocole SNMP entre avec le démon
     """
 
-    @deferred(timeout=5)
+    @deferred(timeout=30)
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp(prefix="test-connector-")
         dbpath = os.path.join(self.tmpdir, "conf.db")
@@ -44,9 +44,11 @@ class ConfDBTest(unittest.TestCase):
         self.confdb = ConfDB(dbpath)
         return defer.succeed(None)
 
+    @deferred(timeout=30)
     def tearDown(self):
         self.confdb.stopService()
         rmtree(self.tmpdir)
+        return defer.succeed(None)
 
 
     def _create_db(self, db_path):
@@ -105,6 +107,7 @@ class ConfDBTest(unittest.TestCase):
         self.assertTrue(old_connection_threads <= new_connection_threads)
 
 
+    @deferred(timeout=30)
     def test_nodb(self):
         """La base n'existe pas"""
         confdb = ConfDB(os.path.join(self.tmpdir, "nonexistant.db"))
@@ -113,11 +116,14 @@ class ConfDBTest(unittest.TestCase):
         confdb.reload()
         self.assertFalse(confdb._read_conf.called)
         self.assertFalse(confdb._rebuild_cache.called)
+        return defer.succeed(None)
 
 
+    @deferred(timeout=30)
     def test_reload_nodb(self):
         """Rechargement alors que la base n'existe pas"""
         confdb = ConfDB(os.path.join(self.tmpdir, "nonexistant.db"))
         confdb._db = Mock()
         self.assertFalse(confdb._db.close.called)
         self.assertFalse(confdb._db.start.called)
+        return defer.succeed(None)
