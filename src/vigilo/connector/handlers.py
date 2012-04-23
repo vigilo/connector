@@ -331,7 +331,7 @@ class MessageHandler(BusHandler):
         Appelée quand le traitement d'un message a échoué : le message est
         rejeté.
         """
-        LOGGER.warning(error.getErrorMessage())
+        LOGGER.warning(u"%s", error.getErrorMessage())
         return self.producer.nack(msg)
 
 
