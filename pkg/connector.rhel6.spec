@@ -6,7 +6,7 @@ Version:    @VERSION@
 Release:    @RELEASE@%{?dist}
 Source0:    %{name}-%{version}.tar.gz
 URL:        @URL@
-Group:      System/Servers
+Group:      Applications/System
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-build
 License:    GPLv2
 Buildarch:  noarch

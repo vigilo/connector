@@ -1,5 +1,5 @@
 # -*- python -*-
 
-from Config import *
+from Config import addFilter
 
 addFilter("W: devel-file-in-non-devel-package /usr/bin/vigilo-bus-config")
