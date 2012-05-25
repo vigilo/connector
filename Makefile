@@ -13,6 +13,6 @@ install_pkg: $(PYTHON) settings.ini build
 
 lint: lint_pylint
 tests: tests_nose
-doc: apidoc
+doc: apidoc sphinxdoc
 clean: clean_python
 	rm -f settings.ini

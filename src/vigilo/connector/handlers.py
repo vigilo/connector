@@ -359,7 +359,7 @@ class MessageHandler(BusHandler):
 
     def subscribe(self, queue_name, bindings=None):
         """
-        Spéficie la file d'attente AMQP à dépiler, avec optionnellements des
+        Spéficie la file d'attente AMQP à dépiler, avec optionnellement des
         abonnements à réaliser.
 
         @param queue_name: nom de la file d'attente
