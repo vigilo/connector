@@ -28,15 +28,15 @@ Le module :py:mod:`vigilo.connector` contient les fichiers suivants :
     messages en attente.
 
 :file:`client.py`
-    Classes principales pour la gestion de la connexion au bus AMQP. Voir la
-    section ci-dessous pour un détail de ce module.
+    Classes principales pour la gestion de la connexion au bus AMQP. Pour plus
+    d'information, voir la documentation concernant le :ref:`dev_client.py`.
 
 :file:`handlers.py`
-    Classes spécifiques à la gestion d'un aspect d'un connecteur AMQP. Voir la
-    section ci-dessous pour un détail de ce module.
+    Classes spécifiques à la gestion d'un aspect d'un connecteur AMQP. Pour plus
+    d'information, voir la documentation concernant le :ref:`dev_handlers.py`.
 
 :file:`ipv6.py`
-    Classe et méthode pour ajouter une meilleure gestiond d'IPv6 à Twisted
+    Classe et méthode pour ajouter une meilleure gestion d'IPv6 à Twisted
     (par *monkey-patching*).
 
 :file:`socket.py`
@@ -44,7 +44,7 @@ Le module :py:mod:`vigilo.connector` contient les fichiers suivants :
     communication.
 
 :file:`conffile.py`
-    Classe permettant l'accès à un fichier ou un base SQLite de configuration
+    Classe permettant l'accès à un fichier ou une base SQLite de configuration
     télédistribuée par VigiConf, avec gestion du rechargement sur signal ou
     mise à jour du fichier.
 
@@ -57,6 +57,7 @@ Le module :py:mod:`vigilo.connector` contient les fichiers suivants :
     d'état des connecteurs sur le bus, avec leurs données de performance.
 
 
+..  _`dev_client.py`:
 
 Contenu du module :py:mod:`client`
 ----------------------------------
@@ -70,24 +71,24 @@ classes en fonction d'un fichier de *settings*.
 
 :py:class:`VigiloClient`
 ^^^^^^^^^^^^^^^^^^^^^^^^
-La classe :py:class:`VigiloClient` est implémentée sous la forme de services
-Twisted, elle gère :
+La classe :py:class:`VigiloClient` est implémentée sous la forme de
+`services Twisted`_, elle gère :
 
 - le choix du serveur AMQP auquel se connecter (possibilité d'en spécifier
-  plusieurs dans un cas de haute disponibilité)
-- l'envoi des messages sur le bus par la méthode :py:meth:`send`
+  plusieurs dans un cas de haute disponibilité) ;
+- l'envoi des messages sur le bus par la méthode :py:meth:`send` ;
 - l'abonnement de *handlers* aux évènements tels que le démarrage, l'arrêt et
   la connexion au bus, et la diffusion de ces évènements lorsqu'ils
-  surviennent
+  surviennent.
 
 La méthode :py:meth:`send` permet de demander l'envoi d'un message sur le bus,
 qui sera mis en attente si la connexion n'est pas encore établie. Régler
 l'option ``persistent`` à ``False`` si on veut que le message soit transitoire,
-c'est à dire qu'il ne soit pas conservé sur le bus en cas de non-connexion du
+c'est-à-dire qu'il ne soit pas conservé sur le bus en cas de non-connexion du
 ou des destinataires (cas du ``connector-vigiconf`` pour la haute
-disponibilité.
+disponibilité).
 
-Le mécanisme des *handlers* sera décrit dans la section ci-dessous.
+Le mécanisme des *handlers* est décrit dans la section :ref:`dev_handlers.py`.
 
 On peut instancier un :py:class:`VigiloClient` grâce à la méthode
 :py:func:`vigiloclient_factory`, qui prend en argument un fichier de
@@ -96,7 +97,7 @@ On peut instancier un :py:class:`VigiloClient` grâce à la méthode
 :py:class:`OneShotClient`
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 La classe :py:class:`OneShotClient` permet de créer un client à usage unique,
-c'est à dire qu'il se connecte au bus au démarrage, effectue son traitement, se
+c'est-à-dire qu'il se connecte au bus au démarrage, effectue son traitement, se
 déconnecte et s'arrête.
 
 Après instanciation de cette classe, il faut enregistrer une fonction de
@@ -108,6 +109,8 @@ On peut instancier un :py:class:`OneShotClient` grâce à la méthode
 :py:func:`oneshotclient_factory`, qui prend en argument un fichier de
 *settings*.
 
+
+..  _`dev_handlers.py`:
 
 Contenu du module :py:mod:`handlers`
 ------------------------------------
@@ -132,8 +135,12 @@ ci-dessous.
 :py:class:`QueueSubscriber`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Classe permettant de s'abonner à une file d'attente, et fonctionnant comme un
-``PullProducer`` : un appel à :py:meth:`resumeProducing` ne génère qu'un
-message.
+``PullProducer`` : un appel à :py:meth:`resumeProducing` ne permet de recevoir
+qu'un seul message. La méthode en elle-même ne retourne aucune valeur, mais
+elle utilise un |Deferred|_ retourné par la file d'attente pour appeler
+automatiquement la méthode :py:meth:`write` du consommateur
+(:py:class:`MessageHandler`) lorsqu'un message est effectivement mis
+en attente.
 
 Cette classe ne s'instancie généralement pas directement, on préfèrera utiliser
 la classe :py:class:`MessageHandler`.
@@ -142,7 +149,7 @@ la classe :py:class:`MessageHandler`.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 Classe permettant de gérer la réception des messages depuis le bus. Elle
 instancie :py:class:`QueueSubscriber` par l'appel à la méthode
-:py:meth:`subscribe`, reçoit les message qui en proviennent et les décode sous
+:py:meth:`subscribe`, reçoit les messages qui en proviennent et les décode sous
 la forme d'un dictionnaire.
 
 Les messages sont passés à la méthode :py:meth:`processMessage` qui doit être
@@ -158,9 +165,9 @@ héritage.
 ^^^^^^^^^^^^^^^^^^^^^^^^
 Classe permettant de gérer la publication des messages sur le bus.
 
-Elle agit en tant que consommatrice (``Consumer``) d'un producteur de tout type
-(``PushProducer`` ou ``PullProducer``) et demandera le message suivant à
-envoyer en fonction de ce type.
+Elle agit en tant que consommatrice (:py:class:`Consumer`) d'un producteur
+de tout type (:py:class:`PushProducer` ou :py:class:`PullProducer`)
+et demandera le message suivant à envoyer en fonction de ce type.
 
 Le message reçu est un dictionnaire, dont certaines clés sont utilisées pour
 déterminer la persistance et la clé de routage du message. Cette classe est
@@ -173,16 +180,16 @@ dans lequel les options sont spécifiées.
 
 :py:class:`BackupProvider`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-Classe fournissant un système de tampon sauvegardé entre un producteur de type
-``PushProducer`` (dont on ne contrôle pas le débit) et un consommateur. Elle
-ajoute à ce producteur la possibilité d'être mis en pause, auquel cas les
-données sont envoyées dans une file d'attente qui est sauvegardée sur le disque
-dans une base SQLite.  La classe de gestion de la base SQLite est
-:py:class:`store.DbRetry`.
+Classe fournissant un système de tampon avec persistance sur disque entre un
+producteur de type :py:class:`PushProducer` (dont on ne contrôle pas le débit)
+et un consommateur. Elle ajoute à ce producteur la possibilité d'être mis
+en pause, auquel cas les données sont envoyées dans une file d'attente
+qui est sauvegardée sur le disque dans une base SQLite.
+La classe de gestion de la base SQLite est :py:class:`store.DbRetry`.
 
 L'utilisation typique de cette classe est pour fournir un tampon dans le
-``connector-nagios`` entre les messages envoyés par Nagios et le bus, qui peut
-être déconnecté.
+``connector-nagios`` entre les messages envoyés par Nagios et le bus (le
+connecteur pouvant perdre sa connexion).
 
 La classe :py:class:`BackupProvider` peut être instanciée par la fonction
 :py:func:`backupprovider_factory` qui prend en argument le fichier *settings*
@@ -192,7 +199,7 @@ dans lequel les options sont spécifiées.
 Utilisation des classes
 =======================
 
-Par convention, le plugin ``twistd`` d'un connecteur ne contient que l'appel à
+Par convention, le plugin `twistd`_ d'un connecteur ne contient que l'appel à
 une fonction :py:func:`makeService` définie à la racine du module principal du
 connecteur (dans son fichier :file:`__init__.py`).
 
@@ -208,5 +215,12 @@ classes.
     Vigilo.
 
 
+..  _`services Twisted`:
+    http://twistedmatrix.com/documents/current/core/howto/application.html
+..  |Deferred| replace:: :py:class:`Deferred`
+..  _`Deferred`:
+    http://twistedmatrix.com/documents/current/core/howto/defer.html
+..  _`twistd`:
+    http://twistedmatrix.com/documents/current/core/howto/tap.html
 
 .. vim: set tw=79 :
