@@ -2,6 +2,8 @@
 # Copyright (C) 2010-2012 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
+import sys
+
 from twisted.internet import reactor, defer, tcp, ssl
 from twisted.application import service
 
@@ -25,8 +27,9 @@ def split_host_port(hostdef, use_ssl=False):
     """
     Découpe une définition hostname:port en couple (hostname, port)
     @todo: Support IPv6
+    @param hostdef: le serveur auxquel se connecter.
+    @type  hostdef: C{str}
     """
-    hostdef = hostdef.strip()
     if ":" in hostdef:
         host, port = hostdef.split(":")
         port = int(port)
@@ -46,8 +49,8 @@ class MultipleServerMixin:
 
     def setMultipleParams(self, hosts, parentClass):
         """
-        @param hosts: les serveurs auxquels se connecter
-        @type  hosts: C{str}
+        @param hosts: les serveurs auxquels se connecter.
+        @type  hosts: C{list}
         """
         self.hosts = hosts
         self.parentClass = parentClass
@@ -64,7 +67,12 @@ class MultipleServerMixin:
         LOGGER.info("Connecting to %s:%s", self.host, self.port)
 
     def connectionFailed(self, reason):
-        """Echec de la connexion, on marque le serveur comme inutilisable."""
+        """
+        Echec de la connexion, on marque le serveur comme inutilisable.
+
+        @param reason: La raison de la deconnexion.
+        @type  reason: C{twisted.python.failure.Failure}
+        """
         assert self._attemptsLeft is not None
         self._attemptsLeft -= 1
         if self._attemptsLeft == 0:
@@ -99,12 +107,13 @@ class VigiloClient(service.Service):
     """Client du bus Vigilo"""
 
 
-    def __init__(self, host, user, password, use_ssl=False,
+    def __init__(self, hosts, user, password, use_ssl=False,
                  max_delay=60, log_traffic=False):
         """
         Initialise le client.
-        @param host: le serveur AMQP
-        @type  host: C{str}
+        @param hosts: liste des serveurs AMQP, ou un serveur (si besoin,
+            spécifier le port après des deux-points).
+        @type  hosts: C{list} or C{str}
         @param user: Identifiant du client.
         @type  user: C{str}
         @param password: Mot de passe associé au compte.
@@ -115,7 +124,7 @@ class VigiloClient(service.Service):
             reconnexion.
         @type  max_delay: C{int}
         """
-        self.host = host
+        self.hosts = hosts
         self.user = user
         self.password = password
         self.use_ssl = use_ssl
@@ -167,6 +176,8 @@ class VigiloClient(service.Service):
         """
         Récupère l'instance du C{Connector} à utiliser en fonction de
         l'activation de SSL choisie.
+        @param hosts: liste des serveurs AMQP, ou un serveur.
+        @type  hosts: C{list} or C{str}
         """
         if self.use_ssl:
             return self._getConnectorSSL(hosts)
@@ -174,7 +185,12 @@ class VigiloClient(service.Service):
             return self._getConnectorTCP(hosts)
 
     def _getConnectorTCP(self, hosts):
-        """Retourne une instance du C{Connector} sans SSL"""
+        """
+        Retourne une instance du C{Connector} sans SSL
+        @param hosts: liste des serveurs AMQP, ou un serveur (si besoin,
+            spécifier le port après des deux-points).
+        @type  hosts: C{list} or C{str}
+        """
         class MultipleServerConnector(MultipleServerMixin, tcp.Connector):
             pass
         c = MultipleServerConnector(None, None, self.factory, 30, None,
@@ -183,7 +199,12 @@ class VigiloClient(service.Service):
         return c
 
     def _getConnectorSSL(self, hosts):
-        """Retourne une instance du C{Connector} avec SSL"""
+        """
+        Retourne une instance du C{Connector} avec SSL
+        @param hosts: liste des serveurs AMQP, ou un serveur (si besoin,
+            spécifier le port après des deux-points).
+        @type  hosts: C{list} or C{str}
+        """
         class MultipleServerConnector(MultipleServerMixin, ssl.Connector):
             pass
         context = ssl.ClientContextFactory()
@@ -195,13 +216,13 @@ class VigiloClient(service.Service):
 
     def _getConnection(self):
         """Connexion au serveur."""
-        if isinstance(self.host, list):
-            hosts = [ split_host_port(h, self.use_ssl) for h in self.host ]
+        if isinstance(self.hosts, list):
+            hosts = [ split_host_port(h, self.use_ssl) for h in self.hosts ]
             c = self._getConnector(hosts)
             c.connect()
             return c
         else:
-            host, port = split_host_port(self.host, self.use_ssl)
+            host, port = split_host_port(self.hosts, self.use_ssl)
             if self.use_ssl:
                 context = ssl.ClientContextFactory()
                 return reactor.connectSSL(host, port, self.factory, context)
@@ -210,6 +231,10 @@ class VigiloClient(service.Service):
 
 
     def initializationFailed(self, reason):
+        """
+        @param reason: La raison de la deconnexion.
+        @type  reason: C{twisted.python.failure.Failure}
+        """
         self.stopService()
         reason.raiseException()
 
@@ -242,7 +267,11 @@ class VigiloClient(service.Service):
 
 
     def connectionLost(self, reason):
-        """Perte de la connexion, on transmet l'info aux I{handlers}."""
+        """
+        Perte de la connexion, on transmet l'info aux I{handlers}.
+        @param reason: La raison de la deconnexion.
+        @type  reason: C{twisted.python.failure.Failure}
+        """
         self.deferred = defer.Deferred()
         # Notify all child services
         for h in self.handlers:
@@ -346,11 +375,19 @@ def client_factory(settings):
     @type  settings: C{vigilo.common.conf.settings}
     """
     # adresse du bus
-    host = settings['bus'].get('host')
-    if host is not None:
-        host = host.strip()
-        if " " in host:
-            host = [ h.strip() for h in host.split(" ") ]
+    hosts = settings['bus'].get('hosts')
+    if isinstance(hosts, list):
+        hosts = [ h.strip() for h in hosts]
+        for h in hosts:
+            if not h:
+                LOGGER.error(_('Invalid configuration value for option'
+                               '"%(key)s".') % {"key": "hosts"})
+                sys.exit(1)
+
+    if not hosts:
+        LOGGER.error(_('Missing configuration value for option "%(key)s".') %
+                {"key": "hosts"})
+        sys.exit(1)
 
     # SSL
     try:
@@ -367,7 +404,7 @@ def client_factory(settings):
         log_traffic = False
 
     vigilo_client = VigiloClient(
-            host,
+            hosts,
             settings['bus']['user'],
             settings['bus']['password'],
             use_ssl=use_ssl,
@@ -390,12 +427,12 @@ class OneShotClient(object):
 
     client_class = VigiloClient
 
-    def __init__(self, host, user, password, use_ssl=False,
+    def __init__(self, hosts, user, password, use_ssl=False,
                  lock_file=None, timeout=30):
         """
-        @param host: le hostname du serveur AMQP (si besoin, spécifier le port
-            après des deux-points)
-        @type  host: C{str}
+        @param hosts: liste des serveurs AMQP, ou un serveur (si besoin,
+            spécifier le port après des deux-points).
+        @type  hosts: C{list} or C{str}
         @param user: Identifiant AMQP du client.
         @type  user: C{str}
         @param password: Mot de passe associé au compte AMQP.
@@ -406,7 +443,7 @@ class OneShotClient(object):
             afin d'éviter des connecteurs "fous".
         @type  timeout: C{int}
         """
-        self.client = self.client_class(host, user, password, use_ssl)
+        self.client = self.client_class(hosts, user, password, use_ssl)
         self.lock_file = lock_file
         self.timeout = timeout
         self._result = 0
@@ -543,8 +580,22 @@ def oneshotclient_factory(settings):
     except KeyError:
         use_ssl = False
 
+    # adresse du bus
+    hosts = settings['bus'].get('hosts')
+    if isinstance(hosts, list):
+        hosts = [ h.strip() for h in hosts]
+        for h in hosts:
+            if not h:
+                LOGGER.error(_('Invalid configuration option %(key)s.') %
+                        {"key": "hosts"})
+                sys.exit(1)
+    if not hosts:
+        LOGGER.error(_('Missing configuration value for option %(key)s.') %
+                {"key": "hosts"})
+        sys.exit(1)
+
     vigilo_client = OneShotClient(
-            host=settings['bus'].get('host', 'localhost'),
+            hosts=hosts,
             user=settings['bus'].get('user', 'guest'),
             password=settings['bus'].get('password', 'guest'),
             use_ssl=use_ssl,

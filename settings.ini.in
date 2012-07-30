@@ -1,6 +1,10 @@
 [bus]
-; Nom ou adresse IP du serveur AMQP à utiliser.
-host = localhost
+; Liste des serveurs AMQP (noms ou adresses IP) à utiliser,
+; séparés par des virgules. Un numéro de port peut être spécifié
+; en ajoutant ":" suivi du numéro après le nom / l'adresse du serveur.
+; Par défaut, le port 5670 est utilisé lorsque l'option "use_ssl" vaut
+; False ou 5671 lorsque l'option vaut True.
+hosts = localhost
 
 ; Nom d'utilisateur à utiliser pour se connecter au bus.
 user = vigilo-admin

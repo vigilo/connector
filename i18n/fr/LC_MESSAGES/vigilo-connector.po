@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2012-03-27 11:34+0200\n"
+"PO-Revision-Date: 2012-07-30 16:19+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -18,76 +18,96 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 0.9.4\n"
 
-#: src/vigilo/connector/amqp.py:82
+#: src/vigilo/connector/amqp.py:88
 #, python-format
 msgid "Channel open failed: %s"
 msgstr "L'ouverture du canal a échoué : %s"
 
-#: src/vigilo/connector/amqp.py:86
+#: src/vigilo/connector/amqp.py:92
 #, python-format
 msgid "Error getting channel: %s"
 msgstr "Erreur à la récupération du canal : %s"
 
-#: src/vigilo/connector/amqp.py:90
+#: src/vigilo/connector/amqp.py:96
 #, python-format
 msgid "AMQP authentication failed: %s"
 msgstr "Échec de l'authentification AMQP : %s"
 
-#: src/vigilo/connector/amqp.py:94
+#: src/vigilo/connector/amqp.py:100
 #, python-format
 msgid "Channel %(id)d was unexpectedly closed, disconnecting. Reason: %(reason)s"
 msgstr ""
 "Le canal %(id)d a été fermé de manière inattendue, déconnexion. Raison : "
 "%(reason)s"
 
-#: src/vigilo/connector/client.py:77
+#: src/vigilo/connector/client.py:78
 #, python-format
 msgid "Server %(oldserver)s did not answer after %(attempts)d attempts"
 msgstr "Le serveur %(oldserver)s n'a pas répondu après %(attempts)d tentatives"
 
-#: src/vigilo/connector/client.py:251
+#: src/vigilo/connector/client.py:252
 #, python-format
 msgid "Lost connection to the bus (%s)"
 msgstr "Connexion au bus perdue (%s)"
 
-#: src/vigilo/connector/client.py:333
+#: src/vigilo/connector/client.py:334
 #, python-format
 msgid "Sending failed: %(reason)s"
 msgstr "L'envoi a échoué : %(reason)s"
 
-#: src/vigilo/connector/client.py:426
+#: src/vigilo/connector/client.py:356
+#, python-format
+msgid "Invalid configuration value for option \"%(key)s\"."
+msgstr "Valeur de configuration invalide pour l'option \"%(key)s\"."
+
+#: src/vigilo/connector/client.py:361
+#, python-format
+msgid "Missing configuration value for option \"%(key)s\"."
+msgstr "Valeur de configuration manquante pour l'option \"%(key)s\"."
+
+#: src/vigilo/connector/client.py:436
 #, python-format
 msgid "Creating lock file in %s"
 msgstr "Création d'un fichier de verrou dans %s"
 
-#: src/vigilo/connector/client.py:429
+#: src/vigilo/connector/client.py:439
 #, python-format
 msgid "Lock file successfully created in %s"
 msgstr "Fichier de verrou créé avec succès dans %s"
 
-#: src/vigilo/connector/client.py:434
+#: src/vigilo/connector/client.py:444
 msgid "Error: lockfile found, another instance may be running."
 msgstr ""
 "Erreur : le fichier de verrou a été trouvé, une autre instance est "
 "peut-être en fonctionnement."
 
-#: src/vigilo/connector/client.py:447
+#: src/vigilo/connector/client.py:457
 #, python-format
 msgid "Error %(code)s: %(message)s"
 msgstr "Erreur %(code)s : %(message)s"
 
-#: src/vigilo/connector/client.py:454
+#: src/vigilo/connector/client.py:464
 #, python-format
 msgid "Error: %s"
 msgstr "Erreur : %s"
 
-#: src/vigilo/connector/client.py:460
+#: src/vigilo/connector/client.py:470
 msgid "Timeout"
 msgstr "Délai dépassé"
 
-#: src/vigilo/connector/client.py:519
+#: src/vigilo/connector/client.py:529
 msgid "No handler registered for this one-shot client"
 msgstr "Aucune fonction de traitement n'a été enregistrée pour ce client jetable"
+
+#: src/vigilo/connector/client.py:563
+#, python-format
+msgid "Invalid configuration option %(key)s."
+msgstr "Option de configuration invalide %(key)s."
+
+#: src/vigilo/connector/client.py:567
+#, python-format
+msgid "Missing configuration value for option %(key)s."
+msgstr ""
 
 #: src/vigilo/connector/conffile.py:76
 msgid "Received signal to reload the configuration"
@@ -234,24 +254,24 @@ msgstr "Ne peut pas initialiser la file d'attente : %(reason)s"
 msgid "Can't resume producing: not connected yet"
 msgstr "Impossible de reprendre la production : pas encore connecté"
 
-#: src/vigilo/connector/handlers.py:286
+#: src/vigilo/connector/handlers.py:288
 #, python-format
 msgid "Received message is not JSON-encoded: %r"
 msgstr "Le message reçu n'est pas encodé en JSON : %r"
 
-#: src/vigilo/connector/handlers.py:720
+#: src/vigilo/connector/handlers.py:725
 #, python-format
 msgid "Requeuing message (%(reason)s)."
 msgstr "Remise en attente du message (%(reason)s)."
 
-#: src/vigilo/connector/handlers.py:730
+#: src/vigilo/connector/handlers.py:735
 #, python-format
 msgid "Error trying to save a message to the backup database: %s"
 msgstr ""
 "Erreur lors de l'enregistrement du message en base de données de "
 "sauvegarde : %s"
 
-#: src/vigilo/connector/handlers.py:792
+#: src/vigilo/connector/handlers.py:797
 #, python-format
 msgid ""
 "Can't understand the max_queue_size option, it should be an integer (or 0"
@@ -260,25 +280,25 @@ msgstr ""
 "Impossible de lire l'option max_queue_size. Un nombre entier (ou 0 pour "
 "supprimer la limite) doit être renseigné. Valeur actuelle : %s"
 
-#: src/vigilo/connector/handlers.py:800
+#: src/vigilo/connector/handlers.py:805
 msgid "The max_queue_size option is only available on Python >= 2.6. Ignoring."
 msgstr "L'option max_queue_size n'est disponible que pour Python >= 2.6. Ignorée."
 
-#: src/vigilo/connector/handlers.py:808 src/vigilo/connector/socket.py:112
+#: src/vigilo/connector/handlers.py:813 src/vigilo/connector/socket.py:114
 #, python-format
 msgid "Directory not found: '%(dir)s'"
 msgstr "Dossier non trouvé : '%(dir)s'"
 
-#: src/vigilo/connector/handlers.py:813 src/vigilo/connector/socket.py:119
+#: src/vigilo/connector/handlers.py:818 src/vigilo/connector/socket.py:121
 #, python-format
 msgid "Wrong permissions on directory: '%(dir)s'"
 msgstr "Permissions incorrectes sur le répertoire : '%(dir)s'"
 
-#: src/vigilo/connector/options.py:23
+#: src/vigilo/connector/options.py:26
 msgid "Load this settings.ini file"
 msgstr "Utiliser ce fichier settings.ini"
 
-#: src/vigilo/connector/options.py:48
+#: src/vigilo/connector/options.py:51
 msgid "The configuration file does not exist"
 msgstr "Le fichier de configuration n'existe pas"
 
@@ -292,21 +312,21 @@ msgstr "Message mal-formé: %s"
 msgid "Unknown/malformed message type: '%s'"
 msgstr "Type de message inconnu ou message mal-formé: '%s'"
 
-#: src/vigilo/connector/socket.py:38
+#: src/vigilo/connector/socket.py:40
 #, python-format
 msgid "Unparsable line: %s"
 msgstr "Ligne illisible : %s"
 
-#: src/vigilo/connector/status.py:60
+#: src/vigilo/connector/status.py:61
 msgid "OK: running"
 msgstr "OK: en fonctionnement"
 
-#: src/vigilo/connector/status.py:159
+#: src/vigilo/connector/status.py:160
 #, python-format
 msgid "Stats for %(service)s: %(name)s = %(value)s"
 msgstr "Statistiques pour %(service)s : %(name)s = %(value)s"
 
-#: src/vigilo/connector/store.py:190 src/vigilo/connector/store.py:289
+#: src/vigilo/connector/store.py:190 src/vigilo/connector/store.py:290
 #, python-format
 msgid "Could not fill the output buffer: %s"
 msgstr "Impossible de remplir le tampon en sortie : %s"
@@ -315,4 +335,5 @@ msgstr "Impossible de remplir le tampon en sortie : %s"
 #, python-format
 msgid "Could not VACUUM the database: %s"
 msgstr "Impossible de purger la base de données (VACUUM) : %s"
+
 
