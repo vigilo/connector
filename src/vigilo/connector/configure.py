@@ -233,7 +233,7 @@ def main():
         log_traffic = False
 
     manager = BusManager()
-    client = OneShotClient(host=args.server, user=args.user,
+    client = OneShotClient(hosts=args.server, user=args.user,
                            password=args.password, use_ssl=False)
 
     client.setHandler(manager.run, args)
