@@ -47,13 +47,14 @@ class ChannelStub(object):
         return defer.succeed(None)
 
 
-    def queue_declare(self, queue, durable, exclusive, auto_delete):
+    def queue_declare(self, queue, durable, exclusive, auto_delete, arguments):
         self.sent.append( {
             "method": "queue_declare",
             "queue": queue,
             "durable": durable,
             "exclusive": exclusive,
             "auto_delete": auto_delete,
+            "arguments": arguments,
             })
         self.queues[queue] = TimeoutDeferredQueue()
         return defer.succeed(None)
@@ -158,5 +159,3 @@ class ConnectionPoolStub(object):
 
     def __getattr__(self, name):
         return getattr(self.parent, name)
-
-

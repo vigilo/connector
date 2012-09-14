@@ -233,7 +233,7 @@ class QueueSubscriberTestCase(unittest.TestCase):
         self.qs.consumer.write.side_effect = lambda msg: self.qs.resumeProducing()
         self.qs.client.stub_connect()
         self.qs.resumeProducing()
-        print "déconnexion"
+        print "deconnexion"
         self.qs._queue.close()
         self.qs.connectionLost(None)
         print "reconnexion"

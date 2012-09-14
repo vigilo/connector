@@ -147,7 +147,8 @@ class QueueSubscriber(BusHandler):
         if not self._channel:
             return defer.succeed(None)
         d = self._channel.queue_declare(queue=self.queue_name,
-                    durable=True, exclusive=False, auto_delete=False)
+                    durable=True, exclusive=False, auto_delete=False,
+                    arguments={'x-ha-policy': 'all'})
         return d
 
     def _bind(self):
