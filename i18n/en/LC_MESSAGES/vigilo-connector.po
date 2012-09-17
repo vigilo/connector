@@ -6,10 +6,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: vigilo-connector 2.1.1\n"
+"Project-Id-Version: vigilo-connector 2.1.2\n"
 "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
-"POT-Creation-Date: 2012-07-30 16:19+0200\n"
-"PO-Revision-Date: 2012-07-30 16:19+0200\n"
+"POT-Creation-Date: 2012-09-17 11:39+0200\n"
+"PO-Revision-Date: 2012-09-17 11:39+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: en <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -38,72 +38,62 @@ msgstr "AMQP authentication failed: %s"
 msgid "Channel %(id)d was unexpectedly closed, disconnecting. Reason: %(reason)s"
 msgstr "Channel %(id)d was unexpectedly closed, disconnecting. Reason: %(reason)s"
 
-#: src/vigilo/connector/client.py:78
+#: src/vigilo/connector/client.py:85
 #, python-format
 msgid "Server %(oldserver)s did not answer after %(attempts)d attempts"
 msgstr "Server %(oldserver)s did not answer after %(attempts)d attempts"
 
-#: src/vigilo/connector/client.py:252
+#: src/vigilo/connector/client.py:280
 #, python-format
 msgid "Lost connection to the bus (%s)"
 msgstr "Lost connection to the bus (%s)"
 
-#: src/vigilo/connector/client.py:334
+#: src/vigilo/connector/client.py:362
 #, python-format
 msgid "Sending failed: %(reason)s"
 msgstr "Sending failed: %(reason)s"
 
-#: src/vigilo/connector/client.py:356
+#: src/vigilo/connector/client.py:383 src/vigilo/connector/client.py:589
 #, python-format
 msgid "Invalid configuration value for option \"%(key)s\"."
 msgstr "Invalid configuration value for option \"%(key)s\"."
 
-#: src/vigilo/connector/client.py:361
+#: src/vigilo/connector/client.py:388 src/vigilo/connector/client.py:594
 #, python-format
 msgid "Missing configuration value for option \"%(key)s\"."
 msgstr "Missing configuration value for option \"%(key)s\"."
 
-#: src/vigilo/connector/client.py:436
+#: src/vigilo/connector/client.py:463
 #, python-format
 msgid "Creating lock file in %s"
 msgstr "Creating lock file in %s"
 
-#: src/vigilo/connector/client.py:439
+#: src/vigilo/connector/client.py:466
 #, python-format
 msgid "Lock file successfully created in %s"
 msgstr "Lock file successfully created in %s"
 
-#: src/vigilo/connector/client.py:444
+#: src/vigilo/connector/client.py:471
 msgid "Error: lockfile found, another instance may be running."
 msgstr "Error: lockfile found, another instance may be running."
 
-#: src/vigilo/connector/client.py:457
+#: src/vigilo/connector/client.py:484
 #, python-format
 msgid "Error %(code)s: %(message)s"
 msgstr "Error %(code)s: %(message)s"
 
-#: src/vigilo/connector/client.py:464
+#: src/vigilo/connector/client.py:491
 #, python-format
 msgid "Error: %s"
 msgstr "Error: %s"
 
-#: src/vigilo/connector/client.py:470
+#: src/vigilo/connector/client.py:497
 msgid "Timeout"
 msgstr "Timeout"
 
-#: src/vigilo/connector/client.py:529
+#: src/vigilo/connector/client.py:556
 msgid "No handler registered for this one-shot client"
 msgstr "No handler registered for this one-shot client"
-
-#: src/vigilo/connector/client.py:563
-#, python-format
-msgid "Invalid configuration option %(key)s."
-msgstr "Invalid configuration option %(key)s."
-
-#: src/vigilo/connector/client.py:567
-#, python-format
-msgid "Missing configuration value for option %(key)s."
-msgstr "Missing configuration value for option %(key)s."
 
 #: src/vigilo/connector/conffile.py:76
 msgid "Received signal to reload the configuration"
@@ -242,26 +232,26 @@ msgstr "Configuration file"
 msgid "Could not initialize the queue: %(reason)s"
 msgstr "Could not initialize the queue: %(reason)s"
 
-#: src/vigilo/connector/handlers.py:192
+#: src/vigilo/connector/handlers.py:193
 msgid "Can't resume producing: not connected yet"
 msgstr "Can't resume producing: not connected yet"
 
-#: src/vigilo/connector/handlers.py:288
+#: src/vigilo/connector/handlers.py:289
 #, python-format
 msgid "Received message is not JSON-encoded: %r"
 msgstr "Received message is not JSON-encoded: %r"
 
-#: src/vigilo/connector/handlers.py:725
+#: src/vigilo/connector/handlers.py:726
 #, python-format
 msgid "Requeuing message (%(reason)s)."
 msgstr "Requeuing message (%(reason)s)."
 
-#: src/vigilo/connector/handlers.py:735
+#: src/vigilo/connector/handlers.py:736
 #, python-format
 msgid "Error trying to save a message to the backup database: %s"
 msgstr "Error trying to save a message to the backup database: %s"
 
-#: src/vigilo/connector/handlers.py:797
+#: src/vigilo/connector/handlers.py:798
 #, python-format
 msgid ""
 "Can't understand the max_queue_size option, it should be an integer (or 0"
@@ -270,16 +260,16 @@ msgstr ""
 "Can't understand the max_queue_size option, it should be an integer (or 0"
 " for no limit). Current value: %s"
 
-#: src/vigilo/connector/handlers.py:805
+#: src/vigilo/connector/handlers.py:806
 msgid "The max_queue_size option is only available on Python >= 2.6. Ignoring."
 msgstr "The max_queue_size option is only available on Python >= 2.6. Ignoring."
 
-#: src/vigilo/connector/handlers.py:813 src/vigilo/connector/socket.py:114
+#: src/vigilo/connector/handlers.py:814 src/vigilo/connector/socket.py:114
 #, python-format
 msgid "Directory not found: '%(dir)s'"
 msgstr "Directory not found: '%(dir)s'"
 
-#: src/vigilo/connector/handlers.py:818 src/vigilo/connector/socket.py:121
+#: src/vigilo/connector/handlers.py:819 src/vigilo/connector/socket.py:121
 #, python-format
 msgid "Wrong permissions on directory: '%(dir)s'"
 msgstr "Wrong permissions on directory: '%(dir)s'"
@@ -306,6 +296,15 @@ msgstr "Unknown/malformed message type: '%s'"
 #, python-format
 msgid "Unparsable line: %s"
 msgstr "Unparsable line: %s"
+
+#: src/vigilo/connector/ssl.py:102
+#, python-format
+msgid ""
+"Machine hostname (%(hostname)s) does not match certificate CommonName "
+"(%(cn)s)"
+msgstr ""
+"Machine hostname (%(hostname)s) does not match certificate CommonName "
+"(%(cn)s)"
 
 #: src/vigilo/connector/status.py:61
 msgid "OK: running"

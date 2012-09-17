@@ -2,6 +2,16 @@
 # Copyright (C) 2006-2012 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
+"""
+Bibliothèque de fonctions/classes pour faciliter le support
+de SSL/TLS dans un connecteur.
+"""
+
+# pylint: disable-msg=W0611
+# Unused import ...
+# (ce module importe les noms issues de twisted.internet.ssl pour
+# assurer la compatibilité avec ce dernier)
+
 from __future__ import absolute_import
 
 from OpenSSL import SSL, crypto

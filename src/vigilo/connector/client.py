@@ -380,7 +380,7 @@ def client_factory(settings):
         hosts = [ h.strip() for h in hosts]
         for h in hosts:
             if not h:
-                LOGGER.error(_('Invalid configuration value for option'
+                LOGGER.error(_('Invalid configuration value for option '
                                '"%(key)s".') % {"key": "hosts"})
                 sys.exit(1)
 
@@ -586,11 +586,12 @@ def oneshotclient_factory(settings):
         hosts = [ h.strip() for h in hosts]
         for h in hosts:
             if not h:
-                LOGGER.error(_('Invalid configuration option %(key)s.') %
+                LOGGER.error(_('Invalid configuration value '
+                               'for option "%(key)s".') %
                         {"key": "hosts"})
                 sys.exit(1)
     if not hosts:
-        LOGGER.error(_('Missing configuration value for option %(key)s.') %
+        LOGGER.error(_('Missing configuration value for option "%(key)s".') %
                 {"key": "hosts"})
         sys.exit(1)
 
