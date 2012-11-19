@@ -73,7 +73,12 @@ class SocketListener(Service):
         Service.startService(self)
         if os.path.exists(self.socket_filename):
             os.remove(self.socket_filename)
-        self._socket = reactor.listenUNIX(self.socket_filename, self.factory)
+        self._socket = reactor.listenUNIX(
+            self.socket_filename,
+            self.factory,
+            # rw-rw---- vigilo-nagios:vigilo-nagios
+            mode=0660,
+        )
         return defer.succeed(None)
 
 
