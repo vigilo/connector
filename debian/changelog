@@ -1,0 +1,11 @@
+vigilo-connector (3.0.0.dev-gb23002a-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Francois Poirotte <francois.poirotte@c-s.fr>  Sat, 24 Nov 2012 11:47:59 +0100
+
+vigilo-connector (2.1.2.dev-g0d9fe29-1) unstable; urgency=low
+
+  * Initial release
+
+ -- Francois Poirotte <francois.poirotte@c-s.fr>  Wed, 07 Nov 2012 19:34:34 +0100

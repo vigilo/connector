@@ -1,0 +1,11 @@
+Document: vigilo-connector-manual
+Title: Vigilo connector manual
+Author: Vigilo Team
+Abstract: The vigilo-connector paquage provides
+ a library to ease creation of new AMQP connectors
+ for Vigilo.
+Section: Text
+
+Format: HTML
+Index: /usr/share/doc/vigilo-connector-doc/html/index.html
+Files: /usr/share/doc/vigilo-connector-doc/html/*

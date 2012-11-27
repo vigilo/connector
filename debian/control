@@ -1,0 +1,29 @@
+Source: vigilo-connector
+Section: python
+Priority: extra
+Maintainer: Vigilo Team <contact@projet-vigilo.org>
+Build-Depends:
+ debhelper (>= 7.0.50~),
+ python (>= 2.6.6-3~),
+ python-setuptools
+Standards-Version: 3.8.4
+Homepage: http://www.projet-vigilo.org/
+X-Python-Version: >= 2.5
+
+Package: vigilo-connector
+Architecture: all
+Suggests: vigilo-connector-doc
+Depends: ${misc:Depends}, ${python:Depends}
+Description: Vigilo AMQP connector library
+ This library gives an API to create an AMQP
+ connector for Vigilo.
+
+Package: vigilo-connector-doc
+Architecture: all
+Section: doc
+Depends: ${sphinxdoc:Depends} ${misc:Depends}
+Description: Vigilo AMQP connector library (documentation)
+ This library gives an API to create an AMQP
+ connector for Vigilo.
+ .
+ This package contains documentation about Vigilo connectors.

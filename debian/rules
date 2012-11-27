@@ -1,0 +1,43 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+export DH_OPTIONS=-v
+
+PKGNAME=$(shell printf "%s" `dpkg-parsechangelog | grep '^Source:' | cut -d: -f2-`)
+VERSION=$(shell printf "%s" `dpkg-parsechangelog | grep '^Version:' | cut -d: -f2-`)
+
+%:
+	dh $@ --with python2,sphinxdoc
+
+override_dh_auto_clean:
+	dh_auto_clean -- buildclean
+
+override_dh_auto_build:
+
+override_dh_auto_install:
+	python setup.py install --root=debian/$(PKGNAME) \
+		--single-version-externally-managed \
+		--install-layout=deb
+
+override_dh_auto_test:
+
+override_dh_installdocs:
+ifneq "$(shell dh_listpackages | grep -- -doc)" ""
+	PYTHONPATH=src/ sphinx-build -b html -d doc/_build/doctrees \
+		-D version=$(VERSION) -D release=$(VERSION) \
+		doc/ debian/$(PKGNAME)-doc/usr/share/doc/$(PKGNAME)-doc/html/
+endif
+
+override_dh_sphinxdoc:
+ifneq "$(shell dh_listpackages | grep -- -doc)" ""
+	dh_sphinxdoc -p $(PKGNAME)-doc
+endif
+
+.PHONY: override_dh_auto_clean \
+		override_dh_auto_build \
+		override_dh_auto_install \
+		override_dh_auto_test \
+		override_dh_installdocs \
+		override_dh_sphinxdoc

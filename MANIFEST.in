@@ -6,6 +6,7 @@ include COPYING.txt
 
 graft doc
 graft pkg
+graft debian
 recursive-include i18n *.pot *.po
 
 include settings.ini.in
