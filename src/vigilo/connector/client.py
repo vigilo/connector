@@ -2,6 +2,7 @@
 # Copyright (C) 2010-2012 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
+import re
 import sys
 
 from twisted.internet import reactor, defer, tcp, ssl
@@ -26,20 +27,64 @@ from vigilo.connector.interfaces import IBusHandler
 
 def split_host_port(hostdef, use_ssl=False):
     """
-    Découpe une définition hostname:port en couple (hostname, port)
-    @todo: Support IPv6
+    Découpe une définition ``hostname:port`` en couple (hostname, port).
+    L'hôte peut être désigné par son nom de machine (éventuellement qualifié),
+    une adresse IPv4 ou une adresse IPv6. Dans le cas d'une adresse IPv6,
+    celle-ci doit être encadrée par les caractères "[" et "]".
+
+    Exemple d'utilisation d'un port non-standard avec une adresse IPv6 :
+    "[::1]:1337"
+
     @param hostdef: le serveur auxquel se connecter.
     @type  hostdef: C{str}
     """
-    if ":" in hostdef:
-        host, port = hostdef.split(":")
-        port = int(port)
-    else:
-        host = hostdef
+    match = re.match(r"""
+            ^                   # Toute la chaîne doit matcher.
+            (?P<host>           # Groupe nommé "host" pour matcher l'hôte.
+                                #
+                \[              # Les IPv6 sont représentées entre crochets.
+                    [^]]+       # On autorise n'importe quel caractère
+                \]              # jusqu'au crochant fermant (le but n'est
+                                # pas de valider l'adresse).
+                                #
+                |               # ou alors...
+                                #
+                [^:[]+          # IPv4 ou hôte (qualifié). On accepte n'importe
+                                # quel caractère sauf les deux points qui
+                                # servent à séparer le port de l'hôte et le
+                                # crochet ouvrant (réservé pour les IPv6).
+            )
+            (?:                 # On utilise un positive look-ahead
+                                # (groupe non capturant) pour tester
+                                # la présence éventuelle d'un port.
+                                #
+                :               # Matche le port, qui doit être séparé
+                (?P<port>       # de l'hôte par le symbole ":" et ne
+                    [0-9]+      # contenir que des chiffres.
+                )
+            )?                  # Le port est optionnel.
+            $                   # Toute la chaîne doit matcher.
+        """,
+        hostdef,
+        re.VERBOSE)
+    if not match:
+        raise ValueError("Invalid hostname/port")
+    groups = match.groupdict()
+    host = groups['host']
+    port = groups['port']
+
+    # Cas des adresses IPv6.
+    if host.startswith('['):
+        host = host[1:-1]
+
+    if port is None:
+        # Utilisation des ports par défaut.
         if use_ssl:
             port = 5671
         else:
             port = 5670
+    else:
+        port = int(port)
     return host, port
 
 

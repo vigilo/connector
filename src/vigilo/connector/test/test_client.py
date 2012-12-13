@@ -17,6 +17,7 @@ from configobj import ConfigObj
 from vigilo.connector.client import MultipleServerConnector
 from vigilo.connector.client import client_factory, oneshotclient_factory
 from vigilo.connector.client import VigiloClient
+from vigilo.connector.client import split_host_port
 
 class MSCTestCase(unittest.TestCase):
     """Teste L{MultipleServerConnector}"""
@@ -172,3 +173,45 @@ class VigiloClientTestCase(unittest.TestCase):
             self.assertEqual(args["immediate"], True)
         d.addCallback(check)
         return d
+
+class HostAndPortSplitting(unittest.TestCase):
+    def test_valid_splits(self):
+        """Éclatement hôte/port pour des chaînes valides."""
+        values = {
+            'localhost:1234':   ('localhost',   1234, 1234),
+            'localhost':        ('localhost',   5670, 5671),
+            'example.com:0123': ('example.com',  123,  123),
+            'example.com':      ('example.com', 5670, 5671),
+            '127.0.0.1:2345':   ('127.0.0.1',   2345, 2345),
+            '127.0.0.1':        ('127.0.0.1',   5670, 5671),
+            '[::1]:3456':       ('::1',         3456, 3456),
+            '[::1]':            ('::1',         5670, 5671),
+        }
+        for inp, outp in values.iteritems():
+            expectedHost, expectedTCP, expectedSSL = outp
+            # On teste d'abord en plain-text.
+            actualHost, actualPort = split_host_port(inp, False)
+            self.assertEqual(expectedHost, actualHost)
+            self.assertEqual(expectedTCP,  actualPort)
+            # Puis en SSL/TLS.
+            actualHost, actualPort = split_host_port(inp, True)
+            self.assertEqual(expectedHost, actualHost)
+            self.assertEqual(expectedSSL,  actualPort)
+
+    def test_invalid_splits(self):
+        """Éclatement hôte/port pour des chaînes non valides."""
+        values = (
+            'localhost:',       # Port manquant (hostname).
+            'example.com:',     # Port manquant (hostname qualifié).
+            '127.0.0.1:',       # Port manquant (IPv4).
+            '[::1]:',           # Port manquant (IPv6).
+            ':1234',            # Hôte manquant.
+            '::1:2345',         # Crochets manquants autour d'une IPv6.
+        )
+        for value in values:
+            try:
+                split_host_port(value)
+            except ValueError:
+                pass
+            else:
+                self.fail('An exception was expected for value %s' % value)
