@@ -14,13 +14,9 @@ import mock
 from twisted.internet import protocol, tcp, defer
 from configobj import ConfigObj
 
-from vigilo.connector.client import MultipleServerMixin
-#from vigilo.connector.client import MultipleServersXmlStreamFactory
+from vigilo.connector.client import MultipleServerConnector
 from vigilo.connector.client import client_factory, oneshotclient_factory
 from vigilo.connector.client import VigiloClient
-
-class MultipleServerConnector(MultipleServerMixin, tcp.Connector):
-    pass
 
 class MSCTestCase(unittest.TestCase):
     """Teste L{MultipleServerConnector}"""

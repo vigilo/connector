@@ -5,6 +5,7 @@
 import sys
 
 from twisted.internet import reactor, defer, tcp, ssl
+from twisted.protocols import tls
 from twisted.application import service
 
 from txamqp.content import Content
@@ -42,8 +43,11 @@ def split_host_port(hostdef, use_ssl=False):
     return host, port
 
 
-
 class MultipleServerMixin:
+    """
+    Un mixin permettant la connexion en cascade à plusieurs serveurs
+    à partir du même connecteur.
+    """
     # attribute defined outside __init__
     # pylint: disable-msg=W0201
 
@@ -101,6 +105,13 @@ class MultipleServerMixin:
         self.pickServer()
         return self.parentClass._makeTransport(self)
 
+
+class MultipleServerConnector(MultipleServerMixin, tcp.Connector):
+    """
+    Un connecteur Twisted capable de supporter des connexions à plusieurs
+    serveurs simultanément.
+    """
+    pass
 
 
 class VigiloClient(service.Service):
@@ -180,38 +191,37 @@ class VigiloClient(service.Service):
         @type  hosts: C{list} or C{str}
         """
         if self.use_ssl:
-            return self._getConnectorSSL(hosts)
+            return self._getConnectorSSL(self.factory, hosts)
         else:
-            return self._getConnectorTCP(hosts)
+            return self._getConnectorTCP(self.factory, hosts)
 
-    def _getConnectorTCP(self, hosts):
+    def _getConnectorTCP(self, factory, hosts):
         """
         Retourne une instance du C{Connector} sans SSL
         @param hosts: liste des serveurs AMQP, ou un serveur (si besoin,
             spécifier le port après des deux-points).
         @type  hosts: C{list} or C{str}
         """
-        class MultipleServerConnector(MultipleServerMixin, tcp.Connector):
-            pass
-        c = MultipleServerConnector(None, None, self.factory, 30, None,
+        c = MultipleServerConnector(None, None, factory, 30, None,
                                     reactor=reactor)
         c.setMultipleParams(hosts, tcp.Connector)
         return c
 
-    def _getConnectorSSL(self, hosts):
+    def _getConnectorSSL(self, factory, hosts):
         """
         Retourne une instance du C{Connector} avec SSL
         @param hosts: liste des serveurs AMQP, ou un serveur (si besoin,
             spécifier le port après des deux-points).
         @type  hosts: C{list} or C{str}
         """
-        class MultipleServerConnector(MultipleServerMixin, ssl.Connector):
-            pass
         context = ssl.ClientContextFactory()
-        c = MultipleServerConnector(None, None, self.factory, context, 30,
-                                    None, reactor=reactor)
-        c.setMultipleParams(hosts, ssl.Connector)
-        return c
+        # Le principe est repris de connectSSL(), à ceci près qu'on
+        # n'essaye pas de re-basculer vers le support des anciennes versions
+        # de OpenSSL/pyOpenSSL lorsque TLSMemoryBIOFactory n'est pas
+        # disponible (via ssl.Connector); ceci provoque de toute façon
+        # des erreurs liées à la couche de transport (cf. #1112).
+        tlsFactory = tls.TLSMemoryBIOFactory(context, True, factory)
+        return self._getConnectorTCP(tlsFactory, hosts)
 
 
     def _getConnection(self):
