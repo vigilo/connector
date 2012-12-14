@@ -109,7 +109,7 @@ class MultipleServerMixin:
 class MultipleServerConnector(MultipleServerMixin, tcp.Connector):
     """
     Un connecteur Twisted capable de supporter des connexions à plusieurs
-    serveurs simultanément.
+    serveurs en cascade.
     """
     pass
 
