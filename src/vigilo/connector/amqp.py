@@ -170,4 +170,8 @@ class AmqpFactory(protocol.ReconnectingClientFactory):
         d = self.channel.channel_close()
         d.addCallback(lambda _r: self.p.channel(0))
         d.addCallback(lambda ch: ch.connection_close())
+        # Sous RabbitMQ 3.0.x, le fait d'appeler connection_close()
+        # sur le canal ne suffit plus à fermer la connexion
+        # (comportement constaté avec 3.0.0 et 3.0.1 sous Debian Squeeze).
+        d.addCallback(lambda _r: self.p.transport.loseConnection())
         return d
