@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
-# Copyright (C) 2011-2012 CS-SI
+# Copyright (C) 2011-2013 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 """
 Contient des extensions pour les classes de Twisted
