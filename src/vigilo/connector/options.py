@@ -24,6 +24,7 @@ class Options(usage.Options):
     """
     optParameters = [
             ["config", "c", None, _("Load this settings.ini file")],
+            ["id", None, 0, _("Unique ID for this instance"), int],
         ]
 
     def __init__(self, module):
@@ -82,6 +83,8 @@ def getSettings(options, module):
         settings.load_file(options["config"])
     else:
         settings.load_module(module)
+    # On propage l'identifiant de l'instance via les settings.
+    settings["instance"] = options["id"]
     return settings
 
 

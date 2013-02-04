@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2012-09-17 11:39+0200\n"
+"PO-Revision-Date: 2013-02-04 15:48+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -40,62 +40,62 @@ msgstr ""
 "Le canal %(id)d a été fermé de manière inattendue, déconnexion. Raison : "
 "%(reason)s"
 
-#: src/vigilo/connector/client.py:85
+#: src/vigilo/connector/client.py:134
 #, python-format
 msgid "Server %(oldserver)s did not answer after %(attempts)d attempts"
 msgstr "Le serveur %(oldserver)s n'a pas répondu après %(attempts)d tentatives"
 
-#: src/vigilo/connector/client.py:280
+#: src/vigilo/connector/client.py:335
 #, python-format
 msgid "Lost connection to the bus (%s)"
 msgstr "Connexion au bus perdue (%s)"
 
-#: src/vigilo/connector/client.py:362
+#: src/vigilo/connector/client.py:417
 #, python-format
 msgid "Sending failed: %(reason)s"
 msgstr "L'envoi a échoué : %(reason)s"
 
-#: src/vigilo/connector/client.py:383 src/vigilo/connector/client.py:589
+#: src/vigilo/connector/client.py:438 src/vigilo/connector/client.py:644
 #, python-format
 msgid "Invalid configuration value for option \"%(key)s\"."
 msgstr "Valeur de configuration non valide pour l'option \"%(key)s\"."
 
-#: src/vigilo/connector/client.py:388 src/vigilo/connector/client.py:594
+#: src/vigilo/connector/client.py:443 src/vigilo/connector/client.py:649
 #, python-format
 msgid "Missing configuration value for option \"%(key)s\"."
 msgstr "Valeur de configuration manquante pour l'option \"%(key)s\"."
 
-#: src/vigilo/connector/client.py:463
+#: src/vigilo/connector/client.py:518
 #, python-format
 msgid "Creating lock file in %s"
 msgstr "Création d'un fichier de verrou dans %s"
 
-#: src/vigilo/connector/client.py:466
+#: src/vigilo/connector/client.py:521
 #, python-format
 msgid "Lock file successfully created in %s"
 msgstr "Fichier de verrou créé avec succès dans %s"
 
-#: src/vigilo/connector/client.py:471
+#: src/vigilo/connector/client.py:526
 msgid "Error: lockfile found, another instance may be running."
 msgstr ""
 "Erreur : le fichier de verrou a été trouvé, une autre instance est "
 "peut-être en fonctionnement."
 
-#: src/vigilo/connector/client.py:484
+#: src/vigilo/connector/client.py:539
 #, python-format
 msgid "Error %(code)s: %(message)s"
 msgstr "Erreur %(code)s : %(message)s"
 
-#: src/vigilo/connector/client.py:491
+#: src/vigilo/connector/client.py:546
 #, python-format
 msgid "Error: %s"
 msgstr "Erreur : %s"
 
-#: src/vigilo/connector/client.py:497
+#: src/vigilo/connector/client.py:552
 msgid "Timeout"
 msgstr "Délai dépassé"
 
-#: src/vigilo/connector/client.py:556
+#: src/vigilo/connector/client.py:611
 msgid "No handler registered for this one-shot client"
 msgstr "Aucune fonction de traitement n'a été enregistrée pour ce client jetable"
 
@@ -274,12 +274,12 @@ msgstr ""
 msgid "The max_queue_size option is only available on Python >= 2.6. Ignoring."
 msgstr "L'option max_queue_size n'est disponible que pour Python >= 2.6. Ignorée."
 
-#: src/vigilo/connector/handlers.py:814 src/vigilo/connector/socket.py:114
+#: src/vigilo/connector/handlers.py:814 src/vigilo/connector/socket.py:119
 #, python-format
 msgid "Directory not found: '%(dir)s'"
 msgstr "Dossier non trouvé : '%(dir)s'"
 
-#: src/vigilo/connector/handlers.py:819 src/vigilo/connector/socket.py:121
+#: src/vigilo/connector/handlers.py:819 src/vigilo/connector/socket.py:126
 #, python-format
 msgid "Wrong permissions on directory: '%(dir)s'"
 msgstr "Permissions incorrectes sur le répertoire : '%(dir)s'"
@@ -288,7 +288,11 @@ msgstr "Permissions incorrectes sur le répertoire : '%(dir)s'"
 msgid "Load this settings.ini file"
 msgstr "Utiliser ce fichier settings.ini"
 
-#: src/vigilo/connector/options.py:51
+#: src/vigilo/connector/options.py:27
+msgid "Unique ID for this instance"
+msgstr "Identifiant unique de cette instance"
+
+#: src/vigilo/connector/options.py:52
 msgid "The configuration file does not exist"
 msgstr "Le fichier de configuration n'existe pas"
 
@@ -334,4 +338,3 @@ msgstr "Impossible de remplir le tampon en sortie : %s"
 #, python-format
 msgid "Could not VACUUM the database: %s"
 msgstr "Impossible de purger la base de données (VACUUM) : %s"
-
