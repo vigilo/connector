@@ -182,8 +182,12 @@ def statuspublisher_factory(settings, client, providers=None):
         if "." in hostname: # on ne veut pas le FQDN
             hostname = hostname[:hostname.index(".")]
 
+    idinstance = settings.get("instance", "")
+    servicename = os.path.basename(sys.argv[0])
+    if idinstance:
+        servicename = servicename + "-" + str(idinstance)
     servicename = settings.get("connector", {}).get("status_service",
-                               os.path.basename(sys.argv[0]))
+            servicename)
 
     stats_publisher = StatusPublisher(hostname, servicename,
                 exchange=settings["connector"].get("status_exchange", None))
