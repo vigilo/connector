@@ -47,6 +47,10 @@ publications
     Contient une liste d'associations entre les types de messages envoyés
     et les nœuds de publication (:term:`exchange`) vers lesquels ces
     messages sont transmis.
+    Un paramètre optionnel permet de définir une durée de vie en secondes
+    pour les messages (si un message passe plus de temps que sa durée de vie
+    dans la file d'attente sans être consommé, il est automatiquement supprimé
+    de la file d'attente).
 
 loggers, handlers, formatters, logger_*, handler_*, formatter_*
     Contient la configuration du mécanisme de journalisation des événements

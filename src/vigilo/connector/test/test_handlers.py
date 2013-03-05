@@ -221,7 +221,7 @@ class QueueSubscriberTestCase(unittest.TestCase):
 
 
     def setUp(self):
-        self.qs = QueueSubscriber("dummy_queue")
+        self.qs = QueueSubscriber("dummy_queue", 0)
         client = ClientStub("testhostname", None, None)
         self.qs.setClient(client)
 

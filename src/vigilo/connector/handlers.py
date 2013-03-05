@@ -27,6 +27,7 @@ from vigilo.connector import json
 from vigilo.connector.interfaces import IBusHandler, IBusProducer
 from vigilo.connector.store import DbRetry
 from vigilo.connector.amqp import getErrorMessage
+from vigilo.connector.options import parsePublications
 
 from vigilo.common.gettext import translate
 _ = translate(__name__)
@@ -77,13 +78,17 @@ class QueueSubscriber(BusHandler):
     implements(IBusProducer, IBusHandler)
 
 
-    def __init__(self, queue_name):
+    def __init__(self, queue_name, queue_messages_ttl):
         """
         @param queue_name: nom de la file d'attente AMQP
         @type  queue_name: C{str}
+        @param queue_messages_ttl: Durée de vie des messages de la file
+                                   d'attente (en secondes).
+        @type  queue_messages_ttl: C{int}
         """
         BusHandler.__init__(self)
         self.queue_name = queue_name
+        self.queue_messages_ttl = queue_messages_ttl
         self._bindings = []
         self.consumer = None
         self._channel = None
@@ -117,6 +122,7 @@ class QueueSubscriber(BusHandler):
             LOGGER.warning(errmsg % {"reason": getErrorMessage(fail)})
             self.client.disconnect()
         d.addCallbacks(self.ready.callback, on_error)
+        return d
 
     def connectionLost(self, reason):
         """
@@ -146,9 +152,12 @@ class QueueSubscriber(BusHandler):
         """
         if not self._channel:
             return defer.succeed(None)
+        arguments = {'x-ha-policy': 'all'}
+        if self.queue_messages_ttl > 0:
+            arguments["x-message-ttl"] = self.queue_messages_ttl * 1000
         d = self._channel.queue_declare(queue=self.queue_name,
                     durable=True, exclusive=False, auto_delete=False,
-                    arguments={'x-ha-policy': 'all'})
+                    arguments=arguments)
         return d
 
     def _bind(self):
@@ -358,19 +367,22 @@ class MessageHandler(BusHandler):
         return defer.succeed(stats)
 
 
-    def subscribe(self, queue_name, bindings=None):
+    def subscribe(self, queue_name, queue_messages_ttl, bindings=None):
         """
         Spéficie la file d'attente AMQP à dépiler, avec optionnellement des
         abonnements à réaliser.
 
         @param queue_name: nom de la file d'attente
         @type  queue_name: C{str}
+        @param queue_messages_ttl: Durée de vie des messages de la file
+                                   d'attente (en secondes).
+        @type  queue_messages_ttl: C{int}
         @param bindings: abonnements de la file d'attente. Il s'agit d'une liste de couples C{(exchange, routing_key)}.
         @type  bindings: C{list}
         """
         # attention, pas d'injection de deps, faire le vrai boulot dans
         # registerProducer()
-        subscriber = QueueSubscriber(queue_name)
+        subscriber = QueueSubscriber(queue_name, queue_messages_ttl)
         if bindings is None:
             bindings = []
         for exchange, routing_key in bindings:
@@ -416,6 +428,20 @@ class BusPublisher(BusHandler):
 
 
     def __init__(self, publications=None, batch_send_perf=1):
+        """
+        @param publications: le dictionnaire contenant les différents types de
+                             messages et la façon de les publier.
+                             Exemple:
+                             {
+                               "perf": (exchange, ttl),
+                             }
+                             perf est le type de message.
+                             exchange le nom de l'exchange destination.
+                             ttl la durée de vie en secondes.
+        @type  publications: C{dict}
+        @param batch_send_perf: nombre de messages à accumuler avant envoi.
+        @type  batch_send_perf: C{int}
+        """
         BusHandler.__init__(self)
         self.name = self.__class__.__name__
         self.producer = None
@@ -523,15 +549,17 @@ class BusPublisher(BusHandler):
             return defer.succeed(None)
         msg_text = json.dumps(msg)
 
-        if msg["type"] in self._publications:
-            exchange = self._publications[msg["type"]]
-        else:
-            exchange = msg["type"]
+        msg_type = msg["type"]
+        exchange = msg_type
+        ttl = None
+        if msg_type in self._publications:
+            exchange, ttl = self._publications[msg_type]
 
-        routing_key = msg.get("routing_key", msg["type"])
+        routing_key = msg.get("routing_key", msg_type)
         persistent = msg.get("persistent", True)
         result = self.client.send(exchange, str(routing_key), msg_text,
-                                  persistent, content_type="application/json")
+                                  persistent, content_type="application/json",
+                                  ttl=ttl)
         return result
 
 
@@ -774,7 +802,7 @@ def buspublisher_factory(settings, client=None):
     @param client: client du bus
     @type  client: L{vigilo.connector.client.VigiloClient}
     """
-    publications = settings.get('publications', {}).copy()
+    publications = parsePublications(settings.get('publications', {}).copy())
     batch_send_perf = int(settings["bus"].get("batch_send_perf", 1))
     publisher = BusPublisher(publications, batch_send_perf)
     if client is not None:

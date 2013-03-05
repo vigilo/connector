@@ -92,13 +92,9 @@ class ChannelStub(object):
 class ClientStub(VigiloClient):
 
 
-    #def __init__(self, *args, **kwargs):
-    #    VigiloClient.__init__(self, *args, **kwargs)
-
-
     def stub_connect(self):
         self.channel = ChannelStub()
-        self.connectionInitialized()
+        return self.connectionInitialized()
 
 
     def stub_receive(self, message, queue=None):

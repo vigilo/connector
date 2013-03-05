@@ -352,18 +352,19 @@ class VigiloClient(service.Service):
                 if hasattr(h, "connectionInitialized"):
                     h.connectionInitialized()
         d.addCallback(doneSendingQueue)
+        return d
 
 
     @defer.inlineCallbacks
     def _sendPacketQueue(self):
         """Envoie les messages en attente."""
         while self._packetQueue:
-            e, k, m, p, c = self._packetQueue.pop(0)
-            yield self.send(e, k, m, p, c)
+            e, k, m, p, c, t = self._packetQueue.pop(0)
+            yield self.send(e, k, m, p, c, t)
 
 
     def send(self, exchange, routing_key, message, persistent=True,
-             content_type=None):
+             content_type=None, ttl=None):
         """
         Envoie un message sur le bus. Si la connexion n'est pas encore établie,
         le message est sauvegardé et sera expédié à la prochaine connexion.
@@ -379,14 +380,21 @@ class VigiloClient(service.Service):
         @type  persistent: C{boolean}
         @param content_type: type MIME du contenu du message
         @type  content_type: C{str}
+        @param ttl: Durée de vie du message (Time To Live) en secondes.
+        @type  ttl: C{int}
         """
 
         if not self.isConnected():
-            self._packetQueue.append( (exchange, routing_key, message,
-                                       persistent, content_type) )
+            self._packetQueue.append((exchange, routing_key, message,
+                                       persistent, content_type, ttl))
             return defer.succeed(None)
 
-        msg = Content(message)
+        properties = {}
+        if ttl and ttl > 0:
+            properties["expiration"] = str(ttl)
+        msg = Content(message, properties=properties)
+
+
         if persistent:
             msg["delivery-mode"] = amqp.PERSISTENT
             immediate = False

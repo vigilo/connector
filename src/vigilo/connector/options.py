@@ -106,3 +106,54 @@ def parseSubscriptions(settings):
             raise ValueError("Can't parse bus/subscriptions value: %r"
                              % subs_value)
     return subscriptions
+
+
+def parsePublications(publications=None):
+    """
+    Fonction de mise en forme des paramètres de publications.
+
+    @param publications: Dictionnaire des types de messages et de la façon de
+                         les publier.
+    @type publications:  C{dict} or C{None}
+    @return: Un dictionnaire des types de messages et des paramètres associés
+             pour la publication.
+    @rtype:  C{dict}
+    """
+    tmp = {}
+    if publications is None:
+        return tmp
+    for msg_type in publications.iterkeys():
+        exchange = msg_type
+        ttl = None
+        conf = publications[msg_type].split(":")
+        if len(conf) == 1:
+            exchange = conf[0].strip()
+        elif len(conf) == 2:
+            exchange, ttl = conf
+            exchange = exchange.strip()
+            ttl = ttl.strip()
+        else:
+            raise ValueError(_("Can't parse publication value (%(type)s): "
+                               "\"%(value)s\"") % {
+                                    "type":  msg_type,
+                                    "value": publications[msg_type]
+                              })
+        if not exchange:
+            raise ValueError(_("Can't parse publication value (%(type)s): "
+                               "\"%(value)s\"") % {
+                                    "type":  msg_type,
+                                    "value": publications[msg_type]
+                              })
+        if not ttl and ttl is not None:
+            raise ValueError(_("Can't parse publication value (%(type)s): "
+                               "\"%(value)s\"") % {
+                                    "type":  msg_type,
+                                    "value": publications[msg_type]
+                              })
+        elif ttl is not None:
+            ttl = int(ttl) * 1000
+            if ttl < 0:
+                ttl = None
+        tmp[msg_type] = (exchange, ttl)
+
+    return tmp

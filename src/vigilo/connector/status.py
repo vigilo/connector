@@ -19,9 +19,10 @@ from twisted.internet import reactor, task, defer
 
 from vigilo.connector.handlers import BusPublisher
 from vigilo.connector.interfaces import IBusHandler
+from vigilo.connector.options import parsePublications
 from vigilo.common.gettext import translate
 _ = translate(__name__)
-from vigilo.common.logging import get_logger
+from vigilo.common.logging import get_logger, get_error_message
 LOGGER = get_logger(__name__)
 
 
@@ -34,7 +35,7 @@ class StatusPublisher(BusPublisher):
     implements(IBusHandler)
 
 
-    def __init__(self, hostname, servicename, frequency=60, exchange=None):
+    def __init__(self, hostname, servicename, frequency=60, publications=None):
         """
         @param hostname: le nom d'hôte à utiliser pour le message Nagios
         @type  hostname: C{str}
@@ -43,19 +44,22 @@ class StatusPublisher(BusPublisher):
         @param frequency: la fréquence à laquelle envoyer les messages d'état,
             en secondes
         @type  frequency: C{int}
-        @param exchange: l'exchange à utiliser, si on ne veut pas utiliser les
-            exchanges par défaut du connecteur
-        @type  exchange: C{str}
+        @param publications: le dictionnaire contenant les différents types de
+                             messages et la façon de les publier.
+                             Exemple:
+                             {
+                               "perf": (exchange, ttl)
+                             }
+                             perf est le type de message.
+                             exchange le nom de l'exchange destination.
+                             ttl la durée de vie en secondes.
+        @type  publications: C{dict} or C{None}
         """
-        super(StatusPublisher, self).__init__()
+        super(StatusPublisher, self).__init__(publications)
         self.hostname = hostname
         self.servicename = servicename
         self.frequency = frequency
         self.providers = []
-
-        if exchange is not None:
-            self._publications["nagios"] = exchange
-            self._publications["perf"] = exchange
 
         self.task = task.LoopingCall(self.sendStatus)
         self.status = (0, _("OK: running"))
@@ -189,8 +193,24 @@ def statuspublisher_factory(settings, client, providers=None):
     servicename = settings.get("connector", {}).get("status_service",
             servicename)
 
+    se = settings["connector"].get("status_exchange", None)
+    publications = settings.get('publications', {}).copy()
+    try:
+        # Si besoin (paramètre de surcharge défini dans la configuration)
+        # surcharger le paramètre de publication pour les messages qui viennent
+        # de l'auto-supervision du connecteur.
+        if se is not None:
+            publications["nagios"] = se
+        if se is not None:
+            publications["perf"] = se
+        publications = parsePublications(publications)
+    except Exception, e:
+        LOGGER.error(_('Invalid configuration option for publications: '
+                       '(%(error)s).') % {"error": get_error_message(e)})
+        sys.exit(1)
+
     stats_publisher = StatusPublisher(hostname, servicename,
-                exchange=settings["connector"].get("status_exchange", None))
+                                      publications=publications)
 
     stats_publisher.setClient(client)
     if providers is None:

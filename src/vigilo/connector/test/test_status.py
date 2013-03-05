@@ -80,9 +80,8 @@ class StatusPublisherTestCase(unittest.TestCase):
         sp = statuspublisher_factory(self.settings, client, [ProviderStub()])
 
         sp.isConnected = lambda: True
-        client.stub_connect()
-
-        sp.sendStatus()
+        d = client.stub_connect()
+        d.addCallback(lambda _x: sp.sendStatus())
 
         def check(r):
             output = client.channel.sent
@@ -99,7 +98,6 @@ class StatusPublisherTestCase(unittest.TestCase):
                              "PROCESS_SERVICE_CHECK_RESULT")
             self.assertTrue(msg_cmd["value"].startswith(
                             "%s;testservice;0;OK:" % self.localhn))
-        d = wait(0.2)
         d.addCallback(check)
         return d
 
@@ -112,8 +110,8 @@ class StatusPublisherTestCase(unittest.TestCase):
         sp = statuspublisher_factory(self.settings, client,
                                      [ProviderStub()])
         sp.isConnected = lambda: True
-        client.stub_connect()
-        sp.sendStatus()
+        d = client.stub_connect()
+        d.addCallback(lambda _x: sp.sendStatus())
         def check(r):
             output = client.channel.sent
             msg_perf = json.loads(output[0]["content"].body)
@@ -124,26 +122,24 @@ class StatusPublisherTestCase(unittest.TestCase):
             self.assertEqual(msg_cmd["type"], "nagios")
             self.assertTrue(msg_cmd["value"].startswith(
                             "changedhost;changedsvc;"))
-        d = wait(0.2)
         d.addCallback(check)
         return d
 
     @deferred(timeout=30)
     def test_force_exchange(self):
         """On force le nom de l'exchange à utiliser"""
+        client = ClientStub("testhost", None, None)
         self.settings["connector"]["status_exchange"] = "testnode"
         self.settings["connector"]["status_service"] = "dummyservice"
-        client = ClientStub("testhost", None, None)
         sp = statuspublisher_factory(self.settings, client, [ProviderStub()])
         sp.isConnected = lambda: True
-        client.stub_connect()
-        sp.sendStatus()
+        d = client.stub_connect()
+        d.addCallback(lambda _x: sp.sendStatus())
         def check(r):
             output = client.channel.sent
             for msg in output:
                 print msg
                 self.assertEqual(msg["exchange"], "testnode")
-        d = wait(0.2)
         d.addCallback(check)
         return d
 

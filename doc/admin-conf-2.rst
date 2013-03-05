@@ -119,7 +119,8 @@ Les types de messages supportés par un connecteur sont :
 * ``nagios`` : commandes Nagios
 * ``command`` : commandes diverses
 
-Si une destination n'est pas renseignée, le message sera envoyé sur un nœud du même nom que le type du message.
+Si aucune destination n'est renseignée, le message sera envoyé sur un nœud du
+même nom que le type du message.
 
 Exemple de configuration possible, correspondant à une installation standard :
 

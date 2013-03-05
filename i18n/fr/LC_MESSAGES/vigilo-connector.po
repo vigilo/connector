@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version:  vigilo.connector\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-04-23 16:00+0200\n"
-"PO-Revision-Date: 2013-02-04 15:48+0100\n"
+"PO-Revision-Date: 2013-03-11 18:18+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: fr_FR <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
@@ -50,52 +50,52 @@ msgstr "Le serveur %(oldserver)s n'a pas répondu après %(attempts)d tentatives
 msgid "Lost connection to the bus (%s)"
 msgstr "Connexion au bus perdue (%s)"
 
-#: src/vigilo/connector/client.py:417
+#: src/vigilo/connector/client.py:425
 #, python-format
 msgid "Sending failed: %(reason)s"
 msgstr "L'envoi a échoué : %(reason)s"
 
-#: src/vigilo/connector/client.py:438 src/vigilo/connector/client.py:644
+#: src/vigilo/connector/client.py:446 src/vigilo/connector/client.py:652
 #, python-format
 msgid "Invalid configuration value for option \"%(key)s\"."
 msgstr "Valeur de configuration non valide pour l'option \"%(key)s\"."
 
-#: src/vigilo/connector/client.py:443 src/vigilo/connector/client.py:649
+#: src/vigilo/connector/client.py:451 src/vigilo/connector/client.py:657
 #, python-format
 msgid "Missing configuration value for option \"%(key)s\"."
 msgstr "Valeur de configuration manquante pour l'option \"%(key)s\"."
 
-#: src/vigilo/connector/client.py:518
+#: src/vigilo/connector/client.py:526
 #, python-format
 msgid "Creating lock file in %s"
 msgstr "Création d'un fichier de verrou dans %s"
 
-#: src/vigilo/connector/client.py:521
+#: src/vigilo/connector/client.py:529
 #, python-format
 msgid "Lock file successfully created in %s"
 msgstr "Fichier de verrou créé avec succès dans %s"
 
-#: src/vigilo/connector/client.py:526
+#: src/vigilo/connector/client.py:534
 msgid "Error: lockfile found, another instance may be running."
 msgstr ""
 "Erreur : le fichier de verrou a été trouvé, une autre instance est "
 "peut-être en fonctionnement."
 
-#: src/vigilo/connector/client.py:539
+#: src/vigilo/connector/client.py:547
 #, python-format
 msgid "Error %(code)s: %(message)s"
 msgstr "Erreur %(code)s : %(message)s"
 
-#: src/vigilo/connector/client.py:546
+#: src/vigilo/connector/client.py:554
 #, python-format
 msgid "Error: %s"
 msgstr "Erreur : %s"
 
-#: src/vigilo/connector/client.py:552
+#: src/vigilo/connector/client.py:560
 msgid "Timeout"
 msgstr "Délai dépassé"
 
-#: src/vigilo/connector/client.py:611
+#: src/vigilo/connector/client.py:619
 msgid "No handler registered for this one-shot client"
 msgstr "Aucune fonction de traitement n'a été enregistrée pour ce client jetable"
 
@@ -235,33 +235,33 @@ msgstr "Lit la configuration dans un fichier INI."
 msgid "Configuration file"
 msgstr "Fichier de configuration"
 
-#: src/vigilo/connector/handlers.py:116
+#: src/vigilo/connector/handlers.py:121
 #, python-format
 msgid "Could not initialize the queue: %(reason)s"
 msgstr "Ne peut pas initialiser la file d'attente : %(reason)s"
 
-#: src/vigilo/connector/handlers.py:193
+#: src/vigilo/connector/handlers.py:202
 msgid "Can't resume producing: not connected yet"
 msgstr "Impossible de reprendre la production : pas encore connecté"
 
-#: src/vigilo/connector/handlers.py:289
+#: src/vigilo/connector/handlers.py:298
 #, python-format
 msgid "Received message is not JSON-encoded: %r"
 msgstr "Le message reçu n'est pas encodé en JSON : %r"
 
-#: src/vigilo/connector/handlers.py:726
+#: src/vigilo/connector/handlers.py:754
 #, python-format
 msgid "Requeuing message (%(reason)s)."
 msgstr "Remise en attente du message (%(reason)s)."
 
-#: src/vigilo/connector/handlers.py:736
+#: src/vigilo/connector/handlers.py:764
 #, python-format
 msgid "Error trying to save a message to the backup database: %s"
 msgstr ""
 "Erreur lors de l'enregistrement du message en base de données de "
 "sauvegarde : %s"
 
-#: src/vigilo/connector/handlers.py:798
+#: src/vigilo/connector/handlers.py:826
 #, python-format
 msgid ""
 "Can't understand the max_queue_size option, it should be an integer (or 0"
@@ -270,16 +270,16 @@ msgstr ""
 "Impossible de lire l'option max_queue_size. Un nombre entier (ou 0 pour "
 "supprimer la limite) doit être renseigné. Valeur actuelle : %s"
 
-#: src/vigilo/connector/handlers.py:806
+#: src/vigilo/connector/handlers.py:834
 msgid "The max_queue_size option is only available on Python >= 2.6. Ignoring."
 msgstr "L'option max_queue_size n'est disponible que pour Python >= 2.6. Ignorée."
 
-#: src/vigilo/connector/handlers.py:814 src/vigilo/connector/socket.py:119
+#: src/vigilo/connector/handlers.py:842 src/vigilo/connector/socket.py:119
 #, python-format
 msgid "Directory not found: '%(dir)s'"
 msgstr "Dossier non trouvé : '%(dir)s'"
 
-#: src/vigilo/connector/handlers.py:819 src/vigilo/connector/socket.py:126
+#: src/vigilo/connector/handlers.py:847 src/vigilo/connector/socket.py:126
 #, python-format
 msgid "Wrong permissions on directory: '%(dir)s'"
 msgstr "Permissions incorrectes sur le répertoire : '%(dir)s'"
@@ -295,6 +295,12 @@ msgstr "Identifiant unique de cette instance"
 #: src/vigilo/connector/options.py:52
 msgid "The configuration file does not exist"
 msgstr "Le fichier de configuration n'existe pas"
+
+#: src/vigilo/connector/options.py:136 src/vigilo/connector/options.py:142
+#: src/vigilo/connector/options.py:148
+#, python-format
+msgid "Can't parse publication value (%(type)s): \"%(value)s\""
+msgstr "Impossible de lire la valeur de publicaton (%(type)s) : \"%(value)s\""
 
 #: src/vigilo/connector/serialize.py:36
 #, python-format
@@ -320,14 +326,19 @@ msgstr ""
 "Le nom de la machine (%(hostname)s) ne correspond pas au champ CommonName"
 " du certificat (%(cn)s)"
 
-#: src/vigilo/connector/status.py:61
+#: src/vigilo/connector/status.py:65
 msgid "OK: running"
 msgstr "OK: en fonctionnement"
 
-#: src/vigilo/connector/status.py:160
+#: src/vigilo/connector/status.py:164
 #, python-format
 msgid "Stats for %(service)s: %(name)s = %(value)s"
 msgstr "Statistiques pour %(service)s : %(name)s = %(value)s"
+
+#: src/vigilo/connector/status.py:208
+#, python-format
+msgid "Invalid configuration option for publications: (%(error)s)."
+msgstr "Option de publication incorrecte : (%(error)s)"
 
 #: src/vigilo/connector/store.py:190 src/vigilo/connector/store.py:290
 #, python-format
@@ -338,3 +349,4 @@ msgstr "Impossible de remplir le tampon en sortie : %s"
 #, python-format
 msgid "Could not VACUUM the database: %s"
 msgstr "Impossible de purger la base de données (VACUUM) : %s"
+
