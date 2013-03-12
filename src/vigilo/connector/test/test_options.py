@@ -11,69 +11,37 @@ from vigilo.connector.options import parsePublications
 class OptionTestCase(unittest.TestCase):
     """Teste L{options.parsePublications}"""
 
-    def test_basique(self):
-        """Analyse basique de publication sans durée de vie"""
-        publications = { "un":    "testa",
-                         "deux":  "testb",
-                         "trois": "testc "}
-        res_ok =       { "un":    ("testa", None),
-                         "deux":  ("testb", None),
-                         "trois": ("testc", None)}
-
-        self.assertEqual(res_ok, parsePublications(publications))
-
-    def test_basique(self):
-        """Analyse basique de publication avec une durée de vie"""
-        publications = { "un":     "un:42",
-                         "deux":   "deux: 42",
-                         "trois":  " trois : 42 ",
-                         "quatre": " testc:42"}
-        res_ok =       { "un":     ("un",     42000),
-                         "deux":   ("deux",   42000),
-                         "trois":  ("trois",  42000),
-                         "quatre": ("testc",  42000) }
-
-        self.assertEqual(res_ok, parsePublications(publications))
-
-    def test_multiple(self):
-        """Analyse de publication avec une durée de vie (données multiples)"""
-        publications = { "un":   "testa:42",
-                         "deux": "testb:12"}
-        res_ok =       { "un":   ("testa", 42000),
-                         "deux": ("testb",  12000) }
-
-        self.assertEqual(res_ok, parsePublications(publications))
-
-    def test_multiple2(self):
+    def test_nominal(self):
         """Analyse de publication avec et sans durée de vie"""
-        publications = { "un":   "testa",
-                         "deux": "testb:12"}
-        res_ok =       { "un":   ("testa", None),
-                         "deux": ("testb",  12000) }
+        publications = { "un":     "uno",
+                         "deux":   " dos ",
+                         "trois":  "tres:42",
+                         "quatre": " cuatro : 42 "}
+        res_ok =       { "un":     ("uno", None),
+                         "deux":   ("dos", None),
+                         "trois":  ("tres",  42000),
+                         "quatre": ("cuatro",  42000) }
 
         self.assertEqual(res_ok, parsePublications(publications))
 
-    def test_erreur(self):
+    def test_error(self):
         """Analyse de publication (mauvaise syntaxe : cas 1)"""
-        publications = { "un":  "test2:douze",
-                       }
+        publications = { "un":  "uno:douze"}
         self.assertRaises(ValueError, parsePublications, publications)
 
-    def test_erreur2(self):
+    def test_error2(self):
         """Analyse de publication (mauvaise syntaxe : cas 2)"""
-        publications = { "un":  "test2:42:ABCD",
+        publications = { "un":  "uno:42:ABCD"}
+        self.assertRaises(ValueError, parsePublications, publications)
+
+    def test_error3(self):
+        """Analyse de publication (mauvaise syntaxe : cas 3)"""
+        publications = { "un":  "uno:",
                        }
         self.assertRaises(ValueError, parsePublications, publications)
 
-    def test_erreur3(self):
-        """Analyse de publication (mauvaise syntaxe : cas 3)"""
-        publications = { "un":  "test2:",
-                       }
-        self.assertRaises(ValueError, parsePublications, publications)
-
-    def test_erreur4(self):
-        """Analyse de publication (mauvaise syntaxe : cas 3)"""
-        publications = { "un":  ":",
-                       }
+    def test_error4(self):
+        """Analyse de publication (mauvaise syntaxe : cas 4)"""
+        publications = { "un":  ":"}
         self.assertRaises(ValueError, parsePublications, publications)
 
