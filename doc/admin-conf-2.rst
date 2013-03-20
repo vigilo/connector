@@ -84,19 +84,25 @@ Les connecteurs de Vigilo sont capables de s'auto-superviser, c'est-à-dire que
 des alertes peuvent être émises par Vigilo concernant ses propres connecteurs
 lorsque le fonctionnement de ceux-ci est perturbé ou en défaut.
 
-Ce mécanisme est rendu possible grâce à des signaux de vie émis par les
-connecteurs à intervalle régulier. Chaque signal de vie correspond à un message
-de type « nagios ».
-
-L'option « status_exchange » permet de choisir le nœud de publication vers
-lequel les messages de survie du connecteur sont envoyés. Dans le cas où cette
-option ne serait pas renseignée, les nœuds configurés dans la section
-``[publication]`` sont utilisés pour déterminer la destination des messages. Si
-aucun nœud n'est trouvé pour l'envoi des messages de vie, un message d'erreur
-est enregistré dans les journaux d'événements.
+Ce mécanisme est rendu possible grâce à un signal de vie émis (un état
+Nagios) par chaque connecteur à intervalle régulier. Chaque signal de vie
+correspond à un message de type « nagios ».
 
 L'option « status_service » permet de spécifier le nom du service Nagios par
 lequel on supervise ce connecteur.
+
+Des données de performance sont également générées afin d'alimenter les
+graphiques de métrologie des différents connecteurs. Chaque donnée de
+performance correspond à un message de type « perf ».
+
+Les options « self_monitoring_nagios_exchange » et
+« self_monitoring_perf_exchange » permettent de choisir les nœuds de
+publication vers lesquels les messages d'état Nagios et de performance du
+connecteur sont envoyés, respectivement. Dans le cas où cette option ne serait
+pas renseignée, les nœuds configurés dans la section ``[publication]`` sont
+utilisés pour déterminer la destination des messages. Si aucun nœud n'est
+configuré pour l'envoi des messages d'état Nagios ou de performance, un
+message d'erreur est enregistré dans les journaux d'événements.
 
 
 Destination des messages

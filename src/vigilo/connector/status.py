@@ -192,17 +192,17 @@ def statuspublisher_factory(settings, client, providers=None):
         servicename = servicename + "-" + str(idinstance)
     servicename = settings.get("connector", {}).get("status_service",
             servicename)
-
-    se = settings["connector"].get("status_exchange", None)
+    smne = settings["connector"].get("self_monitoring_nagios_exchange", None)
+    smpe = settings["connector"].get("self_monitoring_perf_exchange", None)
     publications = settings.get('publications', {}).copy()
     try:
         # Si besoin (paramètre de surcharge défini dans la configuration)
         # surcharger le paramètre de publication pour les messages qui viennent
         # de l'auto-supervision du connecteur.
-        if se is not None:
-            publications["nagios"] = se
-        if se is not None:
-            publications["perf"] = se
+        if smne is not None:
+            publications["nagios"] = smne
+        if smpe is not None:
+            publications["perf"] = smpe
         publications = parsePublications(publications)
     except Exception, e:
         LOGGER.error(_('Invalid configuration option for publications: '

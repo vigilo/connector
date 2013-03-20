@@ -127,9 +127,10 @@ class StatusPublisherTestCase(unittest.TestCase):
 
     @deferred(timeout=30)
     def test_force_exchange(self):
-        """On force le nom de l'exchange à utiliser"""
+        """On force le nom de l'exchange à utiliser pour un message de perf"""
         client = ClientStub("testhost", None, None)
-        self.settings["connector"]["status_exchange"] = "testnode"
+        self.settings["connector"]["self_monitoring_perf_exchange"] = "foo"
+        self.settings["connector"]["self_monitoring_nagios_exchange"] = "foo"
         self.settings["connector"]["status_service"] = "dummyservice"
         sp = statuspublisher_factory(self.settings, client, [ProviderStub()])
         sp.isConnected = lambda: True
@@ -139,7 +140,7 @@ class StatusPublisherTestCase(unittest.TestCase):
             output = client.channel.sent
             for msg in output:
                 print msg
-                self.assertEqual(msg["exchange"], "testnode")
+                self.assertEqual(msg["exchange"], "foo")
         d.addCallback(check)
         return d
 
