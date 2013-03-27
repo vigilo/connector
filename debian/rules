@@ -17,17 +17,17 @@ override_dh_auto_clean:
 override_dh_auto_build:
 
 override_dh_auto_install:
-	python setup.py install --root=debian/$(PKGNAME) \
-		--single-version-externally-managed \
-		--install-layout=deb
+	/usr/bin/python setup.py install --root=debian/$(PKGNAME) \
+	    --single-version-externally-managed \
+	    --install-layout=deb
 
 override_dh_auto_test:
 
 override_dh_installdocs:
 ifneq "$(shell dh_listpackages | grep -- -doc)" ""
-	PYTHONPATH=src/ sphinx-build -b html -d doc/_build/doctrees \
-		-D version=$(VERSION) -D release=$(VERSION) \
-		doc/ debian/$(PKGNAME)-doc/usr/share/doc/$(PKGNAME)-doc/html/
+	PYTHONPATH=src/ /usr/bin/sphinx-build -b html -d doc/_build/doctrees \
+	                    -D version=$(VERSION) -D release=$(VERSION) \
+	                    doc/ debian/$(PKGNAME)-doc/usr/share/doc/$(PKGNAME)-doc/html/
 endif
 
 override_dh_sphinxdoc:
