@@ -43,7 +43,7 @@ def install_i18n(i18ndir, destdir):
     return data_files
 
 setup(name='vigilo-connector',
-        version='3.1',
+        version='3.2',
         author='Vigilo Team',
         author_email='contact@projet-vigilo.org',
         url='http://www.projet-vigilo.org/',
