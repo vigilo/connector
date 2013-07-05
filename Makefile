@@ -9,7 +9,8 @@ settings.ini: settings.ini.in
 install: $(PYTHON) settings.ini build
 	$(PYTHON) setup.py install --record=INSTALLED_FILES
 install_pkg: $(PYTHON) settings.ini build
-	$(PYTHON) setup.py install --single-version-externally-managed --root=$(DESTDIR)
+	$(PYTHON) setup.py install --single-version-externally-managed \
+		$(SETUP_PY_OPTS) --root=$(DESTDIR)
 
 lint: lint_pylint
 tests: tests_nose
