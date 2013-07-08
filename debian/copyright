@@ -3,11 +3,11 @@ Source: http://sourceforge.net/projects/vigilo/files/Sources/
 Name: vigilo-connector
 
 Files: *
-Copyright: 2006-2012, by CS-SI
+Copyright: 2006-2013, by CS-SI
 License: GPL-2+
 
 Files: debian/*
-Copyright: 2012, by CS-SI
+Copyright: 2013, by CS-SI
 License: GPL-2+
 
 License: GPL-2+
