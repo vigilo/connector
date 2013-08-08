@@ -8,11 +8,20 @@ export DH_OPTIONS=-v
 PKGNAME=$(shell printf "%s" `dpkg-parsechangelog | grep '^Source:' | cut -d: -f2-`)
 VERSION=$(shell printf "%s" `dpkg-parsechangelog | grep '^Version:' | cut -d: -f2-`)
 
+ifeq "$(NOPY)" ""
+	helper=python2
+else
+	helper=python2_nopy
+endif
+
 %:
-	dh $@ --with python2,sphinxdoc
+	dh $@ --with $(helper),sphinxdoc
 
 override_dh_auto_clean:
 	dh_auto_clean -- buildclean
+ifneq "$(NOPY)" ""
+	-rm -f $(CURDIR)/debian/docs $(CURDIR)/debian/copyright
+endif
 
 override_dh_auto_build:
 
