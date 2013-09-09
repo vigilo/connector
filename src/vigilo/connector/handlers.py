@@ -77,18 +77,29 @@ class QueueSubscriber(BusHandler):
 
     implements(IBusProducer, IBusHandler)
 
+    prefetch_count = 5
 
-    def __init__(self, queue_name, queue_messages_ttl):
+
+    def __init__(self, queue_name, queue_messages_ttl, queue_batch=False,
+                 queue_batch_size=1, prefetch_count=5):
         """
         @param queue_name: nom de la file d'attente AMQP
         @type  queue_name: C{str}
         @param queue_messages_ttl: Durée de vie des messages de la file
                                    d'attente (en secondes).
         @type  queue_messages_ttl: C{int}
+        @param queue_batch: Indique si les messages doivent être envoyés par
+                            lot.
+        @type  queue_batch: C{bool}
         """
         BusHandler.__init__(self)
         self.queue_name = queue_name
         self.queue_messages_ttl = queue_messages_ttl
+        self.queue_batch = queue_batch
+        self.queue_batch_size = queue_batch_size
+        if self.queue_batch_size <= 1:
+            self.queue_batch = False
+        self.prefetch_count = prefetch_count
         self._bindings = []
         self.consumer = None
         self._channel = None
@@ -178,9 +189,10 @@ class QueueSubscriber(BusHandler):
         """
         if not self._channel:
             return
-        # On se laisse un buffer de 5 en mémoire, de toute façon il faut les
-        # acquitter donc en cas de plantage ils ne seront pas perdus
-        d = self._channel.basic_qos(prefetch_count=5)
+        # On se laisse un buffer de prefetch_count en mémoire, de toute façon
+        # il faut les acquitter donc en cas de plantage ils ne seront pas
+        # perdus.
+        d = self._channel.basic_qos(prefetch_count=self.prefetch_count)
         d.addCallback(lambda _reply: self._channel.basic_consume(
                       queue=self.queue_name, consumer_tag=self.queue_name))
         d.addCallback(lambda reply: self.client.getQueue(reply.consumer_tag))
@@ -191,18 +203,11 @@ class QueueSubscriber(BusHandler):
         return d
 
 
-    def resumeProducing(self):
+    def _resumeProducingOneMessage(self):
         """
         Dépile un (seul) message de la file d'attente. Appeler une deuxième
         fois pour dépiler un autre message (mode PullProducer).
         """
-        if not self._queue:
-            if self.ready.called:
-                return defer.fail(Exception(
-                            _("Can't resume producing: not connected yet")))
-            else:
-                self.ready.addCallback(lambda _x: self.resumeProducing())
-                return
         d = self._queue.get()
         def cb(msg):
             if self.client.log_traffic:
@@ -219,6 +224,56 @@ class QueueSubscriber(BusHandler):
         # On ne retourne pas le deferred ici pour éviter des recursion errors:
         # resumeProducing -> write -> resumeProducing -> ...
         #return d
+
+    def _resumeProducingBatchMmessage(self):
+        """
+        Dépile une série de messages de la file d'attente. Appeler une
+        deuxième fois pour dépiler une autre série de messages (mode
+        PullProducer).
+        """
+        ld = []
+        for i in range(self.queue_batch_size):
+            ld.append(self._queue.get())
+        dl = defer.DeferredList(ld)
+        def cb(results):
+            msgs = []
+            for r in results:
+                if r[0] == True:
+                    msgs.append(r[1])
+                else:
+                    r[1].trap(txamqp.queue.Closed) # déconnexion pendant le get()
+                    self._production_interrupted = True
+                    return
+            if self.client.log_traffic:
+                # Unused variable:
+                # pylint: disable-msg=W0612
+                for msg in msgs:
+                    qname, msgid, unknown, exch, rkey = msg.fields
+                    LOGGER.debug("RECEIVED from %s on %s with key %s: %s"
+                                 % (exch, qname, rkey, msg.content.body))
+            return self.consumer.write_batch(msgs)
+        dl.addCallback(cb)
+        # On ne retourne pas le deferred ici pour éviter des recursion errors:
+        # resumeProducing -> write_batch -> resumeProducing -> ...
+        #return dl
+
+    def resumeProducing(self):
+        """
+        Dépile un (ou plusieurs) message(s) de la file d'attente. Appeler une
+        deuxième fois pour dépiler un (ou plusieur) autre(s) message(s) (mode
+        PullProducer).
+        """
+        if not self._queue:
+            if self.ready.called:
+                return defer.fail(Exception(
+                            _("Can't resume producing: not connected yet")))
+            else:
+                self.ready.addCallback(lambda _x: self.resumeProducing())
+                return
+        if self.queue_batch:
+            self._resumeProducingBatchMessage()
+        else:
+            self._resumeProducingOneMessage()
 
 
     # Proxies
@@ -290,15 +345,15 @@ class MessageHandler(BusHandler):
 
         @param msg: message à traiter
         @type  msg: C{txamqp.message.Message}
+        @deprecated: Remplacée par la fonction L{write_batch} qui prend en
+                     charge une liste de messages.
         """
         try:
             content = json.loads(msg.content.body)
-
         except ValueError:
             LOGGER.warning(_("Received message is not JSON-encoded: %r"),
                            msg.content.body)
             d = defer.succeed(None)
-
         else:
             if "messages" in content and content["messages"]:
                 d = self._processList(content["messages"])
@@ -306,6 +361,44 @@ class MessageHandler(BusHandler):
                 d = defer.maybeDeferred(self.processMessage, content)
             d.addCallbacks(self.processingSucceeded, self.processingFailed,
                            callbackArgs=(msg, ), errbackArgs=(msg, ))
+
+        if self.keepProducing:
+            d.addBoth(lambda _x: self.producer.resumeProducing())
+        return d
+
+    def write_batch(self, msgs):
+        """
+        Méthode à appeler pour traiter une liste de messages en provenance du
+        bus.
+
+        Si le traitement se passe bien (pas d'I{errback}), les messages seront
+        acquittés, sinon ils seront rejetés, puis les messages suivants seront
+        demandés au bus.
+
+        @param msgs: Liste de messages du type C{txamqp.message.Message}
+                     à traiter.
+        @type  msgs: C{list}
+        """
+
+        contents = []
+        for msg in msgs:
+            try:
+                content = json.loads(msg.content.body)
+            except ValueError:
+                LOGGER.warning(_("Received message is not JSON-encoded: %r"),
+                               msg.content.body)
+            else:
+                if "messages" in content and content["messages"]:
+                    contents.extends(content["messages"])
+                else:
+                    contents.append(content)
+        if contents:
+            d = self.processMessages(contents)
+        else:
+            d = defer.succeed(None)
+        d.addCallbacks(self.processingBatchSucceeded,
+                               self.processingBatchFailed,
+                               callbackArgs=(msgs, ), errbackArgs=(msgs, ))
 
         if self.keepProducing:
             d.addBoth(lambda _x: self.producer.resumeProducing())
@@ -324,6 +417,16 @@ class MessageHandler(BusHandler):
         Méthode à réimplémenter pour traiter véritablement un message.
         @param msg: message à traiter
         @type  msg: C{txamqp.message.Message}
+        @deprecated: Remplacée par la fonction L{processMessages} qui prend en
+                     charge une liste de messages.
+        """
+        raise NotImplementedError()
+
+    def processMessages(self, msgs):
+        """
+        Méthode à réimplémenter pour traiter véritablement les messages.
+        @param msgs: Liste de messages à traiter
+        @type  msgs: C{list} of C{txamqp.message.Message}
         """
         raise NotImplementedError()
 
@@ -336,6 +439,17 @@ class MessageHandler(BusHandler):
         self._messages_received += 1
         return self.producer.ack(msg)
 
+    def processingBatchSucceeded(self, _ignored, msgs):
+        """
+        Appelée quand une liste de messages est traité correctement : les
+        messages sont acquittés.
+        """
+        self._messages_received += len(msgs)
+        ld = []
+        for msg in msgs:
+            ld.append(self.producer.ack(msg))
+        return defer.DeferredList(ld)
+
     def processingFailed(self, error, msg):
         """
         Appelée quand le traitement d'un message a échoué : le message est
@@ -343,6 +457,17 @@ class MessageHandler(BusHandler):
         """
         LOGGER.warning("%s", getErrorMessage(error))
         return self.producer.nack(msg)
+
+    def processingBatchFailed(self, error, msgs):
+        """
+        Appelée quand le traitement d'une liste de messages a échoué : les
+        messages sont rejetés.
+        """
+        LOGGER.warning("%s", getErrorMessage(error))
+        ld = []
+        for msg in msgs:
+            ld.append(self.producer.nack(msg))
+        return defer.DeferredList(ld)
 
 
     def pauseProducing(self):
@@ -367,7 +492,8 @@ class MessageHandler(BusHandler):
         return defer.succeed(stats)
 
 
-    def subscribe(self, queue_name, queue_messages_ttl, bindings=None):
+    def subscribe(self, queue_name, queue_messages_ttl, bindings=None,
+                  queue_batch=False, queue_batch_size=1, prefetch_count=5):
         """
         Spéficie la file d'attente AMQP à dépiler, avec optionnellement des
         abonnements à réaliser.
@@ -377,12 +503,32 @@ class MessageHandler(BusHandler):
         @param queue_messages_ttl: Durée de vie des messages de la file
                                    d'attente (en secondes).
         @type  queue_messages_ttl: C{int}
-        @param bindings: abonnements de la file d'attente. Il s'agit d'une liste de couples C{(exchange, routing_key)}.
+        @param bindings: abonnements de la file d'attente. Il s'agit d'une
+                         liste de couples C{(exchange, routing_key)}.
         @type  bindings: C{list}
+        @param queue_batch: Indique si les messages doivent être envoyés par
+                            lot (C{True}) ou non (C{False}).
+        @type  queue_batch: C{bool}
+        @param queue_batch_size: Nombre de messages à traiter dans un lot de
+                                 traitement.
+        @type  queue_batch_size: C{int}
+        @param prefetch_count: Nombre de messages que l'on peut précharger.
+        @type  prefetch_count: C{int}
         """
         # attention, pas d'injection de deps, faire le vrai boulot dans
         # registerProducer()
-        subscriber = QueueSubscriber(queue_name, queue_messages_ttl)
+
+        # Pour le traitement par lot il faut que l'on précharge un nombre
+        # suffisant de messages.
+        if queue_batch_size > prefetch_count:
+            LOGGER.warning(_("Wrong values for parameters queue_batch_size and "
+                "prefetch_count"))
+            prefetch_count = queue_batch_size
+
+        subscriber = QueueSubscriber(queue_name, queue_messages_ttl,
+                                     queue_batch=queue_batch,
+                                     queue_batch_size=queue_batch_size,
+                                     prefetch_count=prefetch_count)
         if bindings is None:
             bindings = []
         for exchange, routing_key in bindings:

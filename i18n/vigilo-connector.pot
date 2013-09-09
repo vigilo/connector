@@ -1,15 +1,15 @@
 # Translations template for vigilo-connector.
-# Copyright (C) 2013 ORGANIZATION
+# Copyright (C) 2014 ORGANIZATION
 # This file is distributed under the same license as the vigilo-connector
 # project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2013.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2014.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: vigilo-connector 3.0.1\n"
+"Project-Id-Version: vigilo-connector 3.3\n"
 "Report-Msgid-Bugs-To: contact@projet-vigilo.org\n"
-"POT-Creation-Date: 2013-03-11 18:18+0100\n"
+"POT-Creation-Date: 2014-02-03 16:24+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -227,47 +227,51 @@ msgstr ""
 msgid "Configuration file"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:121
+#: src/vigilo/connector/handlers.py:132
 #, python-format
 msgid "Could not initialize the queue: %(reason)s"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:202
+#: src/vigilo/connector/handlers.py:269
 msgid "Can't resume producing: not connected yet"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:298
+#: src/vigilo/connector/handlers.py:354 src/vigilo/connector/handlers.py:388
 #, python-format
 msgid "Received message is not JSON-encoded: %r"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:754
+#: src/vigilo/connector/handlers.py:524
+msgid "Wrong values for parameters queue_batch_size and prefetch_count"
+msgstr ""
+
+#: src/vigilo/connector/handlers.py:900
 #, python-format
 msgid "Requeuing message (%(reason)s)."
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:764
+#: src/vigilo/connector/handlers.py:910
 #, python-format
 msgid "Error trying to save a message to the backup database: %s"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:826
+#: src/vigilo/connector/handlers.py:972
 #, python-format
 msgid ""
 "Can't understand the max_queue_size option, it should be an integer (or 0 for"
 " no limit). Current value: %s"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:834
+#: src/vigilo/connector/handlers.py:980
 msgid "The max_queue_size option is only available on Python >= 2.6. Ignoring."
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:842 src/vigilo/connector/socket.py:119
+#: src/vigilo/connector/handlers.py:988 src/vigilo/connector/socket.py:119
 #, python-format
 msgid "Directory not found: '%(dir)s'"
 msgstr ""
 
-#: src/vigilo/connector/handlers.py:847 src/vigilo/connector/socket.py:126
+#: src/vigilo/connector/handlers.py:993 src/vigilo/connector/socket.py:126
 #, python-format
 msgid "Wrong permissions on directory: '%(dir)s'"
 msgstr ""
