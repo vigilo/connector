@@ -225,7 +225,7 @@ class QueueSubscriber(BusHandler):
         # resumeProducing -> write -> resumeProducing -> ...
         #return d
 
-    def _resumeProducingBatchMmessage(self):
+    def _resumeProducingBatchMessage(self):
         """
         Dépile une série de messages de la file d'attente. Appeler une
         deuxième fois pour dépiler une autre série de messages (mode
