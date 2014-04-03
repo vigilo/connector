@@ -56,19 +56,24 @@ def msg2dict(elements):
         "timestamp": elements[1],
     }
 
-    if msg_type == "event" and len(elements) == 6:
+    size = len(elements)
+    if msg_type == "event" and 6 <= size <= 7:
         d["host"] = elements[2]
         if elements[3] and elements[3].lower() != "host":
             d["service"] = elements[3]
         d["state"] = elements[4]
         d["message"] = elements[5]
+        if size == 7 and elements[6]:
+            d["routing_key"] = elements[6]
 
-    elif msg_type == "perf" and len(elements) == 5:
+    elif msg_type == "perf" and 5 <= size <= 6:
         d["host"] = elements[2]
         d["datasource"] = elements[3]
         d["value"] = elements[4]
+        if size == 6 and elements[5]:
+            d["routing_key"] = elements[5]
 
-    elif msg_type == "nagios" and len(elements) >= 3:
+    elif msg_type == "nagios" and size >= 3:
         d["cmdname"] = elements[2]
         d["value"] = ";".join(elements[3:])
         #d["routing_key"] = "all"
@@ -76,7 +81,7 @@ def msg2dict(elements):
                 and d["cmdname"].endswith("_CHECK_RESULT")):
             d["host"] = elements[3]
 
-    elif msg_type == "state" and len(elements) == 9:
+    elif msg_type == "state" and 9 <= size <= 10:
         d["host"] = elements[2]
         d["ip"] = elements[3]
         d["service"] = elements[4]
@@ -84,6 +89,8 @@ def msg2dict(elements):
         d["statetype"] = elements[6]
         d["attempt"] = elements[7]
         d["message"] = elements[8]
+        if size == 10 and elements[9]:
+            d["routing_key"] = elements[9]
 
     else:
         LOGGER.warning(_("Unknown/malformed message type: '%s'") %
