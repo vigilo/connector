@@ -18,13 +18,12 @@ et donne une brève définition de chacun de ces termes.
 
     inotify
         L'outil inotify est un mécanisme du noyau Linux qui fournit des
-        notifications concernant le système de fichiers. On spécifie quel
-        répertoire il doit surveiller et quel est le signal auquel on attache un
-        événement (ici, la fermeture d'un fichier).
+        notifications concernant le système de fichiers lorsqu'un événement
+        particulier se produit (par exemple, la fermeture d'un fichier).
 
     JSON
         JavaScript Object Notation. Méthode de sérialisation textuelle
-        compatible Javascript.
+        compatible JavaScript.
 
     RRD
         Round-Robin Database. Base de données circulaire permettant de stocker
