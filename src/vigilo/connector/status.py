@@ -105,18 +105,25 @@ class StatusPublisher(BusPublisher):
         timestamp = int(time.time())
 
         # État Nagios
+        if self.servicename:
+            cmdname = "PROCESS_SERVICE_CHECK_RESULT"
+            args = "%(host)s;%(service)s;%(code)d;%(msg)s"
+        else:
+            cmdname = "PROCESS_HOST_CHECK_RESULT"
+            args = "%(host)s;%(code)d;%(msg)s"
+
         msg_state = {
-                "type": "nagios",
-                "timestamp": timestamp,
-                "cmdname": "PROCESS_SERVICE_CHECK_RESULT",
-                "routing_key": "Vigilo",
-                }
-        msg_state["value"] = ("%(host)s;%(service)s;%(code)d;%(msg)s"
-                              % { "host": self.hostname,
-                                  "service": self.servicename,
-                                  "code": self.status[0],
-                                  "msg": self.status[1].encode("utf-8"),
-                                })
+            "type": "nagios",
+            "timestamp": timestamp,
+            "cmdname": cmdname,
+            "routing_key": "Vigilo",
+            "value": args % {
+                "host": self.hostname,
+                "service": self.servicename,
+                "code": self.status[0],
+                "msg": self.status[1].encode("utf-8"),
+            }
+        }
 
         # Métrologie
         msg_perf = {
@@ -126,7 +133,9 @@ class StatusPublisher(BusPublisher):
                 "routing_key": "Vigilo",
                 }
         d = self._collectStats()
-        # on envoie même si on est pas connecté pour avoir des graphes continus
+
+        # On envoie même si on n'est pas connecté
+        # afin d'avoir des graphes continus.
         d.addCallback(self._sendStats, msg_perf)
 
         if self.isConnected():
