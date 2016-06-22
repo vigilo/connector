@@ -18,6 +18,7 @@ Requires:   python-distribute
 Requires:   vigilo-common
 Requires:   python-zope-interface
 Requires:   python-txamqp
+Requires:   python-argparse
 
 
 %description
