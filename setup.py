@@ -14,11 +14,12 @@ install_requires = [
     'vigilo-common',
     'txAMQP',
     'Twisted',
-    'argparse',
     'pyOpenSSL',
 ]
 if tuple(python_version_tuple()) < ('2', '6'):
     install_requires.append("simplejson")
+if tuple(python_version_tuple()) < ('2', '7'):
+    install_requires.append("argparse")
 
 tests_require = [
     'coverage',
