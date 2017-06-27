@@ -247,7 +247,7 @@ class VigiloClient(service.Service):
             spécifier le port après des deux-points).
         @type  hosts: C{list} or C{str}
         """
-        c = MultipleServerConnector(None, None, factory, 30, None,
+        c = MultipleServerConnector('', None, factory, 30, None,
                                     reactor=reactor)
         c.setMultipleParams(hosts, tcp.Connector)
         return c
