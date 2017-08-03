@@ -389,7 +389,7 @@ class MessageHandler(BusHandler):
                                msg.content.body)
             else:
                 if "messages" in content and content["messages"]:
-                    contents.extends(content["messages"])
+                    contents.extend(content["messages"])
                 else:
                     contents.append(content)
         if contents:
