@@ -7,6 +7,7 @@
 # - W0613: Unused argument
 # - R0904: Too many public methods
 # - W0212: Access to a protected member of a client class
+from __future__ import print_function
 
 import os, os.path
 import tempfile
@@ -88,7 +89,7 @@ class SocketListenerTestCase(unittest.TestCase):
             msg = consumer.written[0]
             d.callback(msg)
         def check_msg(msg):
-            print msg
+            print(msg)
             self.assertEquals(msg, msg_sent_dict)
         # On laisse un peu de temps pour traiter
         reactor.callLater(0.5, get_output)

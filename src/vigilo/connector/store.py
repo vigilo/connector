@@ -109,9 +109,9 @@ class DbRetry(object):
             try:
                 txn.executemany("INSERT INTO %s VALUES (?, ?)"
                                 % self._table, get_from_buffer_out())
-            except sqlite3.IntegrityError, e:
+            except sqlite3.IntegrityError as e:
                 LOGGER.debug("IntegrityError while flushing: %s", e)
-            except sqlite3.OperationalError, e:
+            except sqlite3.OperationalError as e:
                 LOGGER.debug("OperationalError while flushing: %s", e)
             self._cache_isempty = False
         def get_from_buffer_in():
@@ -186,7 +186,7 @@ class DbRetry(object):
         try:
             txn.execute("SELECT id, msg FROM %s ORDER BY id LIMIT %s"
                         % (self._table, msg_count))
-        except sqlite3.OperationalError, e:
+        except sqlite3.OperationalError as e:
             LOGGER.warning(_("Could not fill the output buffer: %s"), e)
             return
         msgs = txn.fetchall()
@@ -286,7 +286,7 @@ class DbRetry(object):
         try:
             txn.executemany("INSERT INTO %s VALUES (null, ?)" % self._table,
                             get_from_buffer_in())
-        except sqlite3.OperationalError, e:
+        except sqlite3.OperationalError as e:
             LOGGER.warning(_("Could not fill the output buffer: %s"), e)
         else:
             LOGGER.debug("Saved %d messages from the input buffer", total)

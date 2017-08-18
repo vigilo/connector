@@ -7,6 +7,7 @@
 # - W0613: Unused argument
 # - R0904: Too many public methods
 # - W0212: Access to a protected member of a client class
+from __future__ import print_function
 
 import os, os.path
 import tempfile
@@ -135,7 +136,7 @@ class BackupProviderTestCase(unittest.TestCase):
         self.bp.consumer = consumer
         yield self.bp.resumeProducing()
         # On envoie des messages
-        print "envoi 1"
+        print("envoi 1")
         for _i in range(10):
             self.bp.queue.append(msg)
         yield self.bp.processQueue()
@@ -143,7 +144,7 @@ class BackupProviderTestCase(unittest.TestCase):
         # On se déconnecte (ça flushe les messages)
         yield self.bp.pauseProducing()
         # On envoie des messages (-> backup)
-        print "envoi 2"
+        print("envoi 2")
         for _i in range(20):
             self.bp.queue.append(msg)
         yield self.bp.processQueue()
@@ -152,15 +153,15 @@ class BackupProviderTestCase(unittest.TestCase):
         # on vide les buffers (pour fiabiliser le test)
         yield self.bp.retry.flush()
         backup_size = yield self.bp.retry.qsize()
-        print (self.bp.retry._cache_isempty,
-               len(self.bp.retry.buffer_in),
-               len(self.bp.retry.buffer_out),
-               len(consumer.written), backup_size)
+        print(self.bp.retry._cache_isempty,
+              len(self.bp.retry.buffer_in),
+              len(self.bp.retry.buffer_out),
+              len(consumer.written), backup_size)
         LOGGER.debug("Beginning assertions")
         self.assertEqual(backup_size, 20)
         self.assertEqual(len(consumer.written), 10)
         stats = yield self.bp.getStats()
-        print stats
+        print(stats)
         self.assertEqual(stats, {
             "queue": 0,
             "backup": 20,
@@ -196,7 +197,7 @@ class BusPublisherTestCase(unittest.TestCase):
         # on en envoie un de plus, ce qui doit envoyer un message accumulé
         self.bp.write(msg)
         self.assertEqual(len(output), 1)
-        print repr(output[0])
+        print(repr(output[0]))
         sent = json.loads(output[0]["content"].body)
         self.assertEqual(len(sent["messages"]), count)
 
@@ -233,17 +234,17 @@ class QueueSubscriberTestCase(unittest.TestCase):
         self.qs.consumer.write.side_effect = lambda msg: self.qs.resumeProducing()
         self.qs.client.stub_connect()
         self.qs.resumeProducing()
-        print "deconnexion"
+        print("deconnexion")
         self.qs._queue.close()
         self.qs.connectionLost(None)
-        print "reconnexion"
+        print("reconnexion")
         self.qs.connectionInitialized()
-        print "réception d'un message"
+        print("reception d'un message")
         self.qs.client.stub_receive("dummy message")
 
         def check(r):
-            print "vérification"
-            print self.qs.consumer.write.call_args_list
+            print("verification")
+            print(self.qs.consumer.write.call_args_list)
             self.assertTrue(self.qs.consumer.write.called,
                     "la fonction write() n'a pas été appelée")
             self.assertEqual("dummy message",

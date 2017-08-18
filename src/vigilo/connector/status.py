@@ -213,7 +213,7 @@ def statuspublisher_factory(settings, client, providers=None):
         if smpe is not None:
             publications["perf"] = smpe
         publications = parsePublications(publications)
-    except Exception, e:
+    except Exception as e:
         LOGGER.error(_('Invalid configuration option for publications: '
                        '(%(error)s).') % {"error": get_error_message(e)})
         sys.exit(1)

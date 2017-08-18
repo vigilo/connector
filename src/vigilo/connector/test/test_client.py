@@ -3,6 +3,7 @@
 # Copyright (C) 2006-2016 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
+from __future__ import print_function
 import unittest
 
 # ATTENTION: ne pas utiliser twisted.trial, car nose va ignorer les erreurs
@@ -143,9 +144,8 @@ class VigiloClientTestCase(unittest.TestCase):
         d = c.send("exch", "key", "msg")
         def check(r):
             self.assertTrue(c.channel.basic_publish.called)
-            #print c.channel.basic_publish.call_args_list
             args = c.channel.basic_publish.call_args_list[0][1]
-            print args
+            print(args)
             self.assertTrue("delivery-mode" in args["content"].properties)
             self.assertEqual(args["content"].properties["delivery-mode"], 2)
             self.assertEqual(args["content"].body, "msg")
@@ -165,9 +165,8 @@ class VigiloClientTestCase(unittest.TestCase):
         d = c.send("exch", "key", "msg", persistent=False)
         def check(r):
             self.assertTrue(c.channel.basic_publish.called)
-            #print c.channel.basic_publish.call_args_list
             args = c.channel.basic_publish.call_args_list[0][1]
-            print args
+            print(args)
             self.assertTrue("delivery-mode" in args["content"].properties)
             self.assertEqual(args["content"].properties["delivery-mode"], 1)
             self.assertEqual(args["immediate"], True)

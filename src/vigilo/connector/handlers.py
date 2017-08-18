@@ -889,7 +889,7 @@ class BackupProvider(Service):
                 break
             try:
                 yield self.consumer.write(msg)
-            except Exception, e: # pylint: disable-msg=W0703
+            except Exception as e: # pylint: disable-msg=W0703
                 # W0703: Catch "Exception"
                 self._send_failed(e, msg)
         self._processing_queue = False

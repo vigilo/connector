@@ -12,6 +12,7 @@
 Teste la sauvegarde et la récupération d'un message en utilisant
 une base de données SQLite locale via la classe DbRetry.
 """
+from __future__ import print_function
 
 import os
 import tempfile
@@ -157,7 +158,7 @@ class TestDbRetry(unittest.TestCase):
 
         # On attend un peu, le VACUUM est décalé
         yield wait(1)
-        print stub.requests
+        print(stub.requests)
         self.assertEqual( (("VACUUM", ), {}), stub.requests.pop() )
 
     @deferred(timeout=30)

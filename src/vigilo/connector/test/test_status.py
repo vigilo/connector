@@ -7,6 +7,7 @@
 # - W0613: Unused argument
 # - R0904: Too many public methods
 # - W0212: Access to a protected member of a client class
+from __future__ import print_function
 
 import unittest
 import socket
@@ -58,7 +59,7 @@ class StatusPublisherTestCase(unittest.TestCase):
         sp._sendStats(stats, msg)
         def check(r_):
             output = client.channel.sent
-            print output
+            print(output)
             self.assertEqual(len(output), 3)
             msg_out = [ json.loads(m["content"].body)
                         for m in output ]
@@ -85,7 +86,7 @@ class StatusPublisherTestCase(unittest.TestCase):
 
         def check(r):
             output = client.channel.sent
-            print output
+            print(output)
             self.assertEqual(len(output), 2)
             msg_perf = json.loads(output[0]["content"].body)
             self.assertEqual(msg_perf["type"], "perf")
@@ -139,7 +140,7 @@ class StatusPublisherTestCase(unittest.TestCase):
         def check(r):
             output = client.channel.sent
             for msg in output:
-                print msg
+                print(msg)
                 self.assertEqual(msg["exchange"], "foo")
         d.addCallback(check)
         return d

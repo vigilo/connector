@@ -38,12 +38,12 @@ class IPv6CapableUDPPort(Port):
             assert addr in (None, self._connectedAddr)
             try:
                 return self.socket.send(datagram)
-            except socket.error, se:
+            except socket.error as se:
                 no = se.args[0]
                 if no == udp.EINTR:
                     return self.write(datagram)
                 elif no == udp.EMSGSIZE:
-                    raise error.MessageLengthError, "message too long"
+                    raise error.MessageLengthError("message too long")
                 elif no == udp.ECONNREFUSED:
                     self.protocol.connectionRefused()
                 else:
@@ -71,12 +71,12 @@ class IPv6CapableUDPPort(Port):
 
         try:
             return self.socket.sendto(datagram, addr)
-        except socket.error, se:
+        except socket.error as se:
             no = se.args[0]
             if no == udp.EINTR:
                 return self.write(datagram, addr)
             elif no == udp.EMSGSIZE:
-                raise error.MessageLengthError, "message too long"
+                raise error.MessageLengthError("message too long")
             elif no == udp.ECONNREFUSED:
                 # in non-connected UDP ECONNREFUSED is platform dependent, I think
                 # and the info is not necessarily useful. Nevertheless maybe we

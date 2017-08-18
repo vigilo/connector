@@ -9,7 +9,7 @@
 # - R0904: Too many public methods
 # - W0212: Access to a protected member of a client class
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import tempfile
 import os
@@ -103,7 +103,7 @@ class ConfDBTest(unittest.TestCase):
         new_connection_threads = set(self.confdb._db.connections.keys())
         self.assertFalse(self.confdb._db.close.called)
         self.assertFalse(self.confdb._db.start.called)
-        print old_connection_threads, new_connection_threads
+        print(old_connection_threads, new_connection_threads)
         self.assertTrue(old_connection_threads <= new_connection_threads)
 
 

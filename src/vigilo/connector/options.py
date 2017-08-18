@@ -6,6 +6,7 @@
 Ce module contient la classe qui gère les options
 d'un connecteur pour le bus de Vigilo.
 """
+from __future__ import print_function
 
 import sys
 import os
@@ -42,7 +43,7 @@ class Options(usage.Options):
         """Affiche la version du connecteur et quitte."""
         module_name = '-'.join(self._module.split('.')[:2]).replace('_', '-')
         dist = pkg_resources.get_distribution(module_name)
-        print '%s %s' % (module_name, dist.version)
+        print('%s %s' % (module_name, dist.version))
         sys.exit(0)
 
     def postOptions(self):
