@@ -16,7 +16,7 @@ BuildRequires:   python-babel
 
 Requires:   python-distribute
 Requires:   vigilo-common
-Requires:   python-zope-interface
+Requires:   python-zope-interface >= 4.0.5
 Requires:   python-txamqp
 
 
