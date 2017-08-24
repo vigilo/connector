@@ -1,15 +1,15 @@
 # English translations for vigilo-connector.
-# Copyright (C) 2014 ORGANIZATION
+# Copyright (C) 2017 ORGANIZATION
 # This file is distributed under the same license as the vigilo-connector
 # project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2014.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2017.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: vigilo-connector 3.3\n"
+"Project-Id-Version: vigilo-connector 4.1.0rc2\n"
 "Report-Msgid-Bugs-To: contact.vigilo@c-s.fr\n"
-"POT-Creation-Date: 2014-02-03 16:24+0100\n"
-"PO-Revision-Date: 2014-02-03 16:24+0100\n"
+"POT-Creation-Date: 2017-08-24 12:13+0200\n"
+"PO-Revision-Date: 2017-08-24 12:13+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: en <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -278,20 +278,20 @@ msgstr "Directory not found: '%(dir)s'"
 msgid "Wrong permissions on directory: '%(dir)s'"
 msgstr "Wrong permissions on directory: '%(dir)s'"
 
-#: src/vigilo/connector/options.py:26
+#: src/vigilo/connector/options.py:27
 msgid "Load this settings.ini file"
 msgstr "Load this settings.ini file"
 
-#: src/vigilo/connector/options.py:27
+#: src/vigilo/connector/options.py:28
 msgid "Unique ID for this instance"
 msgstr "Unique ID for this instance"
 
-#: src/vigilo/connector/options.py:52
+#: src/vigilo/connector/options.py:53
 msgid "The configuration file does not exist"
 msgstr "The configuration file does not exist"
 
-#: src/vigilo/connector/options.py:136 src/vigilo/connector/options.py:142
-#: src/vigilo/connector/options.py:148
+#: src/vigilo/connector/options.py:137 src/vigilo/connector/options.py:143
+#: src/vigilo/connector/options.py:149
 #, python-format
 msgid "Can't parse publication value (%(type)s): \"%(value)s\""
 msgstr "Can't parse publication value (%(type)s): \"%(value)s\""
@@ -301,7 +301,7 @@ msgstr "Can't parse publication value (%(type)s): \"%(value)s\""
 msgid "Got malformed message: %s"
 msgstr "Got malformed message: %s"
 
-#: src/vigilo/connector/serialize.py:47 src/vigilo/connector/serialize.py:89
+#: src/vigilo/connector/serialize.py:47 src/vigilo/connector/serialize.py:96
 #, python-format
 msgid "Unknown/malformed message type: '%s'"
 msgstr "Unknown/malformed message type: '%s'"
@@ -324,12 +324,12 @@ msgstr ""
 msgid "OK: running"
 msgstr "OK: running"
 
-#: src/vigilo/connector/status.py:164
+#: src/vigilo/connector/status.py:173
 #, python-format
 msgid "Stats for %(service)s: %(name)s = %(value)s"
 msgstr "Stats for %(service)s: %(name)s = %(value)s"
 
-#: src/vigilo/connector/status.py:208
+#: src/vigilo/connector/status.py:217
 #, python-format
 msgid "Invalid configuration option for publications: (%(error)s)."
 msgstr "Invalid configuration option for publications: (%(error)s)."

@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: vigilo-connector 2.0.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2010-11-19 12:16+0100\n"
-"PO-Revision-Date: 2014-02-03 16:24+0100\n"
+"PO-Revision-Date: 2017-08-24 12:13+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: de <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -276,20 +276,20 @@ msgstr "Verzeichnis: '%(dir)s' nicht gefunden"
 msgid "Wrong permissions on directory: '%(dir)s'"
 msgstr ""
 
-#: src/vigilo/connector/options.py:26
+#: src/vigilo/connector/options.py:27
 msgid "Load this settings.ini file"
 msgstr ""
 
-#: src/vigilo/connector/options.py:27
+#: src/vigilo/connector/options.py:28
 msgid "Unique ID for this instance"
 msgstr ""
 
-#: src/vigilo/connector/options.py:52
+#: src/vigilo/connector/options.py:53
 msgid "The configuration file does not exist"
 msgstr ""
 
-#: src/vigilo/connector/options.py:136 src/vigilo/connector/options.py:142
-#: src/vigilo/connector/options.py:148
+#: src/vigilo/connector/options.py:137 src/vigilo/connector/options.py:143
+#: src/vigilo/connector/options.py:149
 #, python-format
 msgid "Can't parse publication value (%(type)s): \"%(value)s\""
 msgstr ""
@@ -299,7 +299,7 @@ msgstr ""
 msgid "Got malformed message: %s"
 msgstr "Fehlerhafte Nachricht: %s vorhanden"
 
-#: src/vigilo/connector/serialize.py:47 src/vigilo/connector/serialize.py:89
+#: src/vigilo/connector/serialize.py:47 src/vigilo/connector/serialize.py:96
 #, python-format
 msgid "Unknown/malformed message type: '%s'"
 msgstr "Unbekannter/fehlerhafter Nachrichtentyp: '%s'"
@@ -320,12 +320,12 @@ msgstr ""
 msgid "OK: running"
 msgstr ""
 
-#: src/vigilo/connector/status.py:164
+#: src/vigilo/connector/status.py:173
 #, python-format
 msgid "Stats for %(service)s: %(name)s = %(value)s"
 msgstr ""
 
-#: src/vigilo/connector/status.py:208
+#: src/vigilo/connector/status.py:217
 #, python-format
 msgid "Invalid configuration option for publications: (%(error)s)."
 msgstr ""
