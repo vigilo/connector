@@ -74,7 +74,7 @@ class TestDbRetry(unittest.TestCase):
         # celui dans lequel on les a stocké, comme une FIFO.
         def try_get(r, xml):
             d = self.db.get()
-            d.addCallback(self.assertEquals, xml)
+            d.addCallback(self.assertEqual, xml)
             return d
         for xml in xmls:
             main_d.addCallback(try_get, xml)
@@ -83,7 +83,7 @@ class TestDbRetry(unittest.TestCase):
         # renvoie None pour indiquer la fin des messages.
         def try_final_get(r):
             d = self.db.get()
-            d.addCallback(self.assertEquals, None)
+            d.addCallback(self.assertEqual, None)
             return d
         main_d.addCallback(try_final_get)
 
