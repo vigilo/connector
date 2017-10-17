@@ -170,7 +170,6 @@ class VigiloClientTestCase(unittest.TestCase):
             print args
             self.assertTrue("delivery-mode" in args["content"].properties)
             self.assertEqual(args["content"].properties["delivery-mode"], 1)
-            self.assertEqual(args["immediate"], True)
         d.addCallback(check)
         return d
 
