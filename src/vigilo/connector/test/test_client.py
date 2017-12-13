@@ -76,7 +76,7 @@ class VCTestCase(unittest.TestCase):
         vc = client_factory(self.settings)
         vc._getConnection()
         self.assertEqual(mockedConnectTCP.call_count, 1)
-        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5670))
+        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5672))
 
     #@mock.patch("twisted.internet.reactor.stop")
     #@mock.patch("twisted.internet.reactor.run")
@@ -116,7 +116,7 @@ class OSCTestCase(unittest.TestCase):
         osc.create_lockfile.return_value = False
         osc.run()
         self.assertEqual(mockedConnectTCP.call_count, 1)
-        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5670))
+        self.assertEqual(mockedConnectTCP.call_args[0][:2], ("testhost", 5672))
 
     @mock.patch("twisted.internet.reactor.stop")
     @mock.patch("twisted.internet.reactor.run")
@@ -177,13 +177,13 @@ class HostAndPortSplitting(unittest.TestCase):
         """Éclatement hôte/port pour des chaînes valides."""
         values = {
             'localhost:1234':   ('localhost',   1234, 1234),
-            'localhost':        ('localhost',   5670, 5671),
+            'localhost':        ('localhost',   5672, 5671),
             'example.com:0123': ('example.com',  123,  123),
-            'example.com':      ('example.com', 5670, 5671),
+            'example.com':      ('example.com', 5672, 5671),
             '127.0.0.1:2345':   ('127.0.0.1',   2345, 2345),
-            '127.0.0.1':        ('127.0.0.1',   5670, 5671),
+            '127.0.0.1':        ('127.0.0.1',   5672, 5671),
             '[::1]:3456':       ('::1',         3456, 3456),
-            '[::1]':            ('::1',         5670, 5671),
+            '[::1]':            ('::1',         5672, 5671),
         }
         for inp, outp in values.iteritems():
             expectedHost, expectedTCP, expectedSSL = outp

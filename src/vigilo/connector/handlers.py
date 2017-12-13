@@ -234,7 +234,7 @@ class QueueSubscriber(BusHandler):
         ld = []
         for i in range(self.queue_batch_size):
             ld.append(self._queue.get())
-        dl = defer.DeferredList(ld)
+        dl = defer.DeferredList(ld, consumeErrors=True)
         def cb(results):
             msgs = []
             for r in results:
