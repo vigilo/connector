@@ -382,16 +382,17 @@ class MessageHandler(BusHandler):
 
         contents = []
         for msg in msgs:
-            try:
-                content = json.loads(msg.content.body)
-            except ValueError:
-                LOGGER.warning(_("Received message is not JSON-encoded: %r"),
-                               msg.content.body)
-            else:
-                if "messages" in content and content["messages"]:
-                    contents.extend(content["messages"])
+            if msg is not None:
+                try:
+                    content = json.loads(msg.content.body)
+                except ValueError:
+                    LOGGER.warning(_("Received message is not JSON-encoded: %r"),
+                                   msg.content.body)
                 else:
-                    contents.append(content)
+                    if "messages" in content and content["messages"]:
+                        contents.extend(content["messages"])
+                    else:
+                        contents.append(content)
         if contents:
             d = self.processMessages(contents)
         else:
