@@ -22,7 +22,7 @@ Requires:   python-txamqp
 
 %description
 @DESCRIPTION@
-This library is part of the Vigilo Project <http://vigilo-nms.com>
+This library is part of the Vigilo Project <https://www.vigilo-nms.com>
 
 %prep
 %setup -q
