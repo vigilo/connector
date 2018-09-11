@@ -4,7 +4,7 @@ Name:       vigilo-%{module}
 Summary:    @SUMMARY@
 Version:    @VERSION@
 Release:    @RELEASE@%{?dist}
-Source0:    %{name}-%{version}.tar.gz
+Source0:    %{name}-%{version}@PREVERSION@.tar.gz
 URL:        @URL@
 Group:      Applications/System
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-build
@@ -20,12 +20,13 @@ Requires:   python-zope-interface >= 4.0.5
 Requires:   python-txamqp
 
 
+
 %description
 @DESCRIPTION@
 This library is part of the Vigilo Project <https://www.vigilo-nms.com>
 
 %prep
-%setup -q
+%setup -q -n %{name}-%{version}@PREVERSION@
 
 %build
 
