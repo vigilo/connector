@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable-msg=W0212,R0903,R0904,C0111,W0613
-# Copyright (C) 2006-2018 CS-SI
+# Copyright (C) 2006-2019 CS-SI
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
 from __future__ import print_function
