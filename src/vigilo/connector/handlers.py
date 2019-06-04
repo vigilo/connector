@@ -9,7 +9,7 @@ Gestionnaires de messages
 from __future__ import absolute_import
 
 import os
-import time
+import calendar
 from datetime import datetime
 from collections import deque
 from platform import python_version_tuple
@@ -687,7 +687,7 @@ class BusPublisher(BusHandler):
             msg = json.loads(msg)
         try:
             if isinstance(msg["timestamp"], datetime):
-                msg["timestamp"] = time.mktime(msg["timestamp"].timetuple())
+                msg["timestamp"] = calendar.timegm(msg["timestamp"].utctimetuple())
         except (KeyError, TypeError):
             pass
         # accumulation des messages de perf
