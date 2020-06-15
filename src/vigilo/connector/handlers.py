@@ -355,7 +355,7 @@ class MessageHandler(BusHandler):
                            msg.content.body)
             d = defer.succeed(None)
         else:
-            if "messages" in content and content["messages"]:
+            if content.get("messages"):
                 d = self._processList(content["messages"])
             else:
                 d = defer.maybeDeferred(self.processMessage, content)
@@ -389,7 +389,7 @@ class MessageHandler(BusHandler):
                     LOGGER.warning(_("Received message is not JSON-encoded: %r"),
                                    msg.content.body)
                 else:
-                    if "messages" in content and content["messages"]:
+                    if content.get("messages"):
                         contents.extend(content["messages"])
                     else:
                         contents.append(content)
@@ -408,8 +408,7 @@ class MessageHandler(BusHandler):
 
     @defer.inlineCallbacks
     def _processList(self, msglist):
-        while msglist:
-            msg = msglist.pop(0)
+        for msg in msglist:
             yield defer.maybeDeferred(self.processMessage, msg)
 
 
