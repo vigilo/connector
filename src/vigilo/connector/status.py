@@ -192,8 +192,6 @@ def statuspublisher_factory(settings, client, providers=None):
     hostname = settings.get("connector", {}).get("hostname", None)
     if hostname is None:
         hostname = socket.gethostname()
-        if "." in hostname: # on ne veut pas le FQDN
-            hostname = hostname[:hostname.index(".")]
 
     idinstance = settings.get("instance", "")
     servicename = os.path.basename(sys.argv[0])
