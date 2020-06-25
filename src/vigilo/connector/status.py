@@ -199,12 +199,9 @@ def statuspublisher_factory(settings, client, providers=None):
     if hostname is None:
         hostname = socket.gethostname()
 
-    idinstance = settings.get("instance", "")
-    servicename = os.path.basename(sys.argv[0])
-    if idinstance:
-        servicename = servicename + "-" + str(idinstance)
-    servicename = settings.get("connector", {}).get("status_service",
-            servicename)
+    idinstance = settings.get("instance", "") or 1
+    svcname = "%s-%s" % (os.path.basename(sys.argv[0]), idinstance)
+    svcname = settings.get("connector", {}).get("status_service", svcname)
     smne = settings["connector"].get("self_monitoring_nagios_exchange", None)
     smpe = settings["connector"].get("self_monitoring_perf_exchange", None)
     publications = settings.get('publications', {}).copy()
@@ -222,7 +219,7 @@ def statuspublisher_factory(settings, client, providers=None):
                        '(%(error)s).') % {"error": get_error_message(e)})
         sys.exit(1)
 
-    stats_publisher = StatusPublisher(hostname, servicename,
+    stats_publisher = StatusPublisher(hostname, svcname,
                                       publications=publications)
 
     stats_publisher.setClient(client)
