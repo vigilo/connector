@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf-8 sw=4 ts=4 et :
-# Copyright (C) 2006-2020 CS-SI
+# Copyright (C) 2006-2020 CS GROUP – France
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
 import os, sys
@@ -46,7 +46,7 @@ def install_i18n(i18ndir, destdir):
 setup(name='vigilo-connector',
         version='5.2.0b1',
         author='Vigilo Team',
-        author_email='contact.vigilo@c-s.fr',
+        author_email='contact.vigilo@csgroup.eu',
         url='https://www.vigilo-nms.com/',
         description="Vigilo AMQP connector library",
         license='http://www.gnu.org/licenses/gpl-2.0.html',
