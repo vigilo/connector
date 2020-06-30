@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # vim: set et sw=4 ts=4 ai:
-# Copyright (C) 2006-2020 CS GROUP – France
+# Copyright (C) 2006-2020 CS GROUP - France
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
 # pylint: disable-msg=C0111,W0613,R0904,W0212
