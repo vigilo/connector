@@ -43,8 +43,6 @@ class StatusPublisherTestCase(unittest.TestCase):
         self.settings = ConfigObj()
         self.settings["connector"] = {}
         self.localhn = socket.gethostname()
-        if "." in self.localhn: # on ne veut pas le FQDN
-            self.localhn = self.localhn[:self.localhn.index(".")]
 
     @deferred(timeout=30)
     def test_send_stats(self):
