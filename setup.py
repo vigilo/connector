@@ -15,6 +15,7 @@ install_requires = [
     'txAMQP',
     'Twisted',
     'pyOpenSSL',
+    'psutil >= 4.4.2',
 ]
 if tuple(python_version_tuple()) < ('2', '6'):
     install_requires.append("simplejson")

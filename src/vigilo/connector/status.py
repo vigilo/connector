@@ -11,6 +11,7 @@ from __future__ import absolute_import
 import os
 import sys
 import time
+import psutil
 import socket # pylint: disable-msg=W0403
 # W0403: Relative import 'socket', corrigé par le __future__.absolute_import
 
@@ -155,7 +156,12 @@ class StatusPublisher(BusPublisher):
             dl.append(provider.getStats())
         dl = defer.gatherResults(dl)
         def merge(results):
-            stats = {}
+            process = psutil.Process()
+            meminfo = process.memory_full_info()
+            stats = {
+                'process_uss': meminfo.uss,
+                'process_rss': meminfo.rss,
+            }
             for result in results:
                 stats.update(result)
             return stats

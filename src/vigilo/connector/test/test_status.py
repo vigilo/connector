@@ -85,13 +85,25 @@ class StatusPublisherTestCase(unittest.TestCase):
         def check(r):
             output = client.channel.sent
             print(output)
-            self.assertEqual(len(output), 2)
-            msg_perf = json.loads(output[0]["content"].body)
+            # 1 metric from the stub, 2 from StatusPublisher + the state
+            self.assertEqual(len(output), 4)
+            metrics = [json.loads(msg["content"].body)["datasource"]
+                       for msg in output[:-1]]
+            expected_metrics = [
+                "testservice-dummykey",
+                "testservice-process_uss",
+                "testservice-process_rss",
+            ]
+            for metric in expected_metrics:
+                self.assertTrue(metric in metrics, "'%s' not found" % metric)
+
+            msg = output[metrics.index("testservice-dummykey")]["content"].body
+            msg_perf = json.loads(msg)
             self.assertEqual(msg_perf["type"], "perf")
             self.assertEqual(msg_perf["host"], self.localhn)
-            self.assertEqual(msg_perf["datasource"], "testservice-dummykey")
             self.assertEqual(msg_perf["value"], "dummyvalue")
-            msg_cmd = json.loads(output[1]["content"].body)
+
+            msg_cmd = json.loads(output[-1]["content"].body)
             self.assertEqual(msg_cmd["type"], "nagios")
             self.assertEqual(msg_cmd["cmdname"],
                              "PROCESS_SERVICE_CHECK_RESULT")
@@ -101,23 +113,38 @@ class StatusPublisherTestCase(unittest.TestCase):
         return d
 
     @deferred(timeout=30)
-    def test_servicename(self):
-        """On force le nom du service à utiliser"""
+    def test_hostname(self):
+        """On force le nom d'hôte de l'auto-supervision"""
         client = ClientStub("testhost", None, None)
         self.settings["connector"]["hostname"] = "changedhost"
         self.settings["connector"]["status_service"] = "changedsvc"
-        sp = statuspublisher_factory(self.settings, client,
-                                     [ProviderStub()])
+        sp = statuspublisher_factory(self.settings, client, [ProviderStub()])
+
         sp.isConnected = lambda: True
         d = client.stub_connect()
         d.addCallback(lambda _x: sp.sendStatus())
+
         def check(r):
             output = client.channel.sent
-            msg_perf = json.loads(output[0]["content"].body)
+            print(output)
+            # 1 metric from the stub, 2 from StatusPublisher + the state
+            self.assertEqual(len(output), 4)
+            metrics = [json.loads(msg["content"].body)["datasource"]
+                       for msg in output[:-1]]
+            expected_metrics = [
+                "changedsvc-dummykey",
+                "changedsvc-process_uss",
+                "changedsvc-process_rss",
+            ]
+            for metric in expected_metrics:
+                self.assertTrue(metric in metrics, "'%s' not found" % metric)
+
+            msg = output[metrics.index("changedsvc-dummykey")]["content"].body
+            msg_perf = json.loads(msg)
             self.assertEqual(msg_perf["type"], "perf")
             self.assertEqual(msg_perf["datasource"],
                              "changedsvc-dummykey")
-            msg_cmd = json.loads(output[1]["content"].body)
+            msg_cmd = json.loads(output[-1]["content"].body)
             self.assertEqual(msg_cmd["type"], "nagios")
             self.assertTrue(msg_cmd["value"].startswith(
                             "changedhost;changedsvc;"))
