@@ -13,7 +13,6 @@ install_requires = [
     'zope.interface',
     'vigilo-common',
     'txAMQP',
-    'Twisted',
     'pyOpenSSL',
     'psutil >= 4.4.2',
 ]
@@ -69,6 +68,7 @@ setup(name='vigilo-connector',
         extras_require={
             'tests': tests_require,
         },
+        test_suite='nose.collector',
         package_dir={'': 'src'},
         include_package_data=True,
         data_files=install_i18n("i18n", os.path.join(sys.prefix, 'share', 'locale'))

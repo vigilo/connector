@@ -1,35 +1,29 @@
 Connector
 =========
 
-Connector est une bibliothèque de Vigilo_ proposant des classes pour
+"vigilo-connector" est une bibliothèque de Vigilo_ proposant des classes pour
 construire des connecteurs branchés sur le bus de messages.
 
-Pour les détails du fonctionnement de la bibliothèque Connector, se reporter à
-la `documentation officielle`_.
+Pour les détails du fonctionnement de la bibliothèque "vigilo-connector",
+se reporter à la `documentation officielle`_.
 
 
 Dépendances
 -----------
-Vigilo nécessite une version de Python supérieure ou égale à 2.5. Le chemin de
-l'exécutable python peut être passé en paramètre du ``make install`` de la
-façon suivante::
+Vigilo nécessite une version de Python supérieure ou égale à 2.7.
 
-    make install PYTHON=/usr/bin/python2.6
+La bibliothèque "vigilo-connector" a besoin des modules python suivants :
 
-La bibliothèque Connector a besoin des modules python suivants :
-
-- setuptools (ou distribute)
-- argparse (si python < 2.6)
+- setuptools
 - vigilo-common
 - zope.interface
-- Twisted
 - txAMQP
 
 
 Installation
 ------------
-L'installation se fait par la commande ``make install`` (à exécuter en
-``root``).
+L'installation se fait par la commande ``python setup.py install``
+(depuis le compte ``root``).
 
 
 License

@@ -30,7 +30,7 @@ class MSCTestCase(unittest.TestCase):
         self.rcf.stopTrying()
 
     def test_pickServer_first(self):
-        c = MultipleServerConnector(None, None, None, 30, None,
+        c = MultipleServerConnector('', None, None, 30, None,
                                     reactor=reactor)
         c.setMultipleParams([("test1", 5222), ("test2", 5222)], tcp.Connector)
         c.pickServer()
@@ -39,7 +39,7 @@ class MSCTestCase(unittest.TestCase):
     def test_change_host(self):
         # reconnexion manuelle
         self.rcf.stopTrying()
-        c = MultipleServerConnector(None, None, self.rcf, 30, None,
+        c = MultipleServerConnector('', None, self.rcf, 30, None,
                                     reactor=reactor)
         c.setMultipleParams([("test1", 5222), ("test2", 5222)], tcp.Connector)
 
