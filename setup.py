@@ -4,9 +4,9 @@
 # License: GNU GPL v2 <http://www.gnu.org/licenses/gpl-2.0.html>
 
 import os, sys
-from platform import python_version_tuple
 from setuptools import setup, find_packages
 
+setup_requires = ['vigilo-common'] if not os.environ.get('CI') else []
 
 install_requires = [
     'setuptools',
@@ -16,10 +16,6 @@ install_requires = [
     'pyOpenSSL',
     'psutil >= 4.4.2',
 ]
-if tuple(python_version_tuple()) < ('2', '6'):
-    install_requires.append("simplejson")
-if tuple(python_version_tuple()) < ('2', '7'):
-    install_requires.append("argparse")
 
 tests_require = [
     'coverage',
@@ -52,6 +48,7 @@ setup(name='vigilo-connector',
         license='http://www.gnu.org/licenses/gpl-2.0.html',
         long_description="This library gives an API to create an AMQP "
                          "connector for Vigilo.",
+        setup_requires=setup_requires,
         install_requires=install_requires,
         namespace_packages = [ 'vigilo' ],
         packages=find_packages("src"),
@@ -71,6 +68,7 @@ setup(name='vigilo-connector',
         test_suite='nose.collector',
         package_dir={'': 'src'},
         include_package_data=True,
+        vigilo_builds_vars={},
         data_files=install_i18n("i18n", os.path.join(sys.prefix, 'share', 'locale'))
         )
 
