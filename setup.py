@@ -24,21 +24,6 @@ tests_require = [
     'mock',
 ]
 
-def install_i18n(i18ndir, destdir):
-    data_files = []
-    langs = []
-    for f in os.listdir(i18ndir):
-        if os.path.isdir(os.path.join(i18ndir, f)) and not f.startswith("."):
-            langs.append(f)
-    for lang in langs:
-        for f in os.listdir(os.path.join(i18ndir, lang, "LC_MESSAGES")):
-            if f.endswith(".mo"):
-                data_files.append(
-                        (os.path.join(destdir, lang, "LC_MESSAGES"),
-                         [os.path.join(i18ndir, lang, "LC_MESSAGES", f)])
-                )
-    return data_files
-
 setup(name='vigilo-connector',
         version='5.2.0',
         author='Vigilo Team',
@@ -52,11 +37,6 @@ setup(name='vigilo-connector',
         install_requires=install_requires,
         namespace_packages = [ 'vigilo' ],
         packages=find_packages("src"),
-        message_extractors={
-            'src': [
-                ('**.py', 'python', None),
-            ],
-        },
         entry_points={
             'console_scripts': [
                 'vigilo-bus-config = vigilo.connector.configure:main',
@@ -69,6 +49,5 @@ setup(name='vigilo-connector',
         package_dir={'': 'src'},
         include_package_data=True,
         vigilo_builds_vars={},
-        data_files=install_i18n("i18n", os.path.join(sys.prefix, 'share', 'locale'))
         )
 
